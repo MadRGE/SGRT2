@@ -1,0 +1,78 @@
+{
+  "TT-COSM-001": {
+    "codigo": "DDJJ_COSM",
+    "nombre": "Declaración Jurada - Producto Cosmético",
+    "checklistItemId": 10,
+    "plantillaUrl": "plantillas/anmat/DDJJ_Cosmeticos_7939.pdf",
+    "mapeo": {
+      "razon_social_importador": "cliente.razon_social",
+      "cuit_importador": "cliente.cuit",
+      "nombre_producto_comercial": "producto.nombre",
+      "marca_producto": "producto.marca",
+      "pais_origen": "producto.pais_origen",
+      "fecha_presentacion": "system.current_date"
+    }
+  },
+  "TT-RENPRE-003": {
+    "codigo": "F05_RENPRE",
+    "nombre": "Formulario F05 - RENPRE",
+    "checklistItemId": 38,
+    "plantillaUrl": "plantillas/sedronar/F05_RENPRE.pdf",
+    "mapeo": {
+      "operador_razon_social": "cliente.razon_social",
+      "operador_cuit": "cliente.cuit",
+      "operador_direccion": "cliente.direccion",
+      "sustancia_nombre": "producto.nombre",
+      "sustancia_cantidad_kg": "proyecto.metadata.cantidad_kg",
+      "pais_destino": "proyecto.metadata.pais_destino",
+      "fecha_presentacion": "system.current_date"
+    }
+  },
+  "TT-INAL-003": {
+    "codigo": "DDJJ_EQUIV",
+    "nombre": "Declaración Jurada - Equivalencia Sanitaria",
+    "checklistItemId": 15,
+    "plantillaUrl": "plantillas/inal/DDJJ_Equivalencia_35_2025.pdf",
+    "mapeo": {
+      "razon_social": "cliente.razon_social",
+      "cuit": "cliente.cuit",
+      "direccion": "cliente.direccion",
+      "producto_nombre": "producto.nombre",
+      "marca": "producto.marca",
+      "pais_origen": "producto.pais_origen",
+      "categoria_producto": "producto.rubro",
+      "fecha_hoy": "system.current_date"
+    }
+  },
+  "TT-SENASA-001": {
+    "codigo": "DDJJ_SENASA",
+    "nombre": "Declaración Jurada - Producto Animal",
+    "checklistItemId": 22,
+    "plantillaUrl": "plantillas/senasa/DDJJ_Producto_Animal.pdf",
+    "mapeo": {
+      "importador_razon_social": "cliente.razon_social",
+      "importador_cuit": "cliente.cuit",
+      "importador_domicilio": "cliente.direccion",
+      "producto_descripcion": "producto.nombre",
+      "pais_procedencia": "producto.pais_origen",
+      "cantidad_estimada": "proyecto.metadata.cantidad_toneladas",
+      "fecha": "system.current_date"
+    }
+  },
+  "TT-ANMAT-001": {
+    "codigo": "FORM_DM",
+    "nombre": "Formulario DM - Dispositivo Médico",
+    "checklistItemId": 45,
+    "plantillaUrl": "plantillas/anmat/Formulario_DM.pdf",
+    "mapeo": {
+      "solicitante_razon_social": "cliente.razon_social",
+      "solicitante_cuit": "cliente.cuit",
+      "dispositivo_nombre": "producto.nombre",
+      "dispositivo_marca": "producto.marca",
+      "fabricante_nombre": "proyecto.metadata.fabricante",
+      "pais_fabricacion": "producto.pais_origen",
+      "clase_riesgo": "proyecto.metadata.clase_riesgo",
+      "fecha_solicitud": "system.current_date"
+    }
+  }
+}

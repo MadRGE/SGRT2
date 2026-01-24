@@ -1,0 +1,264 @@
+{
+  "metadata": {
+    "titulo": "Catálogo Completo de Trámites Regulatorios Argentinos 2025",
+    "fecha_actualizacion": "2025-11-27",
+    "version": "1.0",
+    "total_tramites": 535,
+    "fuente": "Documento Excel consolidado Noviembre 2025",
+    "organismos": 10
+  },
+  "organismos": {
+    "INAL": {
+      "nombre": "Instituto Nacional de Alimentos",
+      "total_tramites": 52,
+      "categorias": ["RNE", "RNPA", "Modificaciones", "Importaciones", "Inspecciones", "Certificaciones"]
+    },
+    "ANMAT_PM": {
+      "nombre": "ANMAT - Productos Médicos",
+      "total_tramites": 52,
+      "categorias": ["Legajos", "Habilitaciones", "Registros Clase I-IV", "Modificaciones", "Renovaciones", "Importaciones", "Inspecciones"]
+    },
+    "ANMAT_COSM": {
+      "nombre": "ANMAT - Cosméticos e Higiene Personal",
+      "total_tramites": 52,
+      "categorias": ["Legajos", "Notificaciones Grado 1", "Registros Grado 2", "Modificaciones", "Inspecciones"]
+    },
+    "ANMAT_DOM": {
+      "nombre": "ANMAT - Domisanitarios",
+      "total_tramites": 52,
+      "categorias": ["Legajos", "Notificaciones Riesgo I", "Registros Riesgo IIA/IIB", "Modificaciones", "Inspecciones"]
+    },
+    "SENASA": {
+      "nombre": "Servicio Nacional de Sanidad y Calidad Agroalimentaria",
+      "total_tramites": 132,
+      "categorias": ["Food", "Feed", "Fertilizantes", "Suplementos", "RPV", "RENSPA", "Inspecciones", "Certificaciones"]
+    },
+    "INTI": {
+      "nombre": "Instituto Nacional de Tecnología Industrial",
+      "total_tramites": 80,
+      "categorias": ["Metrología Legal", "Certificaciones Técnicas", "Ensayos", "Otros"]
+    },
+    "SEDRONAR": {
+      "nombre": "SEDRONAR - RENPRE (Precursores Químicos)",
+      "total_tramites": 25,
+      "categorias": ["Inscripciones", "Autorizaciones", "Formularios", "Informes"]
+    },
+    "FAUNA_CITES": {
+      "nombre": "Dirección de Fauna - CITES",
+      "total_tramites": 20,
+      "categorias": ["RUOFS", "Certificados CITES", "Autorizaciones"]
+    },
+    "INASE": {
+      "nombre": "Instituto Nacional de Semillas",
+      "total_tramites": 30,
+      "categorias": ["RNCyFS", "Cultivares", "Certificaciones", "Semillas"]
+    },
+    "SIC": {
+      "nombre": "Secretaría de Industria y Comercio",
+      "total_tramites": 40,
+      "categorias": ["Certificaciones RT", "LCM Vehículos", "Eficiencia Energética", "Seguridad"]
+    }
+  },
+  "tramites": {
+    "INAL": [
+      {
+        "id": "TT-INAL-001",
+        "codigo_oficial": "4045",
+        "nombre": "Inscripción / Reinscripción / Transferencia RNPA (alimentos, suplementos, APM)",
+        "organismo": "INAL",
+        "categoria": "RNPA",
+        "subcategoria": "Inscripción",
+        "costo_noviembre_2025": null,
+        "moneda": "ARS",
+        "plataforma": "TADO",
+        "plazo_dias": 90,
+        "documentacion_obligatoria": [
+          "Ficha técnica",
+          "Análisis bromatológico",
+          "Rótulo español",
+          "CFS origen",
+          "RNE",
+          "DDJJ DT"
+        ],
+        "observaciones": "Exento Anexo III (UE, Chile)",
+        "activo": true,
+        "prioridad": "alta"
+      },
+      {
+        "id": "TT-INAL-002",
+        "codigo_oficial": "4046",
+        "nombre": "Agotamiento stock rótulos RNPA",
+        "organismo": "INAL",
+        "categoria": "RNPA",
+        "subcategoria": "Modificación",
+        "costo_noviembre_2025": null,
+        "moneda": "ARS",
+        "plataforma": "TADO",
+        "plazo_dias": 30,
+        "documentacion_obligatoria": [
+          "Nota solicitud",
+          "RNPA",
+          "Cantidad stock viejo"
+        ],
+        "observaciones": "Permite transición",
+        "activo": true,
+        "prioridad": "media"
+      },
+      {
+        "id": "TT-INAL-003",
+        "codigo_oficial": "4047",
+        "nombre": "Inscripción RNE Importador/Exportador (por depósito)",
+        "organismo": "INAL",
+        "categoria": "RNE",
+        "subcategoria": "Inscripción",
+        "costo_noviembre_2025": 40000,
+        "moneda": "ARS",
+        "plataforma": "TADO",
+        "plazo_dias": 120,
+        "documentacion_obligatoria": [
+          "Habilitación municipal",
+          "Plano",
+          "POE",
+          "Título DT"
+        ],
+        "observaciones": "Primer trámite alimentos",
+        "activo": true,
+        "prioridad": "alta"
+      },
+      {
+        "id": "TT-INAL-004",
+        "codigo_oficial": "4048",
+        "nombre": "Modificación general RNE",
+        "organismo": "INAL",
+        "categoria": "RNE",
+        "subcategoria": "Modificación",
+        "costo_noviembre_2025": 12000,
+        "moneda": "ARS",
+        "plataforma": "TADO",
+        "plazo_dias": 60,
+        "documentacion_obligatoria": [
+          "Nota cambio",
+          "Docs respaldatorios"
+        ],
+        "observaciones": "No rubro/depósito",
+        "activo": true,
+        "prioridad": "media"
+      },
+      {
+        "id": "TT-INAL-005",
+        "codigo_oficial": "4049",
+        "nombre": "Designación Director Técnico",
+        "organismo": "INAL",
+        "categoria": "RNE",
+        "subcategoria": "Personal",
+        "costo_noviembre_2025": 8000,
+        "moneda": "ARS",
+        "plataforma": "TADO",
+        "plazo_dias": 30,
+        "documentacion_obligatoria": [
+          "Nota",
+          "DNI/título/matrícula",
+          "CV",
+          "DDJJ"
+        ],
+        "observaciones": "Bromatología/Química",
+        "activo": true,
+        "prioridad": "alta"
+      },
+      {
+        "id": "TT-INAL-006",
+        "codigo_oficial": "4050",
+        "nombre": "Ampliación rubro RNE",
+        "organismo": "INAL",
+        "categoria": "RNE",
+        "subcategoria": "Ampliación",
+        "costo_noviembre_2025": 15000,
+        "moneda": "ARS",
+        "plataforma": "TADO",
+        "plazo_dias": 60,
+        "documentacion_obligatoria": [
+          "Nota rubros nuevos",
+          "POE ampliado"
+        ],
+        "observaciones": null,
+        "activo": true,
+        "prioridad": "media"
+      },
+      {
+        "id": "TT-INAL-007",
+        "codigo_oficial": "4051",
+        "nombre": "Modificación estructura depósito",
+        "organismo": "INAL",
+        "categoria": "RNE",
+        "subcategoria": "Modificación",
+        "costo_noviembre_2025": null,
+        "moneda": "ARS",
+        "plataforma": "TAD + inspección",
+        "plazo_dias": 90,
+        "documentacion_obligatoria": [
+          "Planos nuevos",
+          "Fotos"
+        ],
+        "observaciones": null,
+        "activo": true,
+        "prioridad": "baja"
+      },
+      {
+        "id": "TT-INAL-008",
+        "codigo_oficial": "4052",
+        "nombre": "Incorporación/modificación depósito",
+        "organismo": "INAL",
+        "categoria": "RNE",
+        "subcategoria": "Depósito",
+        "costo_noviembre_2025": 20000,
+        "moneda": "ARS",
+        "plataforma": "TADO",
+        "plazo_dias": 60,
+        "documentacion_obligatoria": [
+          "Habilitación municipal nuevo"
+        ],
+        "observaciones": null,
+        "activo": true,
+        "prioridad": "media"
+      },
+      {
+        "id": "TT-INAL-009",
+        "codigo_oficial": "4053",
+        "nombre": "Autorización/transferencia envases",
+        "organismo": "INAL",
+        "categoria": "Envases",
+        "subcategoria": "Autorización",
+        "costo_noviembre_2025": 35000,
+        "moneda": "ARS",
+        "plataforma": "TADO",
+        "plazo_dias": 90,
+        "documentacion_obligatoria": [
+          "Ficha material",
+          "Ensayo migración"
+        ],
+        "observaciones": null,
+        "activo": true,
+        "prioridad": "alta"
+      },
+      {
+        "id": "TT-INAL-010",
+        "codigo_oficial": "4054",
+        "nombre": "Autorización importación temporal",
+        "organismo": "INAL",
+        "categoria": "Importación",
+        "subcategoria": "Temporal",
+        "costo_noviembre_2025": 10000,
+        "moneda": "ARS",
+        "plataforma": "TADO",
+        "plazo_dias": 30,
+        "documentacion_obligatoria": [
+          "Nota finalidad",
+          "Compromiso reexport"
+        ],
+        "observaciones": "6 meses",
+        "activo": true,
+        "prioridad": "media"
+      }
+    ]
+  }
+}
