@@ -26,6 +26,7 @@ import ConfiguracionMargenes from './pages/ConfiguracionMargenes';
 import CatalogoServicios from './pages/CatalogoServicios';
 import GestionProveedores from './pages/GestionProveedores';
 import { CotizacionService } from './services/CotizacionService';
+import { ANMATCasosList } from './components/ANMAT';
 
 type View =
   | { type: 'dashboard' }
@@ -47,7 +48,8 @@ type View =
   | { type: 'portal-proyecto'; proyectoId: string }
   | { type: 'admin-usuarios' }
   | { type: 'portal-despachante' }
-  | { type: 'despachante-expediente'; expedienteId: string };
+  | { type: 'despachante-expediente'; expedienteId: string }
+  | { type: 'anmat' };
 
 function AppContent() {
   const { userRole, clienteId } = useAuth();
@@ -115,6 +117,8 @@ function AppContent() {
         return 'Portal Despachante';
       case 'despachante-expediente':
         return 'Detalle de Expediente';
+      case 'anmat':
+        return 'Gestoría ANMAT';
       default:
         return 'SGT v5';
     }
@@ -141,6 +145,8 @@ function AppContent() {
         return '/cotizaciones';
       case 'configuracion-margenes':
         return '/configuracion';
+      case 'anmat':
+        return '/anmat';
       default:
         return '/dashboard';
     }
@@ -177,6 +183,7 @@ function AppContent() {
     else if (path === '/gestion-proveedores') setView({ type: 'gestion-proveedores' });
     else if (path === '/portal-cliente') setView({ type: 'portal-cliente' });
     else if (path === '/portal-despachante') setView({ type: 'portal-despachante' });
+    else if (path === '/anmat') setView({ type: 'anmat' });
   };
 
   if (view.type === 'portal-despachante' || view.type === 'despachante-expediente') {
@@ -334,6 +341,9 @@ function AppContent() {
       )}
       {view.type === 'admin-usuarios' && (
         <GestionUsuarios onBack={() => setView({ type: 'dashboard' })} />
+      )}
+      {view.type === 'anmat' && (
+        <ANMATCasosList />
       )}
     </Layout>
   );
