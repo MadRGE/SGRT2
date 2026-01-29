@@ -1,4 +1,5 @@
-import { LayoutDashboard, Users, DollarSign, BookOpen, BarChart3, Settings, FileText, Package, UserPlus } from 'lucide-react';
+
+import { LayoutDashboard, Users, DollarSign, BookOpen, BarChart3, Settings, FileText, Package, UserPlus, Shield } from 'lucide-react';
 
 interface SidebarProps {
   currentPath: string;
@@ -11,6 +12,11 @@ export default function Sidebar({ currentPath, onNavigate }: SidebarProps) {
       path: '/dashboard',
       label: 'Panel de Proyectos',
       icon: LayoutDashboard
+    },
+    {
+      path: '/anmat',
+      label: 'Gestoría ANMAT',
+      icon: Shield
     },
     {
       path: '/cotizaciones',
