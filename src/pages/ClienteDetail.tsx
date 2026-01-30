@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { TabDocumentacionGlobal } from '../components/Cliente/TabDocumentacionGlobal';
 import { TabUsuarios } from '../components/Cliente/TabUsuarios';
-
+import EnvasesList from '../components/Envases/EnvasesList';
 interface Props {
   clienteId: string;
   onBack: () => void;
@@ -78,7 +78,7 @@ interface ResumenCliente {
   alertas: number;
 }
 
-type TabType = 'resumen' | 'productos' | 'habilitaciones' | 'depositos' | 'proyectos' | 'finalizados' | 'documentacion' | 'facturacion' | 'info';
+type TabType = 'resumen' | 'productos' | 'envases' | 'habilitaciones' | 'depositos' | 'proyectos' | 'finalizados' | 'documentacion' | 'facturacion' | 'info';
 
 export default function ClienteDetail({ clienteId, onBack, onViewProyecto }: Props) {
   const [cliente, setCliente] = useState<Cliente | null>(null);
@@ -149,6 +149,7 @@ export default function ClienteDetail({ clienteId, onBack, onViewProyecto }: Pro
     { id: 'documentacion', label: 'Documentación', icon: FolderOpen },
     { id: 'facturacion', label: 'Facturación', icon: Landmark },
     { id: 'info', label: 'Info', icon: User },
+    { id: 'envases', label: 'Envases', icon: Box },
   ];
 
   return (
@@ -253,6 +254,7 @@ export default function ClienteDetail({ clienteId, onBack, onViewProyecto }: Pro
         <div className="p-6">
           {activeTab === 'resumen' && <TabResumen clienteId={clienteId} onViewProyecto={onViewProyecto} />}
           {activeTab === 'productos' && <TabProductos clienteId={clienteId} />}
+          {activeTab === 'envases' && <EnvasesList empresaId={clienteId} />}
           {activeTab === 'habilitaciones' && <TabHabilitaciones clienteId={clienteId} />}
           {activeTab === 'depositos' && <TabDepositos clienteId={clienteId} />}
           {activeTab === 'proyectos' && <TabProyectosActivos clienteId={clienteId} onViewProyecto={onViewProyecto} />}
