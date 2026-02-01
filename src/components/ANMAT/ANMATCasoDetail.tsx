@@ -27,37 +27,24 @@ interface Props {
 
 interface CasoDetail {
   id: string;
-  numero_caso: string;
   referencia_cliente: string | null;
   descripcion_cliente: string | null;
   estado: string;
-  prioridad: number;
   es_urgente: boolean;
   cantidad_skus: number | null;
-  cantidad_familias_estimada: number | null;
-  cantidad_familias_final: number | null;
   fecha_ingreso_puerto: string | null;
-  fecha_inicio_gestion: string | null;
-  fecha_fin_estimada: string | null;
-  presupuesto_aprobado: boolean;
-  facturado: boolean;
-  cobrado: boolean;
-  notas: string | null;
-  notas_internas: string | null;
+  fuente_contacto: string | null;
+  datos_especificos: Record<string, any> | null;
   created_at: string;
   updated_at: string;
-  empresa: {
+  cliente: {
     id: string;
     razon_social: string;
-    nombre_fantasia: string | null;
     cuit: string;
+    email: string | null;
+    telefono: string | null;
   };
   division: {
-    id: string;
-    codigo: string;
-    nombre: string;
-  } | null;
-  tramite_catalogo: {
     id: string;
     codigo: string;
     nombre: string;
@@ -113,9 +100,8 @@ export function ANMATCasoDetail({ casoId, onBack }: Props) {
       .from('anmat_casos')
       .select(`
         *,
-        empresa:empresas(id, razon_social, nombre_fantasia, cuit),
-        division:anmat_divisiones(id, codigo, nombre),
-        tramite_catalogo:tramites_catalogo(id, codigo, nombre)
+        cliente:clientes(id, razon_social, cuit, email, telefono),
+        division:anmat_divisiones(id, codigo, nombre)
       `)
       .eq('id', casoId)
       .single();
@@ -196,7 +182,7 @@ export function ANMATCasoDetail({ casoId, onBack }: Props) {
           </button>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-slate-900">{caso.numero_caso}</h1>
+              <h1 className="text-2xl font-bold text-slate-900">Caso #{caso.id.slice(0, 8)}</h1>
               {caso.es_urgente && (
                 <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-medium">
                   <AlertTriangle className="w-3 h-3" />
@@ -207,7 +193,7 @@ export function ANMATCasoDetail({ casoId, onBack }: Props) {
             <div className="flex items-center gap-4 mt-2 text-sm text-slate-600">
               <span className="flex items-center gap-1">
                 <Building2 className="w-4 h-4" />
-                {caso.empresa.nombre_fantasia || caso.empresa.razon_social}
+                {caso.cliente?.razon_social || 'Sin cliente'}
               </span>
               {caso.division && (
                 <span className="px-2 py-0.5 bg-slate-100 rounded text-xs">
@@ -345,8 +331,8 @@ export function ANMATCasoDetail({ casoId, onBack }: Props) {
                   <h3 className="font-semibold text-slate-800">Información del Caso</h3>
                   <div className="space-y-3 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-slate-600">Número:</span>
-                      <span className="font-mono font-medium">{caso.numero_caso}</span>
+                      <span className="text-slate-600">ID:</span>
+                      <span className="font-mono font-medium">{caso.id.slice(0, 8)}</span>
                     </div>
                     {caso.referencia_cliente && (
                       <div className="flex justify-between">
@@ -363,8 +349,8 @@ export function ANMATCasoDetail({ casoId, onBack }: Props) {
                       <span className="font-medium">{caso.cantidad_skus || '—'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-600">Familias:</span>
-                      <span className="font-medium">{caso.cantidad_familias_final || caso.cantidad_familias_estimada || '—'}</span>
+                      <span className="text-slate-600">Fuente:</span>
+                      <span className="font-medium">{caso.fuente_contacto || '—'}</span>
                     </div>
                   </div>
                 </div>
@@ -386,10 +372,31 @@ export function ANMATCasoDetail({ casoId, onBack }: Props) {
                         <span className="font-medium text-orange-600">{formatDate(caso.fecha_ingreso_puerto)}</span>
                       </div>
                     )}
-                    {caso.fecha_inicio_gestion && (
+                  </div>
+                </div>
+
+                {/* Info Cliente */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-slate-800">Cliente</h3>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Razón Social:</span>
+                      <span className="font-medium">{caso.cliente?.razon_social || '—'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">CUIT:</span>
+                      <span className="font-medium">{caso.cliente?.cuit || '—'}</span>
+                    </div>
+                    {caso.cliente?.email && (
                       <div className="flex justify-between">
-                        <span className="text-slate-600">Inicio Gestión:</span>
-                        <span className="font-medium">{formatDate(caso.fecha_inicio_gestion)}</span>
+                        <span className="text-slate-600">Email:</span>
+                        <span className="font-medium">{caso.cliente.email}</span>
+                      </div>
+                    )}
+                    {caso.cliente?.telefono && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">Teléfono:</span>
+                        <span className="font-medium">{caso.cliente.telefono}</span>
                       </div>
                     )}
                   </div>
@@ -406,41 +413,18 @@ export function ANMATCasoDetail({ casoId, onBack }: Props) {
                 </div>
               )}
 
-              {/* Facturación */}
-              <div className="space-y-2">
-                <h3 className="font-semibold text-slate-800">Estado Comercial</h3>
-                <div className="flex gap-4">
-                  <div className={`px-4 py-2 rounded-lg text-sm ${caso.presupuesto_aprobado ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}`}>
-                    {caso.presupuesto_aprobado ? '✓ Presupuesto Aprobado' : '○ Presupuesto Pendiente'}
+              {/* Datos Específicos */}
+              {caso.datos_especificos && Object.keys(caso.datos_especificos).length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="font-semibold text-slate-800">Datos Específicos</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {Object.entries(caso.datos_especificos).map(([key, value]) => (
+                      <div key={key} className="bg-slate-50 p-3 rounded-lg">
+                        <p className="text-xs text-slate-500">{key.replace(/_/g, ' ')}</p>
+                        <p className="text-sm font-medium text-slate-700">{String(value)}</p>
+                      </div>
+                    ))}
                   </div>
-                  <div className={`px-4 py-2 rounded-lg text-sm ${caso.facturado ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}`}>
-                    {caso.facturado ? '✓ Facturado' : '○ Sin Facturar'}
-                  </div>
-                  <div className={`px-4 py-2 rounded-lg text-sm ${caso.cobrado ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}`}>
-                    {caso.cobrado ? '✓ Cobrado' : '○ Pendiente Cobro'}
-                  </div>
-                </div>
-              </div>
-
-              {/* Notas */}
-              {(caso.notas || caso.notas_internas) && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {caso.notas && (
-                    <div className="space-y-2">
-                      <h3 className="font-semibold text-slate-800">Notas</h3>
-                      <p className="text-sm text-slate-600 bg-slate-50 p-4 rounded-lg">
-                        {caso.notas}
-                      </p>
-                    </div>
-                  )}
-                  {caso.notas_internas && (
-                    <div className="space-y-2">
-                      <h3 className="font-semibold text-slate-800">Notas Internas</h3>
-                      <p className="text-sm text-slate-600 bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                        {caso.notas_internas}
-                      </p>
-                    </div>
-                  )}
                 </div>
               )}
             </div>

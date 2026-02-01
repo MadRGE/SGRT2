@@ -19,30 +19,28 @@ import { ANMATCasoDetail } from './ANMATCasoDetail';
 
 interface ANMATCaso {
   id: string;
-  numero_caso: string;
-  referencia_cliente: string | null;
   estado: string;
-  prioridad: number;
   es_urgente: boolean;
+  descripcion_cliente: string | null;
+  referencia_cliente: string | null;
+  fuente_contacto: string | null;
   cantidad_skus: number | null;
-  cantidad_familias_final: number | null;
   fecha_ingreso_puerto: string | null;
-  presupuesto_aprobado: boolean;
-  facturado: boolean;
-  cobrado: boolean;
+  datos_especificos: Record<string, any> | null;
   created_at: string;
   updated_at: string;
-  empresa: {
-    razon_social: string;
-    nombre_fantasia: string | null;
-  };
-  division: {
-    nombre: string;
-    codigo: string;
-  } | null;
-  productos_cargados: number;
-  familias_creadas: number;
-  docs_pendientes: number;
+  // From view joins
+  cliente_id: string;
+  cliente_razon_social: string;
+  cliente_cuit: string;
+  division_id: string;
+  division_codigo: string;
+  division_nombre: string;
+  asignado_id: string | null;
+  asignado_nombre: string | null;
+  total_productos: number;
+  total_familias: number;
+  total_documentos: number;
 }
 
 const ESTADOS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
@@ -105,7 +103,7 @@ export function ANMATCasosList() {
     }
 
     if (filterDivision) {
-      query = query.eq('division', filterDivision);
+      query = query.eq('division_codigo', filterDivision);
     }
 
     const { data, error } = await query;
@@ -131,9 +129,10 @@ export function ANMATCasosList() {
     if (!searchTerm) return true;
     const search = searchTerm.toLowerCase();
     return (
-      caso.numero_caso?.toLowerCase().includes(search) ||
+      caso.id?.toLowerCase().includes(search) ||
       caso.referencia_cliente?.toLowerCase().includes(search) ||
-      caso.empresa?.toLowerCase().includes(search)
+      caso.cliente_razon_social?.toLowerCase().includes(search) ||
+      caso.cliente_cuit?.includes(search)
     );
   });
 
@@ -268,7 +267,7 @@ export function ANMATCasosList() {
           >
             <option value="">Todas las divisiones</option>
             {divisiones.map(div => (
-              <option key={div.id} value={div.nombre}>{div.nombre}</option>
+              <option key={div.id} value={div.codigo}>{div.nombre}</option>
             ))}
           </select>
 
@@ -325,7 +324,7 @@ export function ANMATCasosList() {
                           <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />
                         )}
                         <div>
-                          <p className="font-mono font-medium text-slate-900">{caso.numero_caso}</p>
+                          <p className="font-mono font-medium text-slate-900 text-xs">{caso.id.slice(0, 8)}</p>
                           {caso.referencia_cliente && (
                             <p className="text-xs text-slate-500">{caso.referencia_cliente}</p>
                           )}
@@ -336,35 +335,30 @@ export function ANMATCasosList() {
                       <div className="flex items-center gap-2">
                         <Building2 className="w-4 h-4 text-slate-400" />
                         <span className="text-sm text-slate-700 truncate max-w-[200px]">
-                          {caso.nombre_fantasia || caso.empresa}
+                          {caso.cliente_razon_social}
                         </span>
                       </div>
                     </td>
                     <td className="px-4 py-4">
-                      <span className="text-sm text-slate-600">{caso.division || '—'}</span>
+                      <span className="text-sm text-slate-600">{caso.division_nombre || '—'}</span>
                     </td>
                     <td className="px-4 py-4 text-center">
                       <span className="text-sm font-medium text-slate-700">
-                        {caso.cantidad_skus || caso.productos_cargados || '—'}
+                        {caso.cantidad_skus || caso.total_productos || '—'}
                       </span>
                     </td>
                     <td className="px-4 py-4 text-center">
                       <span className="text-sm font-medium text-slate-700">
-                        {caso.cantidad_familias_final || caso.familias_creadas || '—'}
+                        {caso.total_familias || '—'}
                       </span>
                     </td>
                     <td className="px-4 py-4 text-center">
                       {getEstadoBadge(caso.estado)}
                     </td>
                     <td className="px-4 py-4 text-center">
-                      {caso.docs_pendientes > 0 ? (
-                        <span className="inline-flex items-center gap-1 text-orange-600 text-sm">
-                          <Clock className="w-3.5 h-3.5" />
-                          {caso.docs_pendientes}
-                        </span>
-                      ) : (
-                        <CheckCircle className="w-4 h-4 text-green-500 mx-auto" />
-                      )}
+                      <span className="text-sm text-slate-600">
+                        {caso.total_documentos || 0}
+                      </span>
                     </td>
                     <td className="px-4 py-4 text-center text-sm text-slate-500">
                       {formatDate(caso.updated_at)}
