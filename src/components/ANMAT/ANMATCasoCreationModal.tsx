@@ -5,13 +5,11 @@ import {
   FileText,
   Search,
   Building2,
-  Package,
   AlertTriangle,
   CheckCircle,
   Loader2,
   ChevronRight,
-  Upload,
-  MessageSquare
+  UserPlus
 } from 'lucide-react';
 
 interface Props {
@@ -19,11 +17,12 @@ interface Props {
   onSuccess: (casoId: string) => void;
 }
 
-interface Empresa {
+interface Cliente {
   id: string;
   razon_social: string;
-  nombre_fantasia: string | null;
   cuit: string;
+  email: string | null;
+  telefono: string | null;
 }
 
 interface Division {
@@ -39,15 +38,20 @@ export function ANMATCasoCreationModal({ onClose, onSuccess }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   // Data
-  const [empresas, setEmpresas] = useState<Empresa[]>([]);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
   const [divisiones, setDivisiones] = useState<Division[]>([]);
-  const [searchEmpresa, setSearchEmpresa] = useState('');
-  const [filteredEmpresas, setFilteredEmpresas] = useState<Empresa[]>([]);
+  const [searchCliente, setSearchCliente] = useState('');
+  const [filteredClientes, setFilteredClientes] = useState<Cliente[]>([]);
+
+  // Crear cliente nuevo inline
+  const [showNuevoCliente, setShowNuevoCliente] = useState(false);
+  const [nuevoCliente, setNuevoCliente] = useState({ razon_social: '', cuit: '', email: '', telefono: '' });
+  const [creandoCliente, setCreandoCliente] = useState(false);
 
   // Form data
   const [formData, setFormData] = useState({
-    empresa_id: '',
-    empresa_nombre: '',
+    cliente_id: '',
+    cliente_nombre: '',
     division_id: '',
     division_nombre: '',
     referencia_cliente: '',
@@ -59,31 +63,30 @@ export function ANMATCasoCreationModal({ onClose, onSuccess }: Props) {
   });
 
   useEffect(() => {
-    loadEmpresas();
+    loadClientes();
     loadDivisiones();
   }, []);
 
   useEffect(() => {
-    if (searchEmpresa.length >= 2) {
-      const filtered = empresas.filter(
-        e =>
-          e.razon_social.toLowerCase().includes(searchEmpresa.toLowerCase()) ||
-          e.nombre_fantasia?.toLowerCase().includes(searchEmpresa.toLowerCase()) ||
-          e.cuit.includes(searchEmpresa)
+    if (searchCliente.length >= 2) {
+      const filtered = clientes.filter(
+        c =>
+          c.razon_social.toLowerCase().includes(searchCliente.toLowerCase()) ||
+          c.cuit.includes(searchCliente)
       );
-      setFilteredEmpresas(filtered.slice(0, 10));
+      setFilteredClientes(filtered.slice(0, 10));
     } else {
-      setFilteredEmpresas([]);
+      setFilteredClientes([]);
     }
-  }, [searchEmpresa, empresas]);
+  }, [searchCliente, clientes]);
 
-  const loadEmpresas = async () => {
+  const loadClientes = async () => {
     const { data } = await supabase
-      .from('empresas')
-      .select('id, razon_social, nombre_fantasia, cuit')
+      .from('clientes')
+      .select('id, razon_social, cuit, email, telefono')
       .order('razon_social');
 
-    if (data) setEmpresas(data);
+    if (data) setClientes(data);
   };
 
   const loadDivisiones = async () => {
@@ -96,14 +99,50 @@ export function ANMATCasoCreationModal({ onClose, onSuccess }: Props) {
     if (data) setDivisiones(data);
   };
 
-  const handleSelectEmpresa = (empresa: Empresa) => {
+  const handleSelectCliente = (cliente: Cliente) => {
     setFormData({
       ...formData,
-      empresa_id: empresa.id,
-      empresa_nombre: empresa.nombre_fantasia || empresa.razon_social
+      cliente_id: cliente.id,
+      cliente_nombre: cliente.razon_social
     });
-    setSearchEmpresa('');
-    setFilteredEmpresas([]);
+    setSearchCliente('');
+    setFilteredClientes([]);
+    setShowNuevoCliente(false);
+  };
+
+  const handleCrearCliente = async () => {
+    if (!nuevoCliente.razon_social.trim() || !nuevoCliente.cuit.trim()) {
+      setError('Razón social y CUIT son obligatorios');
+      return;
+    }
+    setCreandoCliente(true);
+    setError(null);
+
+    const { data, error: insertError } = await supabase
+      .from('clientes')
+      .insert([{
+        razon_social: nuevoCliente.razon_social.trim(),
+        cuit: nuevoCliente.cuit.trim(),
+        email: nuevoCliente.email.trim() || null,
+        telefono: nuevoCliente.telefono.trim() || null
+      }])
+      .select()
+      .single();
+
+    setCreandoCliente(false);
+
+    if (insertError) {
+      setError('Error al crear cliente: ' + insertError.message);
+      return;
+    }
+
+    if (data) {
+      // Agregar a la lista local y seleccionar
+      setClientes([...clientes, data]);
+      handleSelectCliente(data);
+      setShowNuevoCliente(false);
+      setNuevoCliente({ razon_social: '', cuit: '', email: '', telefono: '' });
+    }
   };
 
   const handleSelectDivision = (division: Division) => {
@@ -116,12 +155,12 @@ export function ANMATCasoCreationModal({ onClose, onSuccess }: Props) {
   };
 
   const validateStep1 = () => {
-    if (!formData.empresa_id) {
-      setError('Selecciona una empresa');
+    if (!formData.cliente_id) {
+      setError('Seleccioná un cliente');
       return false;
     }
     if (!formData.division_id) {
-      setError('Selecciona una división ANMAT');
+      setError('Seleccioná una división ANMAT');
       return false;
     }
     setError(null);
@@ -130,7 +169,7 @@ export function ANMATCasoCreationModal({ onClose, onSuccess }: Props) {
 
   const validateStep2 = () => {
     if (!formData.descripcion_cliente.trim()) {
-      setError('Describe brevemente qué necesita el cliente');
+      setError('Describí brevemente qué necesita el cliente');
       return false;
     }
     setError(null);
@@ -144,11 +183,9 @@ export function ANMATCasoCreationModal({ onClose, onSuccess }: Props) {
     setError(null);
 
     try {
-      // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No hay usuario autenticado');
 
-      // Get user id from usuarios table
       const { data: userData } = await supabase
         .from('usuarios')
         .select('id')
@@ -161,7 +198,7 @@ export function ANMATCasoCreationModal({ onClose, onSuccess }: Props) {
         .from('anmat_casos')
         .insert([
           {
-            empresa_id: formData.empresa_id,
+            cliente_id: formData.cliente_id,
             division_id: formData.division_id,
             referencia_cliente: formData.referencia_cliente || null,
             descripcion_cliente: formData.descripcion_cliente,
@@ -216,27 +253,21 @@ export function ANMATCasoCreationModal({ onClose, onSuccess }: Props) {
             <div className={`flex items-center gap-2 ${step >= 1 ? 'text-teal-600' : 'text-slate-400'}`}>
               <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold ${
                 step >= 1 ? 'bg-teal-100 text-teal-600' : 'bg-slate-100 text-slate-400'
-              }`}>
-                1
-              </div>
-              <span className="text-sm font-medium">Empresa y División</span>
+              }`}>1</div>
+              <span className="text-sm font-medium">Cliente y División</span>
             </div>
             <ChevronRight className="w-4 h-4 text-slate-300" />
             <div className={`flex items-center gap-2 ${step >= 2 ? 'text-teal-600' : 'text-slate-400'}`}>
               <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold ${
                 step >= 2 ? 'bg-teal-100 text-teal-600' : 'bg-slate-100 text-slate-400'
-              }`}>
-                2
-              </div>
+              }`}>2</div>
               <span className="text-sm font-medium">Detalles</span>
             </div>
             <ChevronRight className="w-4 h-4 text-slate-300" />
             <div className={`flex items-center gap-2 ${step >= 3 ? 'text-teal-600' : 'text-slate-400'}`}>
               <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold ${
                 step >= 3 ? 'bg-teal-100 text-teal-600' : 'bg-slate-100 text-slate-400'
-              }`}>
-                3
-              </div>
+              }`}>3</div>
               <span className="text-sm font-medium">Confirmar</span>
             </div>
           </div>
@@ -251,22 +282,22 @@ export function ANMATCasoCreationModal({ onClose, onSuccess }: Props) {
             </div>
           )}
 
-          {/* Step 1: Empresa y División */}
+          {/* Step 1: Cliente y División */}
           {step === 1 && (
             <div className="space-y-6">
-              {/* Empresa Selection */}
+              {/* Cliente Selection */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Empresa / Cliente *
+                  Cliente *
                 </label>
-                {formData.empresa_id ? (
+                {formData.cliente_id ? (
                   <div className="flex items-center justify-between p-3 bg-teal-50 border border-teal-200 rounded-lg">
                     <div className="flex items-center gap-3">
                       <Building2 className="w-5 h-5 text-teal-600" />
-                      <span className="font-medium text-teal-900">{formData.empresa_nombre}</span>
+                      <span className="font-medium text-teal-900">{formData.cliente_nombre}</span>
                     </div>
                     <button
-                      onClick={() => setFormData({ ...formData, empresa_id: '', empresa_nombre: '' })}
+                      onClick={() => setFormData({ ...formData, cliente_id: '', cliente_nombre: '' })}
                       className="text-teal-600 hover:text-teal-800 text-sm"
                     >
                       Cambiar
@@ -277,29 +308,108 @@ export function ANMATCasoCreationModal({ onClose, onSuccess }: Props) {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                     <input
                       type="text"
-                      placeholder="Buscar por razón social, nombre o CUIT..."
-                      value={searchEmpresa}
-                      onChange={(e) => setSearchEmpresa(e.target.value)}
+                      placeholder="Buscar por razón social o CUIT..."
+                      value={searchCliente}
+                      onChange={(e) => { setSearchCliente(e.target.value); setShowNuevoCliente(false); }}
                       className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
                     />
-                    {filteredEmpresas.length > 0 && (
+                    {filteredClientes.length > 0 && (
                       <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-auto">
-                        {filteredEmpresas.map(empresa => (
+                        {filteredClientes.map(cliente => (
                           <button
-                            key={empresa.id}
-                            onClick={() => handleSelectEmpresa(empresa)}
+                            key={cliente.id}
+                            onClick={() => handleSelectCliente(cliente)}
                             className="w-full text-left px-4 py-3 hover:bg-slate-50 border-b border-slate-100 last:border-0"
                           >
-                            <p className="font-medium text-slate-900">
-                              {empresa.nombre_fantasia || empresa.razon_social}
-                            </p>
-                            <p className="text-sm text-slate-500">
-                              {empresa.razon_social} • CUIT: {empresa.cuit}
-                            </p>
+                            <p className="font-medium text-slate-900">{cliente.razon_social}</p>
+                            <p className="text-sm text-slate-500">CUIT: {cliente.cuit}{cliente.email ? ` • ${cliente.email}` : ''}</p>
                           </button>
                         ))}
                       </div>
                     )}
+                    {searchCliente.length >= 2 && filteredClientes.length === 0 && !showNuevoCliente && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg p-4">
+                        <p className="text-sm text-slate-500 mb-3">No se encontró ningún cliente con "{searchCliente}"</p>
+                        <button
+                          onClick={() => {
+                            setShowNuevoCliente(true);
+                            setNuevoCliente({ ...nuevoCliente, razon_social: searchCliente });
+                          }}
+                          className="flex items-center gap-2 text-sm font-medium text-teal-600 hover:text-teal-800"
+                        >
+                          <UserPlus className="w-4 h-4" />
+                          Crear cliente nuevo
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Formulario crear cliente nuevo */}
+                {showNuevoCliente && !formData.cliente_id && (
+                  <div className="mt-3 p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-3">
+                    <h4 className="font-semibold text-blue-900 flex items-center gap-2">
+                      <UserPlus className="w-4 h-4" />
+                      Nuevo Cliente
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">Razón Social *</label>
+                        <input
+                          type="text"
+                          value={nuevoCliente.razon_social}
+                          onChange={(e) => setNuevoCliente({ ...nuevoCliente, razon_social: e.target.value })}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                          placeholder="Ej: LOCHEMAR S.A."
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">CUIT *</label>
+                        <input
+                          type="text"
+                          value={nuevoCliente.cuit}
+                          onChange={(e) => setNuevoCliente({ ...nuevoCliente, cuit: e.target.value })}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                          placeholder="Ej: 30-12345678-9"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">Email</label>
+                        <input
+                          type="email"
+                          value={nuevoCliente.email}
+                          onChange={(e) => setNuevoCliente({ ...nuevoCliente, email: e.target.value })}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                          placeholder="contacto@empresa.com"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">Teléfono</label>
+                        <input
+                          type="text"
+                          value={nuevoCliente.telefono}
+                          onChange={(e) => setNuevoCliente({ ...nuevoCliente, telefono: e.target.value })}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                          placeholder="011-1234567"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      <button
+                        onClick={handleCrearCliente}
+                        disabled={creandoCliente}
+                        className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg text-sm hover:bg-teal-700 disabled:opacity-50"
+                      >
+                        {creandoCliente ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                        {creandoCliente ? 'Creando...' : 'Crear y seleccionar'}
+                      </button>
+                      <button
+                        onClick={() => setShowNuevoCliente(false)}
+                        className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-sm"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -310,7 +420,7 @@ export function ANMATCasoCreationModal({ onClose, onSuccess }: Props) {
                   División ANMAT *
                 </label>
                 <p className="text-sm text-slate-500 mb-3">
-                  Selecciona el área de ANMAT que corresponde a este caso
+                  Seleccioná el área de ANMAT que corresponde a este caso
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {divisiones.map(division => (
@@ -341,7 +451,7 @@ export function ANMATCasoCreationModal({ onClose, onSuccess }: Props) {
                 <div className="flex items-center gap-3">
                   <Building2 className="w-5 h-5 text-teal-600" />
                   <div>
-                    <p className="font-medium text-teal-900">{formData.empresa_nombre}</p>
+                    <p className="font-medium text-teal-900">{formData.cliente_nombre}</p>
                     <p className="text-sm text-teal-700">{formData.division_nombre}</p>
                   </div>
                 </div>
@@ -356,7 +466,7 @@ export function ANMATCasoCreationModal({ onClose, onSuccess }: Props) {
                   onChange={(e) => setFormData({ ...formData, descripcion_cliente: e.target.value })}
                   className="w-full p-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
                   rows={4}
-                  placeholder="¿Qué productos necesita registrar? ¿Hay alguna urgencia? Describe la situación..."
+                  placeholder="¿Qué productos necesita registrar? ¿Hay alguna urgencia? Describí la situación..."
                 />
               </div>
 
@@ -440,9 +550,7 @@ export function ANMATCasoCreationModal({ onClose, onSuccess }: Props) {
                   Atrás
                 </button>
                 <button
-                  onClick={() => {
-                    if (validateStep2()) setStep(3);
-                  }}
+                  onClick={() => { if (validateStep2()) setStep(3); }}
                   className="px-4 py-2.5 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
                 >
                   Continuar
@@ -458,9 +566,7 @@ export function ANMATCasoCreationModal({ onClose, onSuccess }: Props) {
                 <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0" />
                 <div>
                   <h3 className="font-semibold text-green-900">Listo para crear</h3>
-                  <p className="text-sm text-green-700 mt-1">
-                    Revisa la información antes de confirmar
-                  </p>
+                  <p className="text-sm text-green-700 mt-1">Revisá la información antes de confirmar</p>
                 </div>
               </div>
 
@@ -468,8 +574,8 @@ export function ANMATCasoCreationModal({ onClose, onSuccess }: Props) {
                 <h4 className="font-semibold text-slate-800">Resumen del Caso</h4>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <p className="text-slate-600">Empresa:</p>
-                    <p className="font-medium text-slate-800">{formData.empresa_nombre}</p>
+                    <p className="text-slate-600">Cliente:</p>
+                    <p className="font-medium text-slate-800">{formData.cliente_nombre}</p>
                   </div>
                   <div>
                     <p className="text-slate-600">División:</p>
