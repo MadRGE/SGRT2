@@ -63,13 +63,31 @@ export function ANMATCasoCreationModal({ onClose, onSuccess }: Props) {
     es_urgente: false,
     fecha_ingreso_puerto: '',
     cantidad_skus_estimada: '',
-    // Campos específicos por división
+    // Campos específicos por división - ENVASES
     tipo_envase: '',
     material_envase: '',
     capacidad_envase: '',
+    // ALIMENTOS
     tipo_producto: '',
     tiene_rnpa: false,
-    numero_rnpa: ''
+    numero_rnpa: '',
+    // MEDICAMENTOS
+    tipo_medicamento: '',
+    requiere_receta: false,
+    principio_activo: '',
+    laboratorio_origen: '',
+    // PROD_MEDICOS
+    clase_riesgo: '',
+    uso_previsto: '',
+    tiene_certificado_origen: false,
+    // COSMETICOS
+    tipo_cosmetico: '',
+    tiene_notificacion: false,
+    // USO_DOMESTICO
+    tipo_domisanitario: '',
+    // SUPLEMENTOS
+    tipo_suplemento: '',
+    ingrediente_principal: ''
   });
 
   useEffect(() => {
@@ -219,6 +237,36 @@ export function ANMATCasoCreationModal({ onClose, onSuccess }: Props) {
 
       if (!userData) throw new Error('Usuario no encontrado');
 
+      // Construir datos específicos según la división
+      const datosEspecificos: Record<string, any> = {};
+
+      if (formData.division_codigo === 'ENVASES') {
+        if (formData.tipo_envase) datosEspecificos.tipo_envase = formData.tipo_envase;
+        if (formData.material_envase) datosEspecificos.material_envase = formData.material_envase;
+        if (formData.capacidad_envase) datosEspecificos.capacidad_envase = formData.capacidad_envase;
+      } else if (formData.division_codigo === 'ALIMENTOS') {
+        if (formData.tipo_producto) datosEspecificos.tipo_producto = formData.tipo_producto;
+        datosEspecificos.tiene_rnpa = formData.tiene_rnpa;
+        if (formData.numero_rnpa) datosEspecificos.numero_rnpa = formData.numero_rnpa;
+      } else if (formData.division_codigo === 'MEDICAMENTOS') {
+        if (formData.tipo_medicamento) datosEspecificos.tipo_medicamento = formData.tipo_medicamento;
+        if (formData.laboratorio_origen) datosEspecificos.laboratorio_origen = formData.laboratorio_origen;
+        if (formData.principio_activo) datosEspecificos.principio_activo = formData.principio_activo;
+        datosEspecificos.requiere_receta = formData.requiere_receta;
+      } else if (formData.division_codigo === 'PROD_MEDICOS') {
+        if (formData.clase_riesgo) datosEspecificos.clase_riesgo = formData.clase_riesgo;
+        if (formData.uso_previsto) datosEspecificos.uso_previsto = formData.uso_previsto;
+        datosEspecificos.tiene_certificado_origen = formData.tiene_certificado_origen;
+      } else if (formData.division_codigo === 'COSMETICOS') {
+        if (formData.tipo_cosmetico) datosEspecificos.tipo_cosmetico = formData.tipo_cosmetico;
+        datosEspecificos.tiene_notificacion = formData.tiene_notificacion;
+      } else if (formData.division_codigo === 'USO_DOMESTICO') {
+        if (formData.tipo_domisanitario) datosEspecificos.tipo_domisanitario = formData.tipo_domisanitario;
+      } else if (formData.division_codigo === 'SUPLEMENTOS') {
+        if (formData.tipo_suplemento) datosEspecificos.tipo_suplemento = formData.tipo_suplemento;
+        if (formData.ingrediente_principal) datosEspecificos.ingrediente_principal = formData.ingrediente_principal;
+      }
+
       const { data, error: insertError } = await supabase
         .from('anmat_casos')
         .insert([
@@ -233,7 +281,8 @@ export function ANMATCasoCreationModal({ onClose, onSuccess }: Props) {
             cantidad_skus: formData.cantidad_skus_estimada ? parseInt(formData.cantidad_skus_estimada) : null,
             estado: 'INTAKE',
             created_by: userData.id,
-            asignado_a: userData.id
+            asignado_a: userData.id,
+            datos_especificos: datosEspecificos
           }
         ])
         .select()
@@ -639,6 +688,211 @@ export function ANMATCasoCreationModal({ onClose, onSuccess }: Props) {
                         />
                       </div>
                     )}
+                  </div>
+                </div>
+              )}
+
+              {/* Campos específicos para MEDICAMENTOS */}
+              {formData.division_codigo === 'MEDICAMENTOS' && (
+                <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg space-y-4">
+                  <h4 className="font-medium text-purple-900 text-sm">Información del Medicamento</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Tipo de Medicamento</label>
+                      <select
+                        value={formData.tipo_medicamento}
+                        onChange={(e) => setFormData({ ...formData, tipo_medicamento: e.target.value })}
+                        className="w-full p-2 border border-slate-300 rounded-lg text-sm"
+                      >
+                        <option value="">Seleccionar...</option>
+                        <option value="ESPECIALIDAD">Especialidad Medicinal</option>
+                        <option value="GENERICO">Genérico</option>
+                        <option value="BIOLOGICO">Biológico</option>
+                        <option value="FITOTERAPICO">Fitoterápico</option>
+                        <option value="HOMEOPATICO">Homeopático</option>
+                        <option value="RADIOFARMACO">Radiofármaco</option>
+                        <option value="OTRO">Otro</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Laboratorio de Origen</label>
+                      <input
+                        type="text"
+                        value={formData.laboratorio_origen}
+                        onChange={(e) => setFormData({ ...formData, laboratorio_origen: e.target.value })}
+                        className="w-full p-2 border border-slate-300 rounded-lg text-sm"
+                        placeholder="Nombre del laboratorio"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Principio Activo</label>
+                      <input
+                        type="text"
+                        value={formData.principio_activo}
+                        onChange={(e) => setFormData({ ...formData, principio_activo: e.target.value })}
+                        className="w-full p-2 border border-slate-300 rounded-lg text-sm"
+                        placeholder="Ej: Paracetamol, Ibuprofeno"
+                      />
+                    </div>
+                    <div className="flex items-center gap-3 pt-5">
+                      <input
+                        type="checkbox"
+                        id="requiere_receta"
+                        checked={formData.requiere_receta}
+                        onChange={(e) => setFormData({ ...formData, requiere_receta: e.target.checked })}
+                        className="w-4 h-4 text-teal-600 border-slate-300 rounded"
+                      />
+                      <label htmlFor="requiere_receta" className="text-sm text-slate-700">
+                        Requiere receta
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Campos específicos para PRODUCTOS MÉDICOS */}
+              {formData.division_codigo === 'PROD_MEDICOS' && (
+                <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-lg space-y-4">
+                  <h4 className="font-medium text-indigo-900 text-sm">Información del Producto Médico</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Clase de Riesgo</label>
+                      <select
+                        value={formData.clase_riesgo}
+                        onChange={(e) => setFormData({ ...formData, clase_riesgo: e.target.value })}
+                        className="w-full p-2 border border-slate-300 rounded-lg text-sm"
+                      >
+                        <option value="">Seleccionar...</option>
+                        <option value="I">Clase I - Bajo riesgo</option>
+                        <option value="II">Clase II - Riesgo moderado</option>
+                        <option value="III">Clase III - Riesgo alto</option>
+                        <option value="IV">Clase IV - Riesgo crítico</option>
+                        <option value="DESCONOCIDO">No sé / A determinar</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Uso Previsto</label>
+                      <input
+                        type="text"
+                        value={formData.uso_previsto}
+                        onChange={(e) => setFormData({ ...formData, uso_previsto: e.target.value })}
+                        className="w-full p-2 border border-slate-300 rounded-lg text-sm"
+                        placeholder="Ej: Diagnóstico, Tratamiento, Monitoreo"
+                      />
+                    </div>
+                    <div className="flex items-center gap-3 md:col-span-2">
+                      <input
+                        type="checkbox"
+                        id="tiene_certificado_origen"
+                        checked={formData.tiene_certificado_origen}
+                        onChange={(e) => setFormData({ ...formData, tiene_certificado_origen: e.target.checked })}
+                        className="w-4 h-4 text-teal-600 border-slate-300 rounded"
+                      />
+                      <label htmlFor="tiene_certificado_origen" className="text-sm text-slate-700">
+                        Tiene certificado de libre venta del país de origen
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Campos específicos para COSMÉTICOS */}
+              {formData.division_codigo === 'COSMETICOS' && (
+                <div className="p-4 bg-pink-50 border border-pink-200 rounded-lg space-y-4">
+                  <h4 className="font-medium text-pink-900 text-sm">Información del Cosmético</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Tipo de Cosmético</label>
+                      <select
+                        value={formData.tipo_cosmetico}
+                        onChange={(e) => setFormData({ ...formData, tipo_cosmetico: e.target.value })}
+                        className="w-full p-2 border border-slate-300 rounded-lg text-sm"
+                      >
+                        <option value="">Seleccionar...</option>
+                        <option value="GRADO1">Grado 1 - Higiene/Perfumes</option>
+                        <option value="GRADO2">Grado 2 - Con activos</option>
+                        <option value="CAPILAR">Capilar</option>
+                        <option value="FACIAL">Facial</option>
+                        <option value="CORPORAL">Corporal</option>
+                        <option value="MAQUILLAJE">Maquillaje</option>
+                        <option value="INFANTIL">Infantil</option>
+                        <option value="OTRO">Otro</option>
+                      </select>
+                    </div>
+                    <div className="flex items-center gap-3 pt-5">
+                      <input
+                        type="checkbox"
+                        id="tiene_notificacion"
+                        checked={formData.tiene_notificacion}
+                        onChange={(e) => setFormData({ ...formData, tiene_notificacion: e.target.checked })}
+                        className="w-4 h-4 text-teal-600 border-slate-300 rounded"
+                      />
+                      <label htmlFor="tiene_notificacion" className="text-sm text-slate-700">
+                        Ya tiene notificación en otro país
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Campos específicos para USO DOMÉSTICO */}
+              {formData.division_codigo === 'USO_DOMESTICO' && (
+                <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg space-y-4">
+                  <h4 className="font-medium text-orange-900 text-sm">Información del Producto Domisanitario</h4>
+                  <div className="grid grid-cols-1 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Tipo de Producto</label>
+                      <select
+                        value={formData.tipo_domisanitario}
+                        onChange={(e) => setFormData({ ...formData, tipo_domisanitario: e.target.value })}
+                        className="w-full p-2 border border-slate-300 rounded-lg text-sm"
+                      >
+                        <option value="">Seleccionar...</option>
+                        <option value="LIMPIEZA">Limpieza general</option>
+                        <option value="DESINFECTANTE">Desinfectante</option>
+                        <option value="INSECTICIDA">Insecticida/Plaguicida</option>
+                        <option value="LAVANDINA">Lavandina/Cloro</option>
+                        <option value="DETERGENTE">Detergente</option>
+                        <option value="AMBIENTADOR">Ambientador</option>
+                        <option value="OTRO">Otro</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Campos específicos para SUPLEMENTOS DIETARIOS */}
+              {formData.division_codigo === 'SUPLEMENTOS' && (
+                <div className="p-4 bg-lime-50 border border-lime-200 rounded-lg space-y-4">
+                  <h4 className="font-medium text-lime-900 text-sm">Información del Suplemento Dietario</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Tipo de Suplemento</label>
+                      <select
+                        value={formData.tipo_suplemento}
+                        onChange={(e) => setFormData({ ...formData, tipo_suplemento: e.target.value })}
+                        className="w-full p-2 border border-slate-300 rounded-lg text-sm"
+                      >
+                        <option value="">Seleccionar...</option>
+                        <option value="VITAMINAS">Vitaminas/Minerales</option>
+                        <option value="PROTEINAS">Proteínas/Aminoácidos</option>
+                        <option value="HERBAL">Herbal/Botánico</option>
+                        <option value="OMEGA">Omega 3/Aceites</option>
+                        <option value="PROBIOTICO">Probiótico</option>
+                        <option value="DEPORTIVO">Deportivo</option>
+                        <option value="OTRO">Otro</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Ingrediente Principal</label>
+                      <input
+                        type="text"
+                        value={formData.ingrediente_principal}
+                        onChange={(e) => setFormData({ ...formData, ingrediente_principal: e.target.value })}
+                        className="w-full p-2 border border-slate-300 rounded-lg text-sm"
+                        placeholder="Ej: Vitamina C, Colágeno, Whey"
+                      />
+                    </div>
                   </div>
                 </div>
               )}
