@@ -288,12 +288,17 @@ export function ANMATCasoCreationModal({ onClose, onSuccess }: Props) {
         .select()
         .single();
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error('Error insertando caso:', insertError);
+        throw insertError;
+      }
 
       if (data) {
         onSuccess(data.id);
+        onClose(); // Cerrar el modal después de crear exitosamente
       }
     } catch (err: any) {
+      console.error('Error en handleSubmit:', err);
       setError(err.message || 'Error al crear el caso');
       setLoading(false);
     }
