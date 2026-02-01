@@ -1,0 +1,15 @@
+{
+  "name": "lanchat-server",
+  "version": "1.0.0",
+  "description": "Servidor de LANChat para comunicacion local",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.14.2"
+  },
+  "keywords": ["lan", "chat", "voice", "gaming"],
+  "author": "",
+  "license": "MIT"
+}
