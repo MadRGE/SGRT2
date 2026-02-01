@@ -42,6 +42,7 @@ export function ANMATCasoCreationModal({ onClose, onSuccess }: Props) {
   const [divisiones, setDivisiones] = useState<Division[]>([]);
   const [searchCliente, setSearchCliente] = useState('');
   const [filteredClientes, setFilteredClientes] = useState<Cliente[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
 
   // Crear cliente nuevo inline
   const [showNuevoCliente, setShowNuevoCliente] = useState(false);
@@ -68,17 +69,24 @@ export function ANMATCasoCreationModal({ onClose, onSuccess }: Props) {
   }, []);
 
   useEffect(() => {
-    if (searchCliente.length >= 2) {
+    if (!showDropdown) {
+      setFilteredClientes([]);
+      return;
+    }
+    if (searchCliente.trim() === '') {
+      // Sin texto: mostrar todos
+      setFilteredClientes(clientes.slice(0, 20));
+    } else {
+      // Con texto: filtrar
+      const term = searchCliente.toLowerCase();
       const filtered = clientes.filter(
         c =>
-          c.razon_social.toLowerCase().includes(searchCliente.toLowerCase()) ||
+          c.razon_social.toLowerCase().includes(term) ||
           c.cuit.includes(searchCliente)
       );
-      setFilteredClientes(filtered.slice(0, 10));
-    } else {
-      setFilteredClientes([]);
+      setFilteredClientes(filtered.slice(0, 20));
     }
-  }, [searchCliente, clientes]);
+  }, [searchCliente, clientes, showDropdown]);
 
   const loadClientes = async () => {
     const { data } = await supabase
@@ -106,7 +114,7 @@ export function ANMATCasoCreationModal({ onClose, onSuccess }: Props) {
       cliente_nombre: cliente.razon_social
     });
     setSearchCliente('');
-    setFilteredClientes([]);
+    setShowDropdown(false);
     setShowNuevoCliente(false);
   };
 
@@ -137,7 +145,6 @@ export function ANMATCasoCreationModal({ onClose, onSuccess }: Props) {
     }
 
     if (data) {
-      // Agregar a la lista local y seleccionar
       setClientes([...clientes, data]);
       handleSelectCliente(data);
       setShowNuevoCliente(false);
@@ -308,39 +315,62 @@ export function ANMATCasoCreationModal({ onClose, onSuccess }: Props) {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                     <input
                       type="text"
-                      placeholder="Buscar por razón social o CUIT..."
+                      placeholder="Buscá por razón social o CUIT, o hacé click para ver todos..."
                       value={searchCliente}
-                      onChange={(e) => { setSearchCliente(e.target.value); setShowNuevoCliente(false); }}
+                      onFocus={() => setShowDropdown(true)}
+                      onChange={(e) => { setSearchCliente(e.target.value); setShowDropdown(true); setShowNuevoCliente(false); }}
                       className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
                     />
-                    {filteredClientes.length > 0 && (
+                    {showDropdown && (
                       <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-auto">
-                        {filteredClientes.map(cliente => (
-                          <button
-                            key={cliente.id}
-                            onClick={() => handleSelectCliente(cliente)}
-                            className="w-full text-left px-4 py-3 hover:bg-slate-50 border-b border-slate-100 last:border-0"
-                          >
-                            <p className="font-medium text-slate-900">{cliente.razon_social}</p>
-                            <p className="text-sm text-slate-500">CUIT: {cliente.cuit}{cliente.email ? ` • ${cliente.email}` : ''}</p>
-                          </button>
-                        ))}
+                        {filteredClientes.length > 0 ? (
+                          <>
+                            {filteredClientes.map(cliente => (
+                              <button
+                                key={cliente.id}
+                                onClick={() => handleSelectCliente(cliente)}
+                                className="w-full text-left px-4 py-3 hover:bg-slate-50 border-b border-slate-100 last:border-0"
+                              >
+                                <p className="font-medium text-slate-900">{cliente.razon_social}</p>
+                                <p className="text-sm text-slate-500">CUIT: {cliente.cuit}{cliente.email ? ` • ${cliente.email}` : ''}</p>
+                              </button>
+                            ))}
+                            {/* Opción crear nuevo siempre al final */}
+                            <button
+                              onClick={() => {
+                                setShowNuevoCliente(true);
+                                setShowDropdown(false);
+                                setNuevoCliente({ ...nuevoCliente, razon_social: searchCliente });
+                              }}
+                              className="w-full text-left px-4 py-3 hover:bg-teal-50 border-t border-slate-200 flex items-center gap-2 text-teal-600 font-medium"
+                            >
+                              <UserPlus className="w-4 h-4" />
+                              Crear cliente nuevo
+                            </button>
+                          </>
+                        ) : (
+                          <div className="p-4">
+                            <p className="text-sm text-slate-500 mb-3">
+                              {searchCliente ? `No se encontró "${searchCliente}"` : 'No hay clientes cargados'}
+                            </p>
+                            <button
+                              onClick={() => {
+                                setShowNuevoCliente(true);
+                                setShowDropdown(false);
+                                setNuevoCliente({ ...nuevoCliente, razon_social: searchCliente });
+                              }}
+                              className="flex items-center gap-2 text-sm font-medium text-teal-600 hover:text-teal-800"
+                            >
+                              <UserPlus className="w-4 h-4" />
+                              Crear cliente nuevo
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
-                    {searchCliente.length >= 2 && filteredClientes.length === 0 && !showNuevoCliente && (
-                      <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg p-4">
-                        <p className="text-sm text-slate-500 mb-3">No se encontró ningún cliente con "{searchCliente}"</p>
-                        <button
-                          onClick={() => {
-                            setShowNuevoCliente(true);
-                            setNuevoCliente({ ...nuevoCliente, razon_social: searchCliente });
-                          }}
-                          className="flex items-center gap-2 text-sm font-medium text-teal-600 hover:text-teal-800"
-                        >
-                          <UserPlus className="w-4 h-4" />
-                          Crear cliente nuevo
-                        </button>
-                      </div>
+                    {/* Overlay para cerrar dropdown */}
+                    {showDropdown && (
+                      <div className="fixed inset-0 z-0" onClick={() => setShowDropdown(false)} />
                     )}
                   </div>
                 )}
