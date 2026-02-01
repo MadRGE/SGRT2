@@ -40,6 +40,7 @@ export function ANMATCasoCreationModal({ onClose, onSuccess }: Props) {
   // Data
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [divisiones, setDivisiones] = useState<Division[]>([]);
+  const [loadingDivisiones, setLoadingDivisiones] = useState(true);
   const [searchCliente, setSearchCliente] = useState('');
   const [filteredClientes, setFilteredClientes] = useState<Cliente[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -98,11 +99,19 @@ export function ANMATCasoCreationModal({ onClose, onSuccess }: Props) {
   };
 
   const loadDivisiones = async () => {
-    const { data } = await supabase
+    setLoadingDivisiones(true);
+    const { data, error: fetchError } = await supabase
       .from('anmat_divisiones')
       .select('*')
       .eq('activo', true)
       .order('nombre');
+
+    setLoadingDivisiones(false);
+
+    if (fetchError) {
+      console.error('Error cargando divisiones:', fetchError);
+      return;
+    }
 
     if (data) setDivisiones(data);
   };
@@ -452,24 +461,41 @@ export function ANMATCasoCreationModal({ onClose, onSuccess }: Props) {
                 <p className="text-sm text-slate-500 mb-3">
                   Seleccioná el área de ANMAT que corresponde a este caso
                 </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {divisiones.map(division => (
-                    <button
-                      key={division.id}
-                      onClick={() => handleSelectDivision(division)}
-                      className={`text-left p-4 border rounded-lg transition-all ${
-                        formData.division_id === division.id
-                          ? 'border-teal-500 bg-teal-50 ring-2 ring-teal-500'
-                          : 'border-slate-200 hover:border-teal-300 hover:bg-slate-50'
-                      }`}
-                    >
-                      <p className="font-medium text-slate-900">{division.nombre}</p>
-                      {division.descripcion && (
-                        <p className="text-xs text-slate-500 mt-1">{division.descripcion}</p>
-                      )}
-                    </button>
-                  ))}
-                </div>
+                {loadingDivisiones ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 text-teal-600 animate-spin" />
+                    <span className="ml-2 text-slate-600">Cargando divisiones...</span>
+                  </div>
+                ) : divisiones.length === 0 ? (
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                    <div className="flex items-center gap-2 text-amber-700">
+                      <AlertTriangle className="w-5 h-5" />
+                      <span className="font-medium">No hay divisiones disponibles</span>
+                    </div>
+                    <p className="text-sm text-amber-600 mt-1">
+                      Contactá al administrador para cargar las divisiones ANMAT en el sistema.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {divisiones.map(division => (
+                      <button
+                        key={division.id}
+                        onClick={() => handleSelectDivision(division)}
+                        className={`text-left p-4 border rounded-lg transition-all ${
+                          formData.division_id === division.id
+                            ? 'border-teal-500 bg-teal-50 ring-2 ring-teal-500'
+                            : 'border-slate-200 hover:border-teal-300 hover:bg-slate-50'
+                        }`}
+                      >
+                        <p className="font-medium text-slate-900">{division.nombre}</p>
+                        {division.descripcion && (
+                          <p className="text-xs text-slate-500 mt-1">{division.descripcion}</p>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
