@@ -55,13 +55,21 @@ export function ANMATCasoCreationModal({ onClose, onSuccess }: Props) {
     cliente_id: '',
     cliente_nombre: '',
     division_id: '',
+    division_codigo: '',
     division_nombre: '',
     referencia_cliente: '',
     descripcion_cliente: '',
     fuente_contacto: 'EMAIL',
     es_urgente: false,
     fecha_ingreso_puerto: '',
-    cantidad_skus_estimada: ''
+    cantidad_skus_estimada: '',
+    // Campos específicos por división
+    tipo_envase: '',
+    material_envase: '',
+    capacidad_envase: '',
+    tipo_producto: '',
+    tiene_rnpa: false,
+    numero_rnpa: ''
   });
 
   useEffect(() => {
@@ -165,6 +173,7 @@ export function ANMATCasoCreationModal({ onClose, onSuccess }: Props) {
     setFormData({
       ...formData,
       division_id: division.id,
+      division_codigo: division.codigo,
       division_nombre: division.nombre
     });
     setStep(2);
@@ -477,21 +486,19 @@ export function ANMATCasoCreationModal({ onClose, onSuccess }: Props) {
                     </p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="flex flex-wrap gap-2">
                     {divisiones.map(division => (
                       <button
                         key={division.id}
                         onClick={() => handleSelectDivision(division)}
-                        className={`text-left p-4 border rounded-lg transition-all ${
+                        title={division.descripcion || division.nombre}
+                        className={`px-4 py-2 border rounded-lg transition-all text-sm font-medium ${
                           formData.division_id === division.id
-                            ? 'border-teal-500 bg-teal-50 ring-2 ring-teal-500'
-                            : 'border-slate-200 hover:border-teal-300 hover:bg-slate-50'
+                            ? 'border-teal-500 bg-teal-50 text-teal-700 ring-2 ring-teal-500'
+                            : 'border-slate-200 hover:border-teal-300 hover:bg-slate-50 text-slate-700'
                         }`}
                       >
-                        <p className="font-medium text-slate-900">{division.nombre}</p>
-                        {division.descripcion && (
-                          <p className="text-xs text-slate-500 mt-1">{division.descripcion}</p>
-                        )}
+                        {division.nombre}
                       </button>
                     ))}
                   </div>
@@ -521,11 +528,122 @@ export function ANMATCasoCreationModal({ onClose, onSuccess }: Props) {
                   value={formData.descripcion_cliente}
                   onChange={(e) => setFormData({ ...formData, descripcion_cliente: e.target.value })}
                   className="w-full p-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-                  rows={4}
-                  placeholder="¿Qué productos necesita registrar? ¿Hay alguna urgencia? Describí la situación..."
+                  rows={3}
+                  placeholder="¿Qué necesita el cliente? Describí brevemente la situación..."
                 />
               </div>
 
+              {/* Campos específicos para ENVASES */}
+              {formData.division_codigo === 'ENVASES' && (
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-4">
+                  <h4 className="font-medium text-blue-900 text-sm">Información del Envase</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Tipo de Envase</label>
+                      <select
+                        value={formData.tipo_envase}
+                        onChange={(e) => setFormData({ ...formData, tipo_envase: e.target.value })}
+                        className="w-full p-2 border border-slate-300 rounded-lg text-sm"
+                      >
+                        <option value="">Seleccionar...</option>
+                        <option value="BOTELLA">Botella</option>
+                        <option value="FRASCO">Frasco</option>
+                        <option value="LATA">Lata</option>
+                        <option value="BOLSA">Bolsa/Pouch</option>
+                        <option value="BANDEJA">Bandeja</option>
+                        <option value="FILM">Film</option>
+                        <option value="CAJA">Caja/Cartón</option>
+                        <option value="OTRO">Otro</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Material</label>
+                      <select
+                        value={formData.material_envase}
+                        onChange={(e) => setFormData({ ...formData, material_envase: e.target.value })}
+                        className="w-full p-2 border border-slate-300 rounded-lg text-sm"
+                      >
+                        <option value="">Seleccionar...</option>
+                        <option value="PET">PET</option>
+                        <option value="PEAD">PEAD</option>
+                        <option value="PEBD">PEBD</option>
+                        <option value="PP">Polipropileno (PP)</option>
+                        <option value="PS">Poliestireno (PS)</option>
+                        <option value="VIDRIO">Vidrio</option>
+                        <option value="ALUMINIO">Aluminio</option>
+                        <option value="HOJALATA">Hojalata</option>
+                        <option value="CARTON">Cartón</option>
+                        <option value="MULTICAPA">Multicapa</option>
+                        <option value="OTRO">Otro</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Capacidad</label>
+                      <input
+                        type="text"
+                        value={formData.capacidad_envase}
+                        onChange={(e) => setFormData({ ...formData, capacidad_envase: e.target.value })}
+                        className="w-full p-2 border border-slate-300 rounded-lg text-sm"
+                        placeholder="Ej: 500ml, 1L, 250g"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Campos específicos para ALIMENTOS */}
+              {formData.division_codigo === 'ALIMENTOS' && (
+                <div className="p-4 bg-green-50 border border-green-200 rounded-lg space-y-4">
+                  <h4 className="font-medium text-green-900 text-sm">Información del Producto Alimenticio</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Tipo de Producto</label>
+                      <select
+                        value={formData.tipo_producto}
+                        onChange={(e) => setFormData({ ...formData, tipo_producto: e.target.value })}
+                        className="w-full p-2 border border-slate-300 rounded-lg text-sm"
+                      >
+                        <option value="">Seleccionar...</option>
+                        <option value="LACTEO">Lácteos</option>
+                        <option value="CARNICO">Cárnicos</option>
+                        <option value="BEBIDA">Bebidas</option>
+                        <option value="SNACK">Snacks/Golosinas</option>
+                        <option value="CONSERVA">Conservas</option>
+                        <option value="CONGELADO">Congelados</option>
+                        <option value="PANADERIA">Panadería</option>
+                        <option value="CONDIMENTO">Condimentos/Salsas</option>
+                        <option value="OTRO">Otro</option>
+                      </select>
+                    </div>
+                    <div className="flex items-center gap-3 pt-5">
+                      <input
+                        type="checkbox"
+                        id="tiene_rnpa"
+                        checked={formData.tiene_rnpa}
+                        onChange={(e) => setFormData({ ...formData, tiene_rnpa: e.target.checked })}
+                        className="w-4 h-4 text-teal-600 border-slate-300 rounded"
+                      />
+                      <label htmlFor="tiene_rnpa" className="text-sm text-slate-700">
+                        Ya tiene RNPA
+                      </label>
+                    </div>
+                    {formData.tiene_rnpa && (
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-medium text-slate-600 mb-1">Número de RNPA</label>
+                        <input
+                          type="text"
+                          value={formData.numero_rnpa}
+                          onChange={(e) => setFormData({ ...formData, numero_rnpa: e.target.value })}
+                          className="w-full p-2 border border-slate-300 rounded-lg text-sm"
+                          placeholder="Ej: 02-123456"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Campos comunes */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
