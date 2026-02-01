@@ -4,7 +4,7 @@ import { Plus, Package, Search, MoreVertical, Edit2, Trash2 } from 'lucide-react
 import EnvaseForm from './EnvaseForm';
 
 interface Props {
-  empresaId: string;
+  clienteId: string;
 }
 
 interface Envase {
@@ -22,7 +22,7 @@ interface Envase {
 }
 
 const CATEGORIAS = [
-  { value: 'todos', label: 'Todas las categorias' },
+  { value: 'todos', label: 'Todas las categorías' },
   { value: 'envase_primario', label: 'Envase Primario' },
   { value: 'tapa_cierre', label: 'Tapa/Cierre' },
   { value: 'film_flexible', label: 'Film Flexible' },
@@ -34,12 +34,12 @@ const CATEGORIAS = [
 const ESTADOS = [
   { value: 'todos', label: 'Todos los estados' },
   { value: 'borrador', label: 'Borrador' },
-  { value: 'en_tramite', label: 'En Tramite' },
+  { value: 'en_tramite', label: 'En Trámite' },
   { value: 'vigente', label: 'Vigente' },
   { value: 'vencido', label: 'Vencido' }
 ];
 
-export default function EnvasesList({ empresaId }: Props) {
+export default function EnvasesList({ clienteId }: Props) {
   const [envases, setEnvases] = useState<Envase[]>([]);
   const [filteredEnvases, setFilteredEnvases] = useState<Envase[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,12 +50,12 @@ export default function EnvasesList({ empresaId }: Props) {
   const [editingEnvase, setEditingEnvase] = useState<Envase | null>(null);
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
 
-  useEffect(() => { loadEnvases(); }, [empresaId]);
+  useEffect(() => { loadEnvases(); }, [clienteId]);
   useEffect(() => { filterEnvases(); }, [envases, searchTerm, filtroCategoria, filtroEstado]);
 
   const loadEnvases = async () => {
     setLoading(true);
-    const { data } = await supabase.from('envases').select('*').eq('empresa_id', empresaId).order('created_at', { ascending: false });
+    const { data } = await supabase.from('envases').select('*').eq('cliente_id', clienteId).order('created_at', { ascending: false });
     if (data) setEnvases(data);
     setLoading(false);
   };
@@ -72,7 +72,7 @@ export default function EnvasesList({ empresaId }: Props) {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Eliminar este envase?')) return;
+    if (!confirm('¿Eliminar este envase?')) return;
     await supabase.from('envases').delete().eq('id', id);
     loadEnvases();
     setMenuOpen(null);
@@ -84,7 +84,7 @@ export default function EnvasesList({ empresaId }: Props) {
   };
 
   if (showForm) {
-    return <EnvaseForm empresaId={empresaId} envase={editingEnvase} onClose={() => { setShowForm(false); setEditingEnvase(null); }} onSuccess={() => { setShowForm(false); setEditingEnvase(null); loadEnvases(); }} />;
+    return <EnvaseForm clienteId={clienteId} envase={editingEnvase} onClose={() => { setShowForm(false); setEditingEnvase(null); }} onSuccess={() => { setShowForm(false); setEditingEnvase(null); loadEnvases(); }} />;
   }
 
   return (
