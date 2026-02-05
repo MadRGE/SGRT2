@@ -3,7 +3,6 @@ import { supabase } from '../../lib/supabase';
 import {
   Plus,
   FileText,
-  Upload,
   CheckCircle,
   Clock,
   AlertTriangle,
@@ -11,193 +10,191 @@ import {
   Eye,
   Download,
   Trash2,
-  Calendar
+  Calendar,
+  List,
+  Check
 } from 'lucide-react';
 
 interface Props {
   casoId: string;
-  tramiteCatalogoId?: string;
+  divisionCodigo?: string;
 }
 
 interface Documento {
   id: string;
-  codigo: string | null;
+  tipo_documento: string;
   nombre: string;
-  descripcion: string | null;
-  requerido: boolean;
-  estado: string;
   archivo_url: string | null;
   archivo_nombre: string | null;
-  fecha_solicitud: string | null;
-  fecha_recepcion: string | null;
-  fecha_validacion: string | null;
-  tiene_vencimiento: boolean;
+  estado: string;
   fecha_vencimiento: string | null;
-  comentario_validacion: string | null;
-  familia: {
-    numero_familia: number;
-    nombre: string | null;
-  } | null;
+  notas: string | null;
+  created_at: string;
 }
 
-interface DocumentoRequerido {
+interface Requisito {
   id: string;
   nombre: string;
   descripcion: string | null;
-  obligatorio: boolean;
+  es_obligatorio: boolean;
+  categoria: string | null;
+  orden: number;
+}
+
+interface ChecklistItem {
+  id: string;
+  requisito_id: string;
+  estado: string;
+  notas: string | null;
+  fecha_recepcion: string | null;
+  requisito: Requisito;
 }
 
 const ESTADOS_DOC: Record<string, { label: string; color: string; bg: string; icon: any }> = {
   PENDIENTE: { label: 'Pendiente', color: 'text-slate-700', bg: 'bg-slate-100', icon: Clock },
-  SOLICITADO: { label: 'Solicitado', color: 'text-blue-700', bg: 'bg-blue-100', icon: Clock },
-  RECIBIDO: { label: 'Recibido', color: 'text-cyan-700', bg: 'bg-cyan-100', icon: FileText },
-  EN_REVISION: { label: 'En Revisión', color: 'text-purple-700', bg: 'bg-purple-100', icon: Eye },
-  VALIDADO: { label: 'Validado', color: 'text-green-700', bg: 'bg-green-100', icon: CheckCircle },
+  RECIBIDO: { label: 'Recibido', color: 'text-blue-700', bg: 'bg-blue-100', icon: FileText },
+  APROBADO: { label: 'Aprobado', color: 'text-green-700', bg: 'bg-green-100', icon: CheckCircle },
   RECHAZADO: { label: 'Rechazado', color: 'text-red-700', bg: 'bg-red-100', icon: XCircle },
-  OBSERVADO: { label: 'Observado', color: 'text-orange-700', bg: 'bg-orange-100', icon: AlertTriangle }
+  NO_APLICA: { label: 'No Aplica', color: 'text-gray-500', bg: 'bg-gray-100', icon: Eye }
 };
 
-export function ANMATTabDocumentos({ casoId, tramiteCatalogoId }: Props) {
+const CATEGORIAS: Record<string, { label: string; color: string }> = {
+  LEGAL: { label: 'Legal', color: 'bg-blue-100 text-blue-700' },
+  TECNICO: { label: 'Técnico', color: 'bg-purple-100 text-purple-700' },
+  COMERCIAL: { label: 'Comercial', color: 'bg-green-100 text-green-700' },
+  SANITARIO: { label: 'Sanitario', color: 'bg-orange-100 text-orange-700' }
+};
+
+export function ANMATTabDocumentos({ casoId, divisionCodigo }: Props) {
+  const [requisitos, setRequisitos] = useState<Requisito[]>([]);
+  const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
   const [documentos, setDocumentos] = useState<Documento[]>([]);
-  const [docsRequeridos, setDocsRequeridos] = useState<DocumentoRequerido[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [familias, setFamilias] = useState<{ id: string; numero_familia: number; nombre: string | null }[]>([]);
+  const [checklistGenerado, setChecklistGenerado] = useState(false);
 
   const [formData, setFormData] = useState({
     nombre: '',
-    descripcion: '',
-    familia_id: '',
-    requerido: true,
-    tiene_vencimiento: false,
-    fecha_vencimiento: ''
+    tipo_documento: '',
+    fecha_vencimiento: '',
+    notas: ''
   });
 
   useEffect(() => {
-    loadDocumentos();
-    loadFamilias();
-    if (tramiteCatalogoId) {
-      loadDocsRequeridos();
-    }
-  }, [casoId, tramiteCatalogoId]);
+    loadData();
+  }, [casoId, divisionCodigo]);
 
-  const loadDocumentos = async () => {
+  const loadData = async () => {
     setLoading(true);
 
-    const { data, error } = await supabase
-      .from('anmat_documentos')
+    // Cargar requisitos de la división
+    if (divisionCodigo) {
+      const { data: reqData } = await supabase
+        .from('anmat_requisitos_documentos')
+        .select('*')
+        .eq('division_codigo', divisionCodigo)
+        .eq('activo', true)
+        .order('orden');
+
+      if (reqData) setRequisitos(reqData);
+    }
+
+    // Cargar checklist existente
+    const { data: checklistData } = await supabase
+      .from('anmat_caso_documentos_checklist')
       .select(`
         *,
-        familia:anmat_familias(numero_familia, nombre)
+        requisito:anmat_requisitos_documentos(*)
       `)
-      .eq('caso_id', casoId)
-      .order('codigo');
+      .eq('caso_id', casoId);
 
-    if (error) {
-      console.error('Error loading documentos:', error);
-    } else {
-      setDocumentos(data as any);
+    if (checklistData && checklistData.length > 0) {
+      setChecklist(checklistData as any);
+      setChecklistGenerado(true);
     }
+
+    // Cargar documentos adicionales
+    const { data: docsData } = await supabase
+      .from('anmat_documentos')
+      .select('*')
+      .eq('caso_id', casoId)
+      .order('created_at', { ascending: false });
+
+    if (docsData) setDocumentos(docsData);
 
     setLoading(false);
   };
 
-  const loadFamilias = async () => {
-    const { data } = await supabase
-      .from('anmat_familias')
-      .select('id, numero_familia, nombre')
-      .eq('caso_id', casoId)
-      .order('numero_familia');
-
-    if (data) setFamilias(data);
-  };
-
-  const loadDocsRequeridos = async () => {
-    if (!tramiteCatalogoId) return;
-
-    const { data } = await supabase
-      .from('tramites_documentos_req')
-      .select('id, nombre, descripcion, obligatorio')
-      .eq('tramite_catalogo_id', tramiteCatalogoId)
-      .order('orden');
-
-    if (data) setDocsRequeridos(data);
-  };
-
   const handleGenerarChecklist = async () => {
-    if (docsRequeridos.length === 0) {
-      alert('No hay documentos requeridos configurados para este tipo de trámite');
+    if (requisitos.length === 0) {
+      alert('No hay requisitos configurados para esta división');
       return;
     }
 
-    const docsToInsert = docsRequeridos.map((doc, index) => ({
+    const itemsToInsert = requisitos.map(req => ({
       caso_id: casoId,
-      documento_req_id: doc.id,
-      codigo: `DOC-${String(index + 1).padStart(3, '0')}`,
-      nombre: doc.nombre,
-      descripcion: doc.descripcion,
-      requerido: doc.obligatorio,
+      requisito_id: req.id,
       estado: 'PENDIENTE'
     }));
 
     const { error } = await supabase
-      .from('anmat_documentos')
-      .insert(docsToInsert);
+      .from('anmat_caso_documentos_checklist')
+      .insert(itemsToInsert);
 
     if (error) {
-      alert('Error al generar checklist: ' + error.message);
+      console.error('Error generando checklist:', error);
+      alert('Error al generar checklist');
     } else {
-      loadDocumentos();
+      loadData();
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleUpdateChecklistItem = async (itemId: string, estado: string) => {
+    const updateData: any = {
+      estado,
+      updated_at: new Date().toISOString()
+    };
 
-    const nextCodigo = `DOC-${String(documentos.length + 1).padStart(3, '0')}`;
+    if (estado === 'RECIBIDO') {
+      updateData.fecha_recepcion = new Date().toISOString().split('T')[0];
+    }
+
+    const { error } = await supabase
+      .from('anmat_caso_documentos_checklist')
+      .update(updateData)
+      .eq('id', itemId);
+
+    if (error) {
+      alert('Error: ' + error.message);
+    } else {
+      loadData();
+    }
+  };
+
+  const handleSubmitDoc = async (e: React.FormEvent) => {
+    e.preventDefault();
 
     const { error } = await supabase
       .from('anmat_documentos')
       .insert([{
         caso_id: casoId,
-        codigo: nextCodigo,
+        tipo_documento: formData.tipo_documento || 'OTRO',
         nombre: formData.nombre,
-        descripcion: formData.descripcion || null,
-        familia_id: formData.familia_id || null,
-        requerido: formData.requerido,
-        tiene_vencimiento: formData.tiene_vencimiento,
         fecha_vencimiento: formData.fecha_vencimiento || null,
+        notas: formData.notas || null,
         estado: 'PENDIENTE'
       }]);
 
     if (error) {
-      alert('Error al crear: ' + error.message);
-    } else {
-      resetForm();
-      loadDocumentos();
-    }
-  };
-
-  const handleChangeEstado = async (docId: string, nuevoEstado: string) => {
-    const updateData: any = { estado: nuevoEstado };
-
-    if (nuevoEstado === 'VALIDADO') {
-      updateData.fecha_validacion = new Date().toISOString();
-    }
-
-    const { error } = await supabase
-      .from('anmat_documentos')
-      .update(updateData)
-      .eq('id', docId);
-
-    if (error) {
       alert('Error: ' + error.message);
     } else {
-      loadDocumentos();
+      setFormData({ nombre: '', tipo_documento: '', fecha_vencimiento: '', notas: '' });
+      setShowForm(false);
+      loadData();
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDeleteDoc = async (id: string) => {
     if (!confirm('¿Eliminar este documento?')) return;
 
     const { error } = await supabase
@@ -205,41 +202,7 @@ export function ANMATTabDocumentos({ casoId, tramiteCatalogoId }: Props) {
       .delete()
       .eq('id', id);
 
-    if (error) {
-      alert('Error: ' + error.message);
-    } else {
-      loadDocumentos();
-    }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      nombre: '',
-      descripcion: '',
-      familia_id: '',
-      requerido: true,
-      tiene_vencimiento: false,
-      fecha_vencimiento: ''
-    });
-    setShowForm(false);
-  };
-
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return '—';
-    return new Date(dateString).toLocaleDateString('es-AR');
-  };
-
-  const isVencido = (fecha: string | null) => {
-    if (!fecha) return false;
-    return new Date(fecha) < new Date();
-  };
-
-  const isPorVencer = (fecha: string | null) => {
-    if (!fecha) return false;
-    const vencimiento = new Date(fecha);
-    const hoy = new Date();
-    const diff = (vencimiento.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24);
-    return diff > 0 && diff <= 30;
+    if (!error) loadData();
   };
 
   if (loading) {
@@ -250,77 +213,179 @@ export function ANMATTabDocumentos({ casoId, tramiteCatalogoId }: Props) {
     );
   }
 
-  // Stats
-  const totalDocs = documentos.length;
-  const docsPendientes = documentos.filter(d => d.estado === 'PENDIENTE' || d.estado === 'SOLICITADO').length;
-  const docsValidados = documentos.filter(d => d.estado === 'VALIDADO').length;
-  const docsObservados = documentos.filter(d => d.estado === 'OBSERVADO' || d.estado === 'RECHAZADO').length;
+  // Stats del checklist
+  const totalChecklist = checklist.length;
+  const completados = checklist.filter(c => c.estado === 'RECIBIDO' || c.estado === 'APROBADO').length;
+  const pendientes = checklist.filter(c => c.estado === 'PENDIENTE').length;
+  const porcentaje = totalChecklist > 0 ? Math.round((completados / totalChecklist) * 100) : 0;
+
+  // Agrupar checklist por categoría
+  const checklistPorCategoria = checklist.reduce((acc, item) => {
+    const cat = item.requisito?.categoria || 'OTRO';
+    if (!acc[cat]) acc[cat] = [];
+    acc[cat].push(item);
+    return acc;
+  }, {} as Record<string, ChecklistItem[]>);
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-slate-800">Documentación</h3>
+          <h3 className="text-lg font-semibold text-slate-800">Documentación Requerida</h3>
           <p className="text-sm text-slate-600">
-            {docsValidados} de {totalDocs} documentos validados
+            {checklistGenerado
+              ? `${completados} de ${totalChecklist} documentos recibidos`
+              : 'Genera el checklist para ver los requisitos'
+            }
           </p>
         </div>
         <div className="flex gap-2">
-          {docsRequeridos.length > 0 && documentos.length === 0 && (
+          {!checklistGenerado && requisitos.length > 0 && (
             <button
               onClick={handleGenerarChecklist}
-              className="flex items-center gap-2 border border-teal-600 text-teal-600 px-4 py-2 rounded-lg hover:bg-teal-50 transition-colors"
+              className="flex items-center gap-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors"
             >
-              <FileText className="w-4 h-4" />
-              Generar Checklist
+              <List className="w-4 h-4" />
+              Generar Checklist ({requisitos.length} items)
             </button>
           )}
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors"
+            className="flex items-center gap-2 border border-teal-600 text-teal-600 px-4 py-2 rounded-lg hover:bg-teal-50 transition-colors"
           >
             <Plus className="w-4 h-4" />
-            Agregar Documento
+            Documento Extra
           </button>
         </div>
       </div>
 
       {/* Progress Bar */}
-      {totalDocs > 0 && (
+      {checklistGenerado && totalChecklist > 0 && (
         <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
           <div className="flex justify-between text-sm mb-2">
             <span className="text-slate-600">Progreso de documentación</span>
-            <span className="font-medium">{Math.round((docsValidados / totalDocs) * 100)}%</span>
+            <span className="font-medium text-teal-600">{porcentaje}%</span>
           </div>
           <div className="w-full bg-slate-200 rounded-full h-3">
             <div
-              className="bg-green-500 h-3 rounded-full transition-all"
-              style={{ width: `${(docsValidados / totalDocs) * 100}%` }}
+              className="bg-teal-500 h-3 rounded-full transition-all"
+              style={{ width: `${porcentaje}%` }}
             />
           </div>
           <div className="flex gap-4 mt-3 text-xs">
             <span className="flex items-center gap-1">
-              <div className="w-2 h-2 bg-slate-300 rounded-full"></div>
-              Pendientes: {docsPendientes}
+              <div className="w-2 h-2 bg-slate-400 rounded-full"></div>
+              Pendientes: {pendientes}
             </span>
             <span className="flex items-center gap-1">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              Validados: {docsValidados}
-            </span>
-            <span className="flex items-center gap-1">
-              <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-              Observados: {docsObservados}
+              <div className="w-2 h-2 bg-teal-500 rounded-full"></div>
+              Recibidos: {completados}
             </span>
           </div>
         </div>
       )}
 
-      {/* Form */}
+      {/* Checklist por Categoría */}
+      {checklistGenerado && Object.keys(checklistPorCategoria).length > 0 && (
+        <div className="space-y-4">
+          {Object.entries(checklistPorCategoria).map(([categoria, items]) => {
+            const catConfig = CATEGORIAS[categoria] || { label: categoria, color: 'bg-gray-100 text-gray-700' };
+            return (
+              <div key={categoria} className="border border-slate-200 rounded-lg overflow-hidden">
+                <div className={`px-4 py-2 ${catConfig.color} font-medium text-sm`}>
+                  {catConfig.label} ({items.length})
+                </div>
+                <div className="divide-y divide-slate-100">
+                  {items.map(item => {
+                    const estadoConfig = ESTADOS_DOC[item.estado] || ESTADOS_DOC.PENDIENTE;
+                    return (
+                      <div key={item.id} className="px-4 py-3 flex items-center justify-between hover:bg-slate-50">
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => handleUpdateChecklistItem(
+                              item.id,
+                              item.estado === 'RECIBIDO' ? 'PENDIENTE' : 'RECIBIDO'
+                            )}
+                            className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${
+                              item.estado === 'RECIBIDO' || item.estado === 'APROBADO'
+                                ? 'bg-teal-500 border-teal-500 text-white'
+                                : 'border-slate-300 hover:border-teal-400'
+                            }`}
+                          >
+                            {(item.estado === 'RECIBIDO' || item.estado === 'APROBADO') && (
+                              <Check className="w-4 h-4" />
+                            )}
+                          </button>
+                          <div>
+                            <p className={`text-sm ${
+                              item.estado === 'RECIBIDO' || item.estado === 'APROBADO'
+                                ? 'text-slate-500 line-through'
+                                : 'text-slate-800'
+                            }`}>
+                              {item.requisito?.nombre}
+                              {item.requisito?.es_obligatorio && (
+                                <span className="text-red-500 ml-1">*</span>
+                              )}
+                            </p>
+                            {item.requisito?.descripcion && (
+                              <p className="text-xs text-slate-500">{item.requisito.descripcion}</p>
+                            )}
+                          </div>
+                        </div>
+                        <select
+                          value={item.estado}
+                          onChange={(e) => handleUpdateChecklistItem(item.id, e.target.value)}
+                          className={`text-xs border rounded px-2 py-1 ${estadoConfig.bg} ${estadoConfig.color}`}
+                        >
+                          {Object.entries(ESTADOS_DOC).map(([key, { label }]) => (
+                            <option key={key} value={key}>{label}</option>
+                          ))}
+                        </select>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Sin checklist */}
+      {!checklistGenerado && requisitos.length > 0 && (
+        <div className="text-center py-8 bg-slate-50 rounded-lg border border-slate-200">
+          <List className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+          <p className="text-slate-600 font-medium">Checklist no generado</p>
+          <p className="text-sm text-slate-500 mt-1 mb-4">
+            Hay {requisitos.length} documentos requeridos para esta división
+          </p>
+          <button
+            onClick={handleGenerarChecklist}
+            className="inline-flex items-center gap-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700"
+          >
+            <List className="w-4 h-4" />
+            Generar Checklist
+          </button>
+        </div>
+      )}
+
+      {/* Sin requisitos configurados */}
+      {!checklistGenerado && requisitos.length === 0 && (
+        <div className="text-center py-8 bg-amber-50 rounded-lg border border-amber-200">
+          <AlertTriangle className="w-12 h-12 text-amber-400 mx-auto mb-3" />
+          <p className="text-amber-700 font-medium">Sin requisitos configurados</p>
+          <p className="text-sm text-amber-600 mt-1">
+            No hay documentos requeridos definidos para esta división
+          </p>
+        </div>
+      )}
+
+      {/* Form para documento extra */}
       {showForm && (
         <div className="bg-slate-50 border border-slate-200 rounded-lg p-6">
-          <h4 className="font-semibold text-slate-800 mb-4">Nuevo Documento</h4>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <h4 className="font-semibold text-slate-800 mb-4">Agregar Documento Extra</h4>
+          <form onSubmit={handleSubmitDoc} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-slate-700 mb-1">Nombre *</label>
@@ -329,63 +394,39 @@ export function ANMATTabDocumentos({ casoId, tramiteCatalogoId }: Props) {
                   required
                   value={formData.nombre}
                   onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                  className="w-full p-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-                  placeholder="Ej: Certificado de Migración Global"
+                  className="w-full p-2.5 border border-slate-300 rounded-lg"
+                  placeholder="Nombre del documento"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Familia (opcional)</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Tipo</label>
                 <select
-                  value={formData.familia_id}
-                  onChange={(e) => setFormData({ ...formData, familia_id: e.target.value })}
-                  className="w-full p-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  value={formData.tipo_documento}
+                  onChange={(e) => setFormData({ ...formData, tipo_documento: e.target.value })}
+                  className="w-full p-2.5 border border-slate-300 rounded-lg"
                 >
-                  <option value="">General (todo el caso)</option>
-                  {familias.map(fam => (
-                    <option key={fam.id} value={fam.id}>
-                      F{fam.numero_familia} - {fam.nombre || 'Sin nombre'}
-                    </option>
-                  ))}
+                  <option value="">Seleccionar...</option>
+                  <option value="LEGAL">Legal</option>
+                  <option value="TECNICO">Técnico</option>
+                  <option value="COMERCIAL">Comercial</option>
+                  <option value="OTRO">Otro</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Fecha Vencimiento</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Vencimiento</label>
                 <input
                   type="date"
                   value={formData.fecha_vencimiento}
-                  onChange={(e) => setFormData({ 
-                    ...formData, 
-                    fecha_vencimiento: e.target.value,
-                    tiene_vencimiento: !!e.target.value 
-                  })}
-                  className="w-full p-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  onChange={(e) => setFormData({ ...formData, fecha_vencimiento: e.target.value })}
+                  className="w-full p-2.5 border border-slate-300 rounded-lg"
                 />
               </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Descripción</label>
-              <textarea
-                value={formData.descripcion}
-                onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
-                className="w-full p-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-                rows={2}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="requerido"
-                checked={formData.requerido}
-                onChange={(e) => setFormData({ ...formData, requerido: e.target.checked })}
-                className="w-4 h-4 text-teal-600 rounded"
-              />
-              <label htmlFor="requerido" className="text-sm text-slate-700">Documento obligatorio</label>
             </div>
             <div className="flex gap-3">
               <button type="submit" className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700">
                 Agregar
               </button>
-              <button type="button" onClick={resetForm} className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50">
+              <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50">
                 Cancelar
               </button>
             </div>
@@ -393,97 +434,34 @@ export function ANMATTabDocumentos({ casoId, tramiteCatalogoId }: Props) {
         </div>
       )}
 
-      {/* Documents List */}
-      {documentos.length === 0 ? (
-        <div className="text-center py-12 bg-slate-50 rounded-lg border border-slate-200">
-          <FileText className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-          <p className="text-slate-600">No hay documentos cargados</p>
-          {docsRequeridos.length > 0 && (
-            <p className="text-sm text-slate-500 mt-1">
-              Usa "Generar Checklist" para crear la lista de documentos requeridos
-            </p>
-          )}
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {documentos.map(doc => {
-            const estadoConfig = ESTADOS_DOC[doc.estado] || ESTADOS_DOC.PENDIENTE;
-            const Icon = estadoConfig.icon;
-            const vencido = isVencido(doc.fecha_vencimiento);
-            const porVencer = isPorVencer(doc.fecha_vencimiento);
-
-            return (
-              <div
-                key={doc.id}
-                className={`bg-white border rounded-lg p-4 ${
-                  vencido ? 'border-red-300 bg-red-50' : porVencer ? 'border-yellow-300 bg-yellow-50' : 'border-slate-200'
-                }`}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-3">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${estadoConfig.bg}`}>
-                      <Icon className={`w-5 h-5 ${estadoConfig.color}`} />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-medium text-slate-900">{doc.nombre}</h4>
-                        {doc.requerido && (
-                          <span className="text-xs text-red-600">*</span>
-                        )}
-                        {doc.familia && (
-                          <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">
-                            F{doc.familia.numero_familia}
-                          </span>
-                        )}
-                      </div>
-                      {doc.descripcion && (
-                        <p className="text-sm text-slate-600 mt-1">{doc.descripcion}</p>
-                      )}
-                      <div className="flex items-center gap-4 mt-2 text-xs text-slate-500">
-                        {doc.codigo && <span className="font-mono">{doc.codigo}</span>}
-                        {doc.fecha_vencimiento && (
-                          <span className={`flex items-center gap-1 ${vencido ? 'text-red-600' : porVencer ? 'text-yellow-600' : ''}`}>
-                            <Calendar className="w-3 h-3" />
-                            Vence: {formatDate(doc.fecha_vencimiento)}
-                            {vencido && ' (VENCIDO)'}
-                            {porVencer && !vencido && ' (Por vencer)'}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <select
-                      value={doc.estado}
-                      onChange={(e) => handleChangeEstado(doc.id, e.target.value)}
-                      className={`text-xs border rounded px-2 py-1 ${estadoConfig.bg} ${estadoConfig.color}`}
-                    >
-                      {Object.entries(ESTADOS_DOC).map(([key, { label }]) => (
-                        <option key={key} value={key}>{label}</option>
-                      ))}
-                    </select>
-                    {doc.archivo_url && (
-                      <a
-                        href={doc.archivo_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
-                      >
-                        <Download className="w-4 h-4" />
-                      </a>
+      {/* Documentos extras */}
+      {documentos.length > 0 && (
+        <div>
+          <h4 className="font-medium text-slate-800 mb-3">Documentos Adicionales</h4>
+          <div className="space-y-2">
+            {documentos.map(doc => (
+              <div key={doc.id} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <FileText className="w-5 h-5 text-slate-400" />
+                  <div>
+                    <p className="text-sm font-medium text-slate-800">{doc.nombre}</p>
+                    {doc.fecha_vencimiento && (
+                      <p className="text-xs text-slate-500">
+                        <Calendar className="w-3 h-3 inline mr-1" />
+                        Vence: {new Date(doc.fecha_vencimiento).toLocaleDateString('es-AR')}
+                      </p>
                     )}
-                    <button
-                      onClick={() => handleDelete(doc.id)}
-                      className="p-1.5 text-red-600 hover:bg-red-50 rounded"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
                   </div>
                 </div>
+                <button
+                  onClick={() => handleDeleteDoc(doc.id)}
+                  className="p-1.5 text-red-600 hover:bg-red-50 rounded"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
-            );
-          })}
+            ))}
+          </div>
         </div>
       )}
     </div>

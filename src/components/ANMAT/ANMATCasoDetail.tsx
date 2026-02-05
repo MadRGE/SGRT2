@@ -439,7 +439,7 @@ export function ANMATCasoDetail({ casoId, onBack }: Props) {
           )}
 
           {activeTab === 'documentos' && (
-            <ANMATTabDocumentos casoId={casoId} tramiteCatalogoId={caso.tramite_catalogo?.id} />
+            <ANMATTabDocumentos casoId={casoId} divisionCodigo={caso.division?.codigo} />
           )}
 
           {activeTab === 'comunicaciones' && (
