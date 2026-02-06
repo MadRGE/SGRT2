@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { UserPlus, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
+import { UserPlus, Loader2, AlertCircle, CheckCircle, Building2, Truck } from 'lucide-react';
 
 interface Props {
   onSwitchToLogin: () => void;
@@ -12,6 +12,7 @@ export default function SignUp({ onSwitchToLogin }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [rol, setRol] = useState<'cliente' | 'despachante'>('cliente');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -32,7 +33,7 @@ export default function SignUp({ onSwitchToLogin }: Props) {
 
     setLoading(true);
 
-    const { error } = await signUp(email, password, nombre);
+    const { error } = await signUp(email, password, nombre, rol);
 
     if (error) {
       setError(error.message);
@@ -133,6 +134,42 @@ export default function SignUp({ onSwitchToLogin }: Props) {
               placeholder="••••••••"
               disabled={loading || success}
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Tipo de Cuenta
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setRol('cliente')}
+                disabled={loading || success}
+                className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all ${
+                  rol === 'cliente'
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    : 'border-slate-200 hover:border-slate-300 text-slate-600'
+                }`}
+              >
+                <Building2 className="w-6 h-6" />
+                <span className="font-medium text-sm">Cliente</span>
+                <span className="text-xs text-center opacity-75">Empresa importadora</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setRol('despachante')}
+                disabled={loading || success}
+                className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all ${
+                  rol === 'despachante'
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    : 'border-slate-200 hover:border-slate-300 text-slate-600'
+                }`}
+              >
+                <Truck className="w-6 h-6" />
+                <span className="font-medium text-sm">Despachante</span>
+                <span className="text-xs text-center opacity-75">Agente de aduana</span>
+              </button>
+            </div>
           </div>
 
           <button
