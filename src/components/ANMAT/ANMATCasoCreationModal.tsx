@@ -234,7 +234,7 @@ export function ANMATCasoCreationModal({ onClose, onSuccess }: Props) {
       const { data: userData, error: userError } = await supabase
         .from('usuarios')
         .select('id')
-        .eq('auth_id', user.id)
+        .eq('auth_user_id', user.id)
         .maybeSingle();
 
       console.log('Usuario query result:', { userData, userError });
@@ -245,8 +245,8 @@ export function ANMATCasoCreationModal({ onClose, onSuccess }: Props) {
       }
 
       if (!userData) {
-        console.error('Usuario no encontrado para auth_id:', user.id);
-        throw new Error(`Usuario no encontrado. Tu auth_id es: ${user.id}. Verificá que exista en la tabla usuarios.`);
+        console.error('Usuario no encontrado para auth_user_id:', user.id);
+        throw new Error(`Usuario no encontrado. Tu auth_user_id es: ${user.id}. Verificá que exista en la tabla usuarios.`);
       }
 
       // Construir datos específicos según la división
