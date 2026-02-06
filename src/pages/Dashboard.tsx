@@ -73,7 +73,6 @@ export default function Dashboard({ onCreateProject, onViewProject }: Props) {
           nombre_proyecto,
           estado,
           created_at,
-          archivado,
           clientes (razon_social),
           expedientes (semaforo),
           presupuestos (estado, total_final)
@@ -85,28 +84,34 @@ export default function Dashboard({ onCreateProject, onViewProject }: Props) {
         // Si falla, intentar query simple sin relaciones
         const { data: proyectosSimple } = await supabase
           .from('proyectos')
-          .select('id, nombre_proyecto, estado, created_at, archivado')
+          .select('id, nombre_proyecto, estado, created_at')
           .order('created_at', { ascending: false });
 
         if (proyectosSimple) {
           // Mapear a la estructura esperada con valores por defecto
           const proyectosMapeados = proyectosSimple.map((p: any) => ({
             ...p,
+            archivado: false,
             clientes: { razon_social: 'Sin cliente' },
             expedientes: [],
             presupuestos: []
           }));
           setProyectos(proyectosMapeados as any);
           setStats({
-            proyectosActivos: proyectosSimple.filter((p: any) => !p.archivado && p.estado !== 'finalizado').length,
+            proyectosActivos: proyectosSimple.filter((p: any) => p.estado !== 'finalizado').length,
             expedientesEnRiesgo: 0,
             habilitacionesPendientes: 0
           });
         }
       } else if (proyectosData) {
-        setProyectos(proyectosData as any);
+        // Agregar archivado: false por defecto si no existe
+        const proyectosConDefaults = proyectosData.map((p: any) => ({
+          ...p,
+          archivado: p.archivado ?? false
+        }));
+        setProyectos(proyectosConDefaults as any);
 
-        const proyectosActivos = proyectosData.filter(
+        const proyectosActivos = proyectosConDefaults.filter(
           (p: any) => !p.archivado && p.estado !== 'finalizado'
         ).length;
 
