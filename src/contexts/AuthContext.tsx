@@ -56,7 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data } = await supabase
       .from('usuarios')
       .select('rol, cliente_id')
-      .eq('auth_id', userId)
+      .eq('auth_user_id', userId)
       .maybeSingle();
 
     if (data) {
@@ -95,7 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (data.user) {
         await supabase.from('usuarios').insert({
-          auth_id: data.user.id,
+          auth_user_id: data.user.id,
           email,
           nombre,
           rol,

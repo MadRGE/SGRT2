@@ -12,7 +12,7 @@ interface UsuarioCliente {
   nombre: string;
   rol: string;
   created_at: string;
-  auth_id: string | null;
+  auth_user_id: string | null;
 }
 
 export function TabUsuarios({ clienteId }: Props) {
@@ -86,13 +86,13 @@ export function TabUsuarios({ clienteId }: Props) {
         <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-lg border border-green-200">
           <p className="text-sm text-green-700 font-medium">Usuarios Activos</p>
           <p className="text-3xl font-bold text-green-800 mt-2">
-            {usuarios.filter((u) => u.auth_id).length}
+            {usuarios.filter((u) => u.auth_user_id).length}
           </p>
         </div>
         <div className="bg-gradient-to-br from-orange-50 to-amber-50 p-6 rounded-lg border border-orange-200">
           <p className="text-sm text-orange-700 font-medium">Pendientes</p>
           <p className="text-3xl font-bold text-orange-800 mt-2">
-            {usuarios.filter((u) => !u.auth_id).length}
+            {usuarios.filter((u) => !u.auth_user_id).length}
           </p>
         </div>
       </div>
@@ -148,7 +148,7 @@ export function TabUsuarios({ clienteId }: Props) {
                     </span>
                   </td>
                   <td className="p-3">
-                    {usuario.auth_id ? (
+                    {usuario.auth_user_id ? (
                       <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
                         Activo
                       </span>
@@ -238,7 +238,7 @@ function NewUserForm({
             nombre: formData.nombre,
             rol: 'cliente',
             cliente_id: clienteId,
-            auth_id: authData.user.id
+            auth_user_id: authData.user.id
           }
         ]);
 
