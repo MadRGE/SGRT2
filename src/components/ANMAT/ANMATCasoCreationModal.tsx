@@ -229,13 +229,25 @@ export function ANMATCasoCreationModal({ onClose, onSuccess }: Props) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No hay usuario autenticado');
 
-      const { data: userData } = await supabase
+      console.log('Auth user ID:', user.id);
+
+      const { data: userData, error: userError } = await supabase
         .from('usuarios')
         .select('id')
         .eq('auth_user_id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (!userData) throw new Error('Usuario no encontrado');
+      console.log('Usuario query result:', { userData, userError });
+
+      if (userError) {
+        console.error('Error buscando usuario:', userError);
+        throw new Error('Error buscando usuario: ' + userError.message);
+      }
+
+      if (!userData) {
+        console.error('Usuario no encontrado para auth_user_id:', user.id);
+        throw new Error(`Usuario no encontrado. Tu auth_user_id es: ${user.id}. Verificá que exista en la tabla usuarios.`);
+      }
 
       // Construir datos específicos según la división
       const datosEspecificos: Record<string, any> = {};
