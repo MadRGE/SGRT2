@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, LogOut, Loader2 } from 'lucide-react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './pages/Auth/Login';
 import SignUp from './pages/Auth/SignUp';
+import ResetPassword from './pages/Auth/ResetPassword';
 import Layout from './components/Layout/Layout';
 import PortalClienteLayout from './components/Layout/PortalClienteLayout';
 import Dashboard from './pages/Dashboard';
@@ -352,6 +353,18 @@ function AppContent() {
 function AuthenticatedApp() {
   const { user, loading } = useAuth();
   const [showSignUp, setShowSignUp] = useState(false);
+  const [isResetPassword, setIsResetPassword] = useState(false);
+
+  useEffect(() => {
+    // Detectar si viene de un link de reset password
+    const hash = window.location.hash;
+    const path = window.location.pathname;
+
+    // Supabase manda el token en el hash cuando viene del email
+    if (hash.includes('type=recovery') || path === '/reset-password') {
+      setIsResetPassword(true);
+    }
+  }, []);
 
   if (loading) {
     return (
@@ -362,6 +375,11 @@ function AuthenticatedApp() {
         </div>
       </div>
     );
+  }
+
+  // Si está en modo reset password y tiene sesión (del link del email)
+  if (isResetPassword && user) {
+    return <ResetPassword />;
   }
 
   if (!user) {
