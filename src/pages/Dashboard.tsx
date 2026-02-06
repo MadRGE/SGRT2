@@ -64,55 +64,95 @@ export default function Dashboard({ onCreateProject, onViewProject }: Props) {
   const loadData = async () => {
     setLoading(true);
 
-    const { data: proyectosData } = await supabase
-      .from('proyectos')
-      .select(`
-        id,
-        nombre_proyecto,
-        estado,
-        created_at,
-        archivado,
-        clientes (razon_social),
-        expedientes (semaforo),
-        presupuestos (estado, total_final)
-      `)
-      .order('created_at', { ascending: false });
+    try {
+      // Intentar query completa con relaciones
+      const { data: proyectosData, error: proyectosError } = await supabase
+        .from('proyectos')
+        .select(`
+          id,
+          nombre_proyecto,
+          estado,
+          created_at,
+          archivado,
+          clientes (razon_social),
+          expedientes (semaforo),
+          presupuestos (estado, total_final)
+        `)
+        .order('created_at', { ascending: false });
 
-    if (proyectosData) {
-      setProyectos(proyectosData as any);
+      if (proyectosError) {
+        console.warn('Error cargando proyectos con relaciones, intentando query simple:', proyectosError);
+        // Si falla, intentar query simple sin relaciones
+        const { data: proyectosSimple } = await supabase
+          .from('proyectos')
+          .select('id, nombre_proyecto, estado, created_at, archivado')
+          .order('created_at', { ascending: false });
 
-      const proyectosActivos = proyectosData.filter(
-        (p: any) => !p.archivado && p.estado !== 'finalizado'
-      ).length;
+        if (proyectosSimple) {
+          // Mapear a la estructura esperada con valores por defecto
+          const proyectosMapeados = proyectosSimple.map((p: any) => ({
+            ...p,
+            clientes: { razon_social: 'Sin cliente' },
+            expedientes: [],
+            presupuestos: []
+          }));
+          setProyectos(proyectosMapeados as any);
+          setStats({
+            proyectosActivos: proyectosSimple.filter((p: any) => !p.archivado && p.estado !== 'finalizado').length,
+            expedientesEnRiesgo: 0,
+            habilitacionesPendientes: 0
+          });
+        }
+      } else if (proyectosData) {
+        setProyectos(proyectosData as any);
 
-      const expedientesEnRiesgo = proyectosData.reduce((count: number, p: any) => {
-        return (
-          count +
-          (p.expedientes?.filter(
-            (e: any) => e.semaforo === 'amarillo' || e.semaforo === 'rojo'
-          ).length || 0)
-        );
-      }, 0);
+        const proyectosActivos = proyectosData.filter(
+          (p: any) => !p.archivado && p.estado !== 'finalizado'
+        ).length;
 
-      const { data: habilitacionesData } = await supabase
-        .from('expedientes')
-        .select('tramite_tipos!inner(es_habilitacion_previa)')
-        .eq('tramite_tipos.es_habilitacion_previa', true)
-        .neq('estado', 'aprobado');
+        const expedientesEnRiesgo = proyectosData.reduce((count: number, p: any) => {
+          return (
+            count +
+            (p.expedientes?.filter(
+              (e: any) => e.semaforo === 'amarillo' || e.semaforo === 'rojo'
+            ).length || 0)
+          );
+        }, 0);
 
-      setStats({
-        proyectosActivos,
-        expedientesEnRiesgo,
-        habilitacionesPendientes: habilitacionesData?.length || 0
-      });
+        let habilitacionesPendientes = 0;
+        try {
+          const { data: habilitacionesData } = await supabase
+            .from('expedientes')
+            .select('tramite_tipos!inner(es_habilitacion_previa)')
+            .eq('tramite_tipos.es_habilitacion_previa', true)
+            .neq('estado', 'aprobado');
+          habilitacionesPendientes = habilitacionesData?.length || 0;
+        } catch (e) {
+          console.warn('Error cargando habilitaciones:', e);
+        }
+
+        setStats({
+          proyectosActivos,
+          expedientesEnRiesgo,
+          habilitacionesPendientes
+        });
+      }
+    } catch (error) {
+      console.error('Error cargando datos del dashboard:', error);
+      setProyectos([]);
+      setStats({ proyectosActivos: 0, expedientesEnRiesgo: 0, habilitacionesPendientes: 0 });
     }
 
-    const cotizacionesStats = await CotizacionService.obtenerEstadisticasCotizaciones();
-    setCotizacionStats({
-      cotizacionesMes: cotizacionesStats.cotizacionesMes,
-      cotizacionesPendientes: cotizacionesStats.cotizacionesPendientes,
-      tasaConversion: cotizacionesStats.tasaConversion
-    });
+    try {
+      const cotizacionesStats = await CotizacionService.obtenerEstadisticasCotizaciones();
+      setCotizacionStats({
+        cotizacionesMes: cotizacionesStats.cotizacionesMes,
+        cotizacionesPendientes: cotizacionesStats.cotizacionesPendientes,
+        tasaConversion: cotizacionesStats.tasaConversion
+      });
+    } catch (e) {
+      console.warn('Error cargando estadísticas de cotizaciones:', e);
+    }
 
     setLoading(false);
   };
