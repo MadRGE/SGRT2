@@ -77,7 +77,7 @@ export function ANMATTabComunicaciones({ casoId }: Props) {
       .from('usuarios')
       .select('id')
       .eq('auth_id', user?.id)
-      .single();
+      .maybeSingle();
 
     const { error } = await supabase
       .from('anmat_comunicaciones')

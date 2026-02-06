@@ -9,8 +9,10 @@ interface AuthContextType {
   userRole: string | null;
   clienteId: string | null;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, nombre: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, nombre: string, rol?: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<{ error: Error | null }>;
+  updatePassword: (newPassword: string) => Promise<{ error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -54,7 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data } = await supabase
       .from('usuarios')
       .select('rol, cliente_id')
-      .eq('auth_user_id', userId)
+      .eq('auth_id', userId)
       .maybeSingle();
 
     if (data) {
@@ -76,7 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signUp = async (email: string, password: string, nombre: string) => {
+  const signUp = async (email: string, password: string, nombre: string, rol: string = 'cliente') => {
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -84,6 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         options: {
           data: {
             nombre,
+            rol,
           },
         },
       });
@@ -92,10 +95,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (data.user) {
         await supabase.from('usuarios').insert({
-          id: data.user.id,
+          auth_id: data.user.id,
           email,
           nombre,
-          rol: 'gestor',
+          rol,
         });
       }
 
@@ -109,6 +112,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
   };
 
+  const resetPassword = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      return { error };
+    } catch (error) {
+      return { error: error as Error };
+    }
+  };
+
+  const updatePassword = async (newPassword: string) => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+      return { error };
+    } catch (error) {
+      return { error: error as Error };
+    }
+  };
+
   const value = {
     user,
     session,
@@ -118,6 +143,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signIn,
     signUp,
     signOut,
+    resetPassword,
+    updatePassword,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
