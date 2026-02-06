@@ -232,7 +232,7 @@ export function ANMATCasoCreationModal({ onClose, onSuccess }: Props) {
       const { data: userData } = await supabase
         .from('usuarios')
         .select('id')
-        .eq('auth_id', user.id)
+        .eq('auth_user_id', user.id)
         .single();
 
       if (!userData) throw new Error('Usuario no encontrado');
