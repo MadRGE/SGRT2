@@ -33,6 +33,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         setLoading(false);
       }
+    }).catch(() => {
+      setLoading(false);
     });
 
     const {
@@ -53,15 +55,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const loadUserData = async (userId: string) => {
-    const { data } = await supabase
-      .from('usuarios')
-      .select('rol, cliente_id')
-      .eq('auth_id', userId)
-      .maybeSingle();
+    try {
+      const { data } = await supabase
+        .from('usuarios')
+        .select('rol, cliente_id')
+        .eq('auth_id', userId)
+        .maybeSingle();
 
-    if (data) {
-      setUserRole(data.rol);
-      setClienteId(data.cliente_id);
+      if (data) {
+        setUserRole(data.rol);
+        setClienteId(data.cliente_id);
+      }
+    } catch {
+      // Table may not exist yet
     }
     setLoading(false);
   };
