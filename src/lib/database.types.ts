@@ -308,23 +308,29 @@ export interface Database {
       usuarios: {
         Row: {
           id: string
+          auth_id: string
           email: string
           nombre: string
           rol: string
+          cliente_id: string | null
           created_at: string
         }
         Insert: {
           id?: string
+          auth_id: string
           email: string
           nombre: string
           rol: string
+          cliente_id?: string | null
           created_at?: string
         }
         Update: {
           id?: string
+          auth_id?: string
           email?: string
           nombre?: string
           rol?: string
+          cliente_id?: string | null
           created_at?: string
         }
       }

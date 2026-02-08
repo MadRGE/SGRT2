@@ -468,7 +468,7 @@ export default function ProyectoWizard({ onComplete, onCancel }: Props) {
     <div className="max-w-4xl mx-auto p-8">
       <div className="bg-white rounded-xl shadow-lg p-8">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold text-slate-800">Asistente de Relevamiento v5</h1>
+          <h1 className="text-3xl font-bold text-slate-800">Asistente de Relevamiento</h1>
           <button
             onClick={onCancel}
             className="px-4 py-2 text-slate-600 hover:text-slate-800"

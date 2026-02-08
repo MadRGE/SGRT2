@@ -76,8 +76,8 @@ export default function Sidebar({ currentPath, onNavigate }: SidebarProps) {
             <span className="text-white font-bold text-sm">SGT</span>
           </div>
           <div>
-            <h1 className="font-bold text-slate-800 text-lg">SGT v5</h1>
-            <p className="text-xs text-slate-500">Sistema de Gestión</p>
+            <h1 className="font-bold text-slate-800 text-lg">SGT</h1>
+            <p className="text-xs text-slate-500">Sistema de Gestión de Trámites</p>
           </div>
         </div>
       </div>
