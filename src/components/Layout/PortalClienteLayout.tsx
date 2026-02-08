@@ -18,7 +18,7 @@ export default function PortalClienteLayout({ children, onLogout }: Props) {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-slate-800">Portal del Cliente</h1>
-                <p className="text-xs text-slate-500">Sistema de Gestión de Trámites v5</p>
+                <p className="text-xs text-slate-500">Sistema de Gestión de Trámites</p>
               </div>
             </div>
             <button
@@ -37,7 +37,7 @@ export default function PortalClienteLayout({ children, onLogout }: Props) {
       <footer className="bg-white border-t border-slate-200 mt-12">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <p className="text-center text-sm text-slate-500">
-            © 2024 SGT v5 - Sistema de Gestión de Trámites Regulatorios
+            © 2025 SGT - Sistema de Gestión de Trámites Regulatorios
           </p>
         </div>
       </footer>

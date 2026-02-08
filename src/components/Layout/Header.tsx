@@ -42,12 +42,18 @@ export default function Header({ pageTitle, primaryAction, onNotificationsClick 
   }, []);
 
   const loadUnreadCount = async () => {
-    const { count } = await supabase
-      .from('notificaciones')
-      .select('*', { count: 'exact', head: true })
-      .eq('leida', false);
+    try {
+      const { count, error } = await supabase
+        .from('notificaciones')
+        .select('*', { count: 'exact', head: true })
+        .eq('leida', false);
 
-    setUnreadCount(count || 0);
+      if (!error) {
+        setUnreadCount(count || 0);
+      }
+    } catch {
+      // Table may not exist yet
+    }
   };
 
   return (

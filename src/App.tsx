@@ -53,14 +53,14 @@ type View =
   | { type: 'anmat' };
 
 function AppContent() {
-  const { userRole, clienteId } = useAuth();
+  const { userRole, clienteId, signOut } = useAuth();
   const [view, setView] = useState<View>({ type: 'dashboard' });
   const mockClienteId = clienteId || 'cliente-demo-uuid';
   const mockDespachanteId = 'despachante-demo-uuid';
 
   if (userRole === 'cliente' && clienteId) {
     return (
-      <PortalClienteLayout>
+      <PortalClienteLayout onLogout={signOut}>
         {view.type === 'portal-proyecto' ? (
           <PortalProyectoDetail
             proyectoId={view.proyectoId}
@@ -121,7 +121,7 @@ function AppContent() {
       case 'anmat':
         return 'Gestoría ANMAT';
       default:
-        return 'SGT v5';
+        return 'SGT';
     }
   };
 
