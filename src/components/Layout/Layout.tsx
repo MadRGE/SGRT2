@@ -1,18 +1,21 @@
 import { ReactNode } from 'react';
-import { LayoutDashboard, Users, FileText, LogOut, Calendar, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, LogOut, Calendar, Briefcase } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 export type Page =
   | { type: 'dashboard' }
   | { type: 'clientes' }
   | { type: 'cliente'; id: string }
+  | { type: 'gestiones' }
+  | { type: 'gestion'; id: string }
   | { type: 'tramites' }
   | { type: 'tramite'; id: string }
   | { type: 'vencimientos' }
-  | { type: 'nuevo-tramite'; clienteId?: string }
+  | { type: 'nuevo-tramite'; gestionId?: string; clienteId?: string }
+  | { type: 'nueva-gestion'; clienteId?: string }
   | { type: 'nuevo-cliente' };
 
-type NavPage = 'dashboard' | 'clientes' | 'tramites' | 'vencimientos';
+type NavPage = 'dashboard' | 'clientes' | 'gestiones' | 'tramites' | 'vencimientos';
 
 interface LayoutProps {
   children: ReactNode;
@@ -22,6 +25,7 @@ interface LayoutProps {
 
 const NAV_ITEMS: { nav: NavPage; label: string; icon: typeof LayoutDashboard }[] = [
   { nav: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { nav: 'gestiones', label: 'Gestiones', icon: Briefcase },
   { nav: 'tramites', label: 'Trámites', icon: FileText },
   { nav: 'clientes', label: 'Clientes', icon: Users },
   { nav: 'vencimientos', label: 'Vencimientos', icon: Calendar },

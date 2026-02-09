@@ -54,11 +54,28 @@ create table if not exists vencimientos (
   created_at timestamptz default now()
 );
 
+-- Registros y Habilitaciones del cliente (RNE, RNEE, habilitaciones varias)
+create table if not exists registros_cliente (
+  id uuid primary key default gen_random_uuid(),
+  cliente_id uuid references clientes(id) on delete cascade,
+  tipo text not null, -- RNE, RNEE, habilitacion_anmat, habilitacion_senasa, habilitacion_inal, habilitacion_enacom, habilitacion_cites, otro
+  numero text, -- número del registro/habilitación
+  organismo text, -- organismo que lo emitió
+  descripcion text, -- descripción o detalle
+  fecha_emision date,
+  fecha_vencimiento date,
+  estado text default 'vigente', -- vigente, en_tramite, vencido, suspendido
+  notas text,
+  created_at timestamptz default now()
+);
+
 -- Indexes
 create index if not exists idx_tramites_cliente on tramites(cliente_id);
 create index if not exists idx_tramites_estado on tramites(estado);
 create index if not exists idx_seguimientos_tramite on seguimientos(tramite_id);
 create index if not exists idx_vencimientos_fecha on vencimientos(fecha_vencimiento);
+create index if not exists idx_registros_cliente on registros_cliente(cliente_id);
+create index if not exists idx_registros_tipo on registros_cliente(tipo);
 
 -- RLS policies (acceso abierto por ahora, single user)
 alter table clientes enable row level security;
@@ -70,3 +87,6 @@ create policy "Allow all for authenticated" on clientes for all using (auth.role
 create policy "Allow all for authenticated" on tramites for all using (auth.role() = 'authenticated');
 create policy "Allow all for authenticated" on seguimientos for all using (auth.role() = 'authenticated');
 create policy "Allow all for authenticated" on vencimientos for all using (auth.role() = 'authenticated');
+
+alter table registros_cliente enable row level security;
+create policy "Allow all for authenticated" on registros_cliente for all using (auth.role() = 'authenticated');

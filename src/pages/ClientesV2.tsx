@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Plus, Search, Users, ChevronRight, Loader2, X } from 'lucide-react';
+import { Plus, Search, Users, ChevronRight, Loader2, X, Shield } from 'lucide-react';
 
 interface Props {
   onNavigate: (page: any) => void;
@@ -15,6 +15,7 @@ interface Cliente {
   telefono: string | null;
   origen: string;
   tramites_count?: number;
+  registros_count?: number;
 }
 
 export default function ClientesV2({ onNavigate }: Props) {
@@ -36,11 +37,15 @@ export default function ClientesV2({ onNavigate }: Props) {
       if (data) {
         const withCounts = await Promise.all(
           data.map(async (c) => {
-            const { count } = await supabase
+            const { count: tramites_count } = await supabase
               .from('tramites')
               .select('*', { count: 'exact', head: true })
               .eq('cliente_id', c.id);
-            return { ...c, tramites_count: count || 0 };
+            const { count: registros_count } = await supabase
+              .from('registros_cliente')
+              .select('*', { count: 'exact', head: true })
+              .eq('cliente_id', c.id);
+            return { ...c, tramites_count: tramites_count || 0, registros_count: registros_count || 0 };
           })
         );
         setClientes(withCounts);
@@ -80,7 +85,7 @@ export default function ClientesV2({ onNavigate }: Props) {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
         <input
           type="text"
-          placeholder="Buscar por razón social, CUIT o RNE..."
+          placeholder="Buscar por razón social, CUIT..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors"
@@ -117,10 +122,16 @@ export default function ClientesV2({ onNavigate }: Props) {
                 <p className="font-medium text-slate-800">{c.razon_social}</p>
                 <div className="flex items-center gap-3 mt-0.5">
                   {c.cuit && <span className="text-xs text-slate-500">CUIT: {c.cuit}</span>}
-                  {c.rne && <span className="text-xs text-slate-500">RNE: {c.rne}</span>}
                 </div>
               </div>
-              <span className="text-sm text-slate-500">{c.tramites_count} trámites</span>
+              <div className="flex items-center gap-4 text-sm text-slate-500">
+                {(c.registros_count ?? 0) > 0 && (
+                  <span className="flex items-center gap-1 text-xs">
+                    <Shield className="w-3 h-3" /> {c.registros_count}
+                  </span>
+                )}
+                <span>{c.tramites_count} trámites</span>
+              </div>
               <ChevronRight className="w-4 h-4 text-slate-300" />
             </button>
           ))}
@@ -143,7 +154,7 @@ export default function ClientesV2({ onNavigate }: Props) {
 
 function NuevoClienteModal({ onClose, onCreated }: { onClose: () => void; onCreated: (id: string) => void }) {
   const [form, setForm] = useState({
-    razon_social: '', cuit: '', rne: '', email: '', telefono: '', contacto_nombre: '',
+    razon_social: '', cuit: '', email: '', telefono: '', contacto_nombre: '',
     origen: 'directo', referido_por: ''
   });
   const [saving, setSaving] = useState(false);
@@ -157,7 +168,6 @@ function NuevoClienteModal({ onClose, onCreated }: { onClose: () => void; onCrea
       .insert({
         razon_social: form.razon_social,
         cuit: form.cuit || null,
-        rne: form.rne || null,
         email: form.email || null,
         telefono: form.telefono || null,
         contacto_nombre: form.contacto_nombre || null,
@@ -193,27 +203,22 @@ function NuevoClienteModal({ onClose, onCreated }: { onClose: () => void; onCrea
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">RNE</label>
-              <input value={form.rne} onChange={e => setForm({...form, rne: e.target.value})}
+              <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+              <input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-              <input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
-            </div>
-            <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Teléfono</label>
               <input value={form.telefono} onChange={e => setForm({...form, telefono: e.target.value})}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Contacto</label>
-            <input value={form.contacto_nombre} onChange={e => setForm({...form, contacto_nombre: e.target.value})} placeholder="Nombre del contacto"
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Contacto</label>
+              <input value={form.contacto_nombre} onChange={e => setForm({...form, contacto_nombre: e.target.value})} placeholder="Nombre del contacto"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Origen</label>
@@ -231,6 +236,7 @@ function NuevoClienteModal({ onClose, onCreated }: { onClose: () => void; onCrea
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
           )}
+          <p className="text-xs text-slate-400">Los registros (RNE, RNEE, habilitaciones) se cargan desde el detalle del cliente.</p>
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50">Cancelar</button>
             <button type="submit" disabled={saving}
