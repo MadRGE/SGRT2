@@ -8,6 +8,9 @@ import Layout, { type Page } from './components/Layout/Layout';
 import DashboardV2 from './pages/DashboardV2';
 import ClientesV2 from './pages/ClientesV2';
 import ClienteDetailV2 from './pages/ClienteDetailV2';
+import GestionesV2 from './pages/GestionesV2';
+import GestionDetailV2 from './pages/GestionDetailV2';
+import NuevaGestionV2 from './pages/NuevaGestionV2';
 import TramitesV2 from './pages/TramitesV2';
 import TramiteDetailV2 from './pages/TramiteDetailV2';
 import NuevoTramiteV2 from './pages/NuevoTramiteV2';
@@ -22,6 +25,7 @@ function AppContent() {
     switch (page.type) {
       case 'dashboard': return 'dashboard' as const;
       case 'clientes': case 'cliente': case 'nuevo-cliente': return 'clientes' as const;
+      case 'gestiones': case 'gestion': case 'nueva-gestion': return 'gestiones' as const;
       case 'tramites': case 'tramite': case 'nuevo-tramite': return 'tramites' as const;
       case 'vencimientos': return 'vencimientos' as const;
       default: return 'dashboard' as const;
@@ -33,9 +37,12 @@ function AppContent() {
       {page.type === 'dashboard' && <DashboardV2 onNavigate={navigate} />}
       {page.type === 'clientes' && <ClientesV2 onNavigate={navigate} />}
       {page.type === 'cliente' && <ClienteDetailV2 clienteId={page.id} onNavigate={navigate} />}
+      {page.type === 'gestiones' && <GestionesV2 onNavigate={navigate} />}
+      {page.type === 'gestion' && <GestionDetailV2 gestionId={page.id} onNavigate={navigate} />}
+      {page.type === 'nueva-gestion' && <NuevaGestionV2 clienteId={page.clienteId} onNavigate={navigate} />}
       {page.type === 'tramites' && <TramitesV2 onNavigate={navigate} />}
       {page.type === 'tramite' && <TramiteDetailV2 tramiteId={page.id} onNavigate={navigate} />}
-      {page.type === 'nuevo-tramite' && <NuevoTramiteV2 clienteId={page.clienteId} onNavigate={navigate} />}
+      {page.type === 'nuevo-tramite' && <NuevoTramiteV2 gestionId={page.gestionId} clienteId={page.clienteId} onNavigate={navigate} />}
       {page.type === 'vencimientos' && <VencimientosV2 onNavigate={navigate} />}
     </Layout>
   );

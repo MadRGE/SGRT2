@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { ArrowLeft, Plus, FileText, ChevronRight, Loader2, Pencil, Save, X, Shield, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, FileText, ChevronRight, Loader2, Pencil, Save, X, Shield, Trash2, Briefcase } from 'lucide-react';
 
 interface Props {
   clienteId: string;
@@ -11,22 +11,12 @@ interface Cliente {
   id: string;
   razon_social: string;
   cuit: string | null;
-  rne: string | null;
   email: string | null;
   telefono: string | null;
   contacto_nombre: string | null;
   origen: string;
   referido_por: string | null;
   notas: string | null;
-}
-
-interface Tramite {
-  id: string;
-  titulo: string;
-  estado: string;
-  organismo: string | null;
-  tipo: string;
-  fecha_vencimiento: string | null;
 }
 
 interface Registro {
@@ -41,45 +31,91 @@ interface Registro {
   notas: string | null;
 }
 
-const ESTADO_LABELS: Record<string, string> = {
+interface TramiteResumen {
+  estado: string;
+}
+
+interface Gestion {
+  id: string;
+  nombre: string;
+  estado: string;
+  prioridad: string;
+  fecha_inicio: string | null;
+  tramites: TramiteResumen[];
+}
+
+interface TramiteSuelto {
+  id: string;
+  titulo: string;
+  estado: string;
+  organismo: string | null;
+  tipo: string;
+  fecha_vencimiento: string | null;
+}
+
+const TRAMITE_ESTADO_LABELS: Record<string, string> = {
   consulta: 'Consulta', presupuestado: 'Presupuestado', en_curso: 'En Curso',
   esperando_cliente: 'Esp. Cliente', esperando_organismo: 'Esp. Organismo',
   observado: 'Observado', aprobado: 'Aprobado', rechazado: 'Rechazado', vencido: 'Vencido',
 };
 
-const ESTADO_COLORS: Record<string, string> = {
+const TRAMITE_ESTADO_COLORS: Record<string, string> = {
   consulta: 'bg-slate-100 text-slate-600', presupuestado: 'bg-purple-100 text-purple-700',
   en_curso: 'bg-blue-100 text-blue-700', esperando_cliente: 'bg-yellow-100 text-yellow-700',
   esperando_organismo: 'bg-orange-100 text-orange-700', observado: 'bg-red-100 text-red-700',
   aprobado: 'bg-green-100 text-green-700', rechazado: 'bg-red-100 text-red-700', vencido: 'bg-red-100 text-red-700',
 };
 
+const GESTION_ESTADO_LABELS: Record<string, string> = {
+  relevamiento: 'Relevamiento',
+  en_curso: 'En Curso',
+  en_espera: 'En Espera',
+  finalizado: 'Finalizado',
+  archivado: 'Archivado',
+};
+
+const GESTION_ESTADO_COLORS: Record<string, string> = {
+  relevamiento: 'bg-slate-100 text-slate-600',
+  en_curso: 'bg-blue-100 text-blue-700',
+  en_espera: 'bg-yellow-100 text-yellow-700',
+  finalizado: 'bg-green-100 text-green-700',
+  archivado: 'bg-slate-100 text-slate-500',
+};
+
+const PRIORIDAD_COLORS: Record<string, string> = {
+  urgente: 'bg-red-500',
+  alta: 'bg-orange-400',
+  normal: 'bg-blue-400',
+  baja: 'bg-slate-300',
+};
+
 const REGISTRO_TIPOS = [
   { value: 'RNE', label: 'RNE' },
   { value: 'RNEE', label: 'RNEE' },
-  { value: 'habilitacion_anmat', label: 'Habilitación ANMAT' },
-  { value: 'habilitacion_senasa', label: 'Habilitación SENASA' },
-  { value: 'habilitacion_inal', label: 'Habilitación INAL' },
-  { value: 'habilitacion_enacom', label: 'Habilitación ENACOM' },
-  { value: 'habilitacion_cites', label: 'Habilitación CITES' },
-  { value: 'habilitacion_renpre', label: 'Habilitación RENPRE' },
-  { value: 'habilitacion_sedronar', label: 'Habilitación SEDRONAR' },
-  { value: 'habilitacion_anmac', label: 'Habilitación ANMAC' },
+  { value: 'habilitacion_anmat', label: 'Habilitacion ANMAT' },
+  { value: 'habilitacion_senasa', label: 'Habilitacion SENASA' },
+  { value: 'habilitacion_inal', label: 'Habilitacion INAL' },
+  { value: 'habilitacion_enacom', label: 'Habilitacion ENACOM' },
+  { value: 'habilitacion_cites', label: 'Habilitacion CITES' },
+  { value: 'habilitacion_renpre', label: 'Habilitacion RENPRE' },
+  { value: 'habilitacion_sedronar', label: 'Habilitacion SEDRONAR' },
+  { value: 'habilitacion_anmac', label: 'Habilitacion ANMAC' },
   { value: 'certificado', label: 'Certificado' },
   { value: 'otro', label: 'Otro' },
 ];
 
 const REGISTRO_ESTADOS = [
   { value: 'vigente', label: 'Vigente', color: 'bg-green-100 text-green-700' },
-  { value: 'en_tramite', label: 'En Trámite', color: 'bg-blue-100 text-blue-700' },
+  { value: 'en_tramite', label: 'En Tramite', color: 'bg-blue-100 text-blue-700' },
   { value: 'vencido', label: 'Vencido', color: 'bg-red-100 text-red-700' },
   { value: 'suspendido', label: 'Suspendido', color: 'bg-yellow-100 text-yellow-700' },
 ];
 
 export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
   const [cliente, setCliente] = useState<Cliente | null>(null);
-  const [tramites, setTramites] = useState<Tramite[]>([]);
   const [registros, setRegistros] = useState<Registro[]>([]);
+  const [gestiones, setGestiones] = useState<Gestion[]>([]);
+  const [tramitesSueltos, setTramitesSueltos] = useState<TramiteSuelto[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState<Partial<Cliente>>({});
@@ -90,15 +126,12 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
   const loadData = async () => {
     setLoading(true);
     try {
-      const { data: c } = await supabase.from('clientes').select('*').eq('id', clienteId).single();
+      const { data: c } = await supabase
+        .from('clientes')
+        .select('*')
+        .eq('id', clienteId)
+        .single();
       if (c) { setCliente(c); setEditForm(c); }
-
-      const { data: t } = await supabase
-        .from('tramites')
-        .select('id, titulo, estado, organismo, tipo, fecha_vencimiento')
-        .eq('cliente_id', clienteId)
-        .order('created_at', { ascending: false });
-      setTramites(t || []);
 
       const { data: r } = await supabase
         .from('registros_cliente')
@@ -106,6 +139,21 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
         .eq('cliente_id', clienteId)
         .order('tipo', { ascending: true });
       setRegistros(r || []);
+
+      const { data: g } = await supabase
+        .from('gestiones')
+        .select('id, nombre, estado, prioridad, fecha_inicio, tramites(estado)')
+        .eq('cliente_id', clienteId)
+        .order('created_at', { ascending: false });
+      setGestiones((g as any) || []);
+
+      const { data: ts } = await supabase
+        .from('tramites')
+        .select('id, titulo, estado, organismo, tipo, fecha_vencimiento')
+        .eq('cliente_id', clienteId)
+        .is('gestion_id', null)
+        .order('created_at', { ascending: false });
+      setTramitesSueltos(ts || []);
     } catch (e) {
       console.warn('Error:', e);
     }
@@ -118,10 +166,10 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
       .update({
         razon_social: editForm.razon_social,
         cuit: editForm.cuit || null,
-        rne: editForm.rne || null,
         email: editForm.email || null,
         telefono: editForm.telefono || null,
         contacto_nombre: editForm.contacto_nombre || null,
+        origen: editForm.origen || 'directo',
         notas: editForm.notas || null,
       })
       .eq('id', clienteId);
@@ -133,7 +181,7 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
   };
 
   const handleDeleteRegistro = async (id: string) => {
-    if (!confirm('¿Eliminar este registro/habilitación?')) return;
+    if (!confirm('Eliminar este registro/habilitacion?')) return;
     await supabase.from('registros_cliente').delete().eq('id', id);
     loadData();
   };
@@ -152,11 +200,12 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
+      {/* Back button */}
       <button onClick={() => onNavigate({ type: 'clientes' })} className="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-800">
         <ArrowLeft className="w-4 h-4" /> Volver a Clientes
       </button>
 
-      {/* Info del cliente */}
+      {/* 1. Client info card */}
       <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50 p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -182,38 +231,41 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
         {editing ? (
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Razón Social</label>
-              <input value={editForm.razon_social || ''} onChange={e => setEditForm({...editForm, razon_social: e.target.value})}
+              <label className="block text-xs font-medium text-slate-500 mb-1">Razon Social</label>
+              <input value={editForm.razon_social || ''} onChange={e => setEditForm({ ...editForm, razon_social: e.target.value })}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1">CUIT</label>
-              <input value={editForm.cuit || ''} onChange={e => setEditForm({...editForm, cuit: e.target.value})}
+              <input value={editForm.cuit || ''} onChange={e => setEditForm({ ...editForm, cuit: e.target.value })}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1">Email</label>
-              <input value={editForm.email || ''} onChange={e => setEditForm({...editForm, email: e.target.value})}
+              <input value={editForm.email || ''} onChange={e => setEditForm({ ...editForm, email: e.target.value })}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Teléfono</label>
-              <input value={editForm.telefono || ''} onChange={e => setEditForm({...editForm, telefono: e.target.value})}
+              <label className="block text-xs font-medium text-slate-500 mb-1">Telefono</label>
+              <input value={editForm.telefono || ''} onChange={e => setEditForm({ ...editForm, telefono: e.target.value })}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1">Contacto</label>
-              <input value={editForm.contacto_nombre || ''} onChange={e => setEditForm({...editForm, contacto_nombre: e.target.value})}
+              <input value={editForm.contacto_nombre || ''} onChange={e => setEditForm({ ...editForm, contacto_nombre: e.target.value })}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">RNE (legacy)</label>
-              <input value={editForm.rne || ''} onChange={e => setEditForm({...editForm, rne: e.target.value})}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
+              <label className="block text-xs font-medium text-slate-500 mb-1">Origen</label>
+              <select value={editForm.origen || 'directo'} onChange={e => setEditForm({ ...editForm, origen: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors">
+                <option value="directo">Directo</option>
+                <option value="referido">Referido</option>
+              </select>
             </div>
             <div className="col-span-2">
               <label className="block text-xs font-medium text-slate-500 mb-1">Notas</label>
-              <textarea value={editForm.notas || ''} onChange={e => setEditForm({...editForm, notas: e.target.value})} rows={3}
+              <textarea value={editForm.notas || ''} onChange={e => setEditForm({ ...editForm, notas: e.target.value })} rows={3}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
           </div>
@@ -221,7 +273,7 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
           <div className="grid grid-cols-2 gap-x-8 gap-y-3">
             <InfoField label="CUIT" value={cliente.cuit} />
             <InfoField label="Email" value={cliente.email} />
-            <InfoField label="Teléfono" value={cliente.telefono} />
+            <InfoField label="Telefono" value={cliente.telefono} />
             <InfoField label="Contacto" value={cliente.contacto_nombre} />
             <InfoField label="Origen" value={cliente.origen === 'directo' ? 'Directo' : `Referido${cliente.referido_por ? ` por ${cliente.referido_por}` : ''}`} />
             {cliente.notas && <div className="col-span-2"><InfoField label="Notas" value={cliente.notas} /></div>}
@@ -229,7 +281,7 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
         )}
       </div>
 
-      {/* Registros y Habilitaciones */}
+      {/* 2. Registros y Habilitaciones */}
       <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50">
         <div className="flex items-center justify-between p-4 border-b border-slate-100">
           <h2 className="font-semibold text-slate-800 flex items-center gap-2">
@@ -249,7 +301,7 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
             <Shield className="w-10 h-10 mx-auto mb-2 opacity-50" />
             <p>Sin registros ni habilitaciones</p>
             <button onClick={() => setShowRegistroForm(true)} className="mt-2 text-xs text-blue-600 font-semibold hover:text-blue-700">
-              Agregar RNE, RNEE o habilitación
+              Agregar RNE, RNEE o habilitacion
             </button>
           </div>
         ) : (
@@ -266,13 +318,13 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
                     </span>
                   </div>
                   <div className="mt-1.5">
-                    {r.numero && <p className="text-sm font-medium text-slate-800">N° {r.numero}</p>}
+                    {r.numero && <p className="text-sm font-medium text-slate-800">N. {r.numero}</p>}
                     {r.descripcion && <p className="text-sm text-slate-600">{r.descripcion}</p>}
                     <div className="flex items-center gap-4 mt-1">
                       {r.organismo && <span className="text-xs text-slate-400">Organismo: {r.organismo}</span>}
                       {r.fecha_emision && (
                         <span className="text-xs text-slate-400">
-                          Emisión: {new Date(r.fecha_emision).toLocaleDateString('es-AR')}
+                          Emision: {new Date(r.fecha_emision).toLocaleDateString('es-AR')}
                         </span>
                       )}
                       {r.fecha_vencimiento && (
@@ -295,26 +347,84 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
         )}
       </div>
 
-      {/* Tramites del cliente */}
+      {/* 3. Gestiones */}
       <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50">
         <div className="flex items-center justify-between p-4 border-b border-slate-100">
-          <h2 className="font-semibold text-slate-800">Trámites ({tramites.length})</h2>
+          <h2 className="font-semibold text-slate-800 flex items-center gap-2">
+            <Briefcase className="w-4 h-4 text-slate-400" />
+            Gestiones ({gestiones.length})
+          </h2>
           <button
-            onClick={() => onNavigate({ type: 'nuevo-tramite', clienteId })}
+            onClick={() => onNavigate({ type: 'nueva-gestion', clienteId })}
             className="flex items-center gap-1 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-3 py-1.5 rounded-lg hover:shadow-lg hover:shadow-blue-500/25"
           >
-            <Plus className="w-4 h-4" /> Nuevo Trámite
+            <Plus className="w-4 h-4" /> Nueva Gestion
           </button>
         </div>
 
-        {tramites.length === 0 ? (
+        {gestiones.length === 0 ? (
           <div className="p-8 text-center text-slate-400">
-            <FileText className="w-10 h-10 mx-auto mb-2 opacity-50" />
-            <p>Este cliente no tiene trámites</p>
+            <Briefcase className="w-10 h-10 mx-auto mb-2 opacity-50" />
+            <p>Este cliente no tiene gestiones</p>
+            <button
+              onClick={() => onNavigate({ type: 'nueva-gestion', clienteId })}
+              className="mt-2 text-xs text-blue-600 font-semibold hover:text-blue-700"
+            >
+              Crear primera gestion
+            </button>
           </div>
         ) : (
           <div className="divide-y divide-slate-100/80">
-            {tramites.map((t) => (
+            {gestiones.map((g) => {
+              const tramitesCount = g.tramites?.length || 0;
+
+              return (
+                <button
+                  key={g.id}
+                  onClick={() => onNavigate({ type: 'gestion', id: g.id })}
+                  className="w-full flex items-center gap-3 p-4 hover:bg-slate-50 transition-colors text-left"
+                >
+                  {/* Priority dot */}
+                  <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${PRIORIDAD_COLORS[g.prioridad] || 'bg-slate-300'}`} />
+
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-slate-800 truncate">{g.nombre}</p>
+                    <div className="flex items-center gap-3 mt-0.5">
+                      {g.fecha_inicio && (
+                        <span className="text-xs text-slate-400">
+                          Inicio: {new Date(g.fecha_inicio).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </span>
+                      )}
+                      <span className="text-xs text-slate-400">
+                        {tramitesCount} {tramitesCount === 1 ? 'tramite' : 'tramites'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <span className={`text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap ${GESTION_ESTADO_COLORS[g.estado] || 'bg-slate-100 text-slate-600'}`}>
+                    {GESTION_ESTADO_LABELS[g.estado] || g.estado}
+                  </span>
+
+                  <ChevronRight className="w-4 h-4 text-slate-300 flex-shrink-0" />
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* 4. Tramites sueltos (without gestion) */}
+      {tramitesSueltos.length > 0 && (
+        <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50">
+          <div className="flex items-center justify-between p-4 border-b border-slate-100">
+            <h2 className="font-semibold text-slate-800 flex items-center gap-2">
+              <FileText className="w-4 h-4 text-slate-400" />
+              Tramites independientes ({tramitesSueltos.length})
+            </h2>
+          </div>
+
+          <div className="divide-y divide-slate-100/80">
+            {tramitesSueltos.map((t) => (
               <button
                 key={t.id}
                 onClick={() => onNavigate({ type: 'tramite', id: t.id })}
@@ -325,17 +435,22 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className="text-xs text-slate-500 capitalize">{t.tipo}</span>
                     {t.organismo && <span className="text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">{t.organismo}</span>}
+                    {t.fecha_vencimiento && (
+                      <span className={`text-xs ${new Date(t.fecha_vencimiento) < new Date() ? 'text-red-600 font-medium' : 'text-slate-400'}`}>
+                        Vence: {new Date(t.fecha_vencimiento).toLocaleDateString('es-AR')}
+                      </span>
+                    )}
                   </div>
                 </div>
-                <span className={`text-xs font-medium px-2 py-1 rounded-full ${ESTADO_COLORS[t.estado] || 'bg-slate-100'}`}>
-                  {ESTADO_LABELS[t.estado] || t.estado}
+                <span className={`text-xs font-medium px-2 py-1 rounded-full ${TRAMITE_ESTADO_COLORS[t.estado] || 'bg-slate-100'}`}>
+                  {TRAMITE_ESTADO_LABELS[t.estado] || t.estado}
                 </span>
                 <ChevronRight className="w-4 h-4 text-slate-300" />
               </button>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Modal nuevo registro */}
       {showRegistroForm && (
@@ -378,21 +493,21 @@ function NuevoRegistroModal({ clienteId, onClose, onCreated }: { clienteId: stri
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-5 border-b border-slate-200">
-          <h2 className="text-lg font-bold text-slate-800">Nuevo Registro / Habilitación</h2>
+          <h2 className="text-lg font-bold text-slate-800">Nuevo Registro / Habilitacion</h2>
           <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
         </div>
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Tipo *</label>
-              <select required value={form.tipo} onChange={e => setForm({...form, tipo: e.target.value})}
+              <select required value={form.tipo} onChange={e => setForm({ ...form, tipo: e.target.value })}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors">
                 {REGISTRO_TIPOS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Estado</label>
-              <select value={form.estado} onChange={e => setForm({...form, estado: e.target.value})}
+              <select value={form.estado} onChange={e => setForm({ ...form, estado: e.target.value })}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors">
                 {REGISTRO_ESTADOS.map(e => <option key={e.value} value={e.value}>{e.label}</option>)}
               </select>
@@ -401,42 +516,42 @@ function NuevoRegistroModal({ clienteId, onClose, onCreated }: { clienteId: stri
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Número</label>
-              <input value={form.numero} onChange={e => setForm({...form, numero: e.target.value})}
-                placeholder="N° de registro"
+              <label className="block text-sm font-medium text-slate-700 mb-1">Numero</label>
+              <input value={form.numero} onChange={e => setForm({ ...form, numero: e.target.value })}
+                placeholder="N. de registro"
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Organismo</label>
-              <input value={form.organismo} onChange={e => setForm({...form, organismo: e.target.value})}
+              <input value={form.organismo} onChange={e => setForm({ ...form, organismo: e.target.value })}
                 placeholder="Ej: ANMAT, SENASA..."
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Descripción</label>
-            <input value={form.descripcion} onChange={e => setForm({...form, descripcion: e.target.value})}
-              placeholder="Ej: Habilitación para importar cosméticos"
+            <label className="block text-sm font-medium text-slate-700 mb-1">Descripcion</label>
+            <input value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })}
+              placeholder="Ej: Habilitacion para importar cosmeticos"
               className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Fecha Emisión</label>
-              <input type="date" value={form.fecha_emision} onChange={e => setForm({...form, fecha_emision: e.target.value})}
+              <label className="block text-sm font-medium text-slate-700 mb-1">Fecha Emision</label>
+              <input type="date" value={form.fecha_emision} onChange={e => setForm({ ...form, fecha_emision: e.target.value })}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Fecha Vencimiento</label>
-              <input type="date" value={form.fecha_vencimiento} onChange={e => setForm({...form, fecha_vencimiento: e.target.value})}
+              <input type="date" value={form.fecha_vencimiento} onChange={e => setForm({ ...form, fecha_vencimiento: e.target.value })}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Notas</label>
-            <textarea value={form.notas} onChange={e => setForm({...form, notas: e.target.value})} rows={2}
+            <textarea value={form.notas} onChange={e => setForm({ ...form, notas: e.target.value })} rows={2}
               placeholder="Observaciones adicionales..."
               className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
           </div>
@@ -458,7 +573,7 @@ function InfoField({ label, value }: { label: string; value: string | null }) {
   return (
     <div>
       <p className="text-xs font-medium text-slate-400">{label}</p>
-      <p className="text-sm text-slate-700">{value || '—'}</p>
+      <p className="text-sm text-slate-700">{value || '\u2014'}</p>
     </div>
   );
 }
