@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { ArrowLeft, Plus, Clock, Loader2, Save, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Clock, Loader2, Save, Pencil, X } from 'lucide-react';
 
 interface Props {
   tramiteId: string;
@@ -162,10 +162,11 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
       </button>
 
       {/* Header con estado */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
+      <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50 p-6">
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
-            <h1 className="text-xl font-bold text-slate-800">{tramite.titulo}</h1>
+            <h1 className="text-[26px] tracking-tight font-bold text-slate-800">{tramite.titulo}</h1>
+            <p className="text-sm text-slate-400 mt-0.5">Detalle del trámite</p>
             <button
               onClick={() => onNavigate({ type: 'cliente', id: tramite.cliente_id })}
               className="text-sm text-blue-600 hover:text-blue-700 mt-1"
@@ -206,12 +207,12 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
               <div>
                 <label className="block text-xs font-medium text-slate-500 mb-1">Título</label>
                 <input value={editForm.titulo || ''} onChange={e => setEditForm({...editForm, titulo: e.target.value})}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-slate-500 mb-1">Tipo</label>
                 <select value={editForm.tipo || 'importacion'} onChange={e => setEditForm({...editForm, tipo: e.target.value})}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors">
                   <option value="importacion">Importación</option>
                   <option value="exportacion">Exportación</option>
                 </select>
@@ -219,7 +220,7 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
               <div>
                 <label className="block text-xs font-medium text-slate-500 mb-1">Organismo</label>
                 <select value={editForm.organismo || ''} onChange={e => setEditForm({...editForm, organismo: e.target.value})}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors">
                   <option value="">Sin definir</option>
                   {ORGANISMOS.map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
@@ -227,39 +228,39 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
               <div>
                 <label className="block text-xs font-medium text-slate-500 mb-1">Prioridad</label>
                 <select value={editForm.prioridad || 'normal'} onChange={e => setEditForm({...editForm, prioridad: e.target.value})}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors">
                   {PRIORIDADES.map(p => <option key={p} value={p} className="capitalize">{p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
                 </select>
               </div>
               <div>
                 <label className="block text-xs font-medium text-slate-500 mb-1">Fecha Vencimiento</label>
                 <input type="date" value={editForm.fecha_vencimiento || ''} onChange={e => setEditForm({...editForm, fecha_vencimiento: e.target.value})}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-slate-500 mb-1">N° Expediente</label>
                 <input value={editForm.numero_expediente || ''} onChange={e => setEditForm({...editForm, numero_expediente: e.target.value})}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-slate-500 mb-1">Presupuesto ($)</label>
                 <input type="number" value={editForm.monto_presupuesto || ''} onChange={e => setEditForm({...editForm, monto_presupuesto: parseFloat(e.target.value) || null})}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
               </div>
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1">Descripción</label>
               <textarea value={editForm.descripcion || ''} onChange={e => setEditForm({...editForm, descripcion: e.target.value})} rows={2}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1">Notas</label>
               <textarea value={editForm.notas || ''} onChange={e => setEditForm({...editForm, notas: e.target.value})} rows={2}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
             <div className="flex justify-end gap-2">
               <button onClick={() => { setEditing(false); setEditForm(tramite); }} className="px-4 py-2 text-sm border border-slate-300 rounded-lg">Cancelar</button>
-              <button onClick={handleSaveEdit} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+              <button onClick={handleSaveEdit} className="px-4 py-2 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:shadow-lg hover:shadow-blue-500/25">
                 <Save className="w-4 h-4 inline mr-1" /> Guardar
               </button>
             </div>
@@ -280,7 +281,7 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
       </div>
 
       {/* Seguimientos / Timeline */}
-      <div className="bg-white rounded-xl border border-slate-200">
+      <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50">
         <div className="p-4 border-b border-slate-100">
           <h2 className="font-semibold text-slate-800">Seguimiento</h2>
         </div>
@@ -293,12 +294,12 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
               onChange={(e) => setNuevoSeguimiento(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleAddSeguimiento()}
               placeholder="Agregar nota de seguimiento..."
-              className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors"
             />
             <button
               onClick={handleAddSeguimiento}
               disabled={savingSeg || !nuevoSeguimiento.trim()}
-              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm rounded-lg hover:shadow-lg hover:shadow-blue-500/25 disabled:opacity-50"
             >
               {savingSeg ? '...' : 'Agregar'}
             </button>
@@ -312,7 +313,7 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
             <p className="text-sm">Sin seguimientos todavía</p>
           </div>
         ) : (
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-slate-100/80">
             {seguimientos.map((s) => (
               <div key={s.id} className="p-4 flex gap-3">
                 <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0" />

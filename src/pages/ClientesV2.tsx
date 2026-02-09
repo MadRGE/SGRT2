@@ -62,10 +62,13 @@ export default function ClientesV2({ onNavigate }: Props) {
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-800">Clientes</h1>
+        <div>
+          <h1 className="text-[26px] tracking-tight font-bold text-slate-800">Clientes</h1>
+          <p className="text-sm text-slate-400 mt-0.5">Gestiona tu cartera de clientes</p>
+        </div>
         <button
           onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+          className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-lg hover:shadow-lg hover:shadow-blue-500/25 transition-colors text-sm font-medium"
         >
           <Plus className="w-4 h-4" />
           Nuevo Cliente
@@ -80,7 +83,7 @@ export default function ClientesV2({ onNavigate }: Props) {
           placeholder="Buscar por razón social, CUIT o RNE..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors"
         />
       </div>
 
@@ -90,7 +93,7 @@ export default function ClientesV2({ onNavigate }: Props) {
           <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
         </div>
       ) : filtered.length === 0 ? (
-        <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
+        <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50 p-12 text-center">
           <Users className="w-12 h-12 mx-auto text-slate-300 mb-3" />
           <p className="text-slate-500">{search ? 'No se encontraron clientes' : 'No hay clientes cargados'}</p>
           {!search && (
@@ -100,7 +103,7 @@ export default function ClientesV2({ onNavigate }: Props) {
           )}
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
+        <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50 divide-y divide-slate-100/80">
           {filtered.map((c) => (
             <button
               key={c.id}
@@ -171,8 +174,8 @@ function NuevoClienteModal({ onClose, onCreated }: { onClose: () => void; onCrea
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg">
         <div className="flex items-center justify-between p-5 border-b border-slate-200">
           <h2 className="text-lg font-bold text-slate-800">Nuevo Cliente</h2>
           <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
@@ -181,41 +184,41 @@ function NuevoClienteModal({ onClose, onCreated }: { onClose: () => void; onCrea
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Razón Social *</label>
             <input required value={form.razon_social} onChange={e => setForm({...form, razon_social: e.target.value})}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">CUIT</label>
               <input value={form.cuit} onChange={e => setForm({...form, cuit: e.target.value})} placeholder="30-12345678-9"
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">RNE</label>
               <input value={form.rne} onChange={e => setForm({...form, rne: e.target.value})}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
               <input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Teléfono</label>
               <input value={form.telefono} onChange={e => setForm({...form, telefono: e.target.value})}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Contacto</label>
             <input value={form.contacto_nombre} onChange={e => setForm({...form, contacto_nombre: e.target.value})} placeholder="Nombre del contacto"
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Origen</label>
             <select value={form.origen} onChange={e => setForm({...form, origen: e.target.value})}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors">
               <option value="directo">Directo</option>
               <option value="referido_cliente">Referido por cliente</option>
               <option value="referido_despachante">Referido por despachante</option>
@@ -225,13 +228,13 @@ function NuevoClienteModal({ onClose, onCreated }: { onClose: () => void; onCrea
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Referido por</label>
               <input value={form.referido_por} onChange={e => setForm({...form, referido_por: e.target.value})}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
           )}
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50">Cancelar</button>
             <button type="submit" disabled={saving}
-              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+              className="px-4 py-2 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:shadow-lg hover:shadow-blue-500/25 disabled:opacity-50">
               {saving ? 'Guardando...' : 'Crear Cliente'}
             </button>
           </div>

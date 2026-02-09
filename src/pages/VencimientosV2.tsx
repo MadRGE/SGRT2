@@ -62,9 +62,12 @@ export default function VencimientosV2({ onNavigate }: Props) {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-800">Vencimientos</h1>
+        <div>
+          <h1 className="text-[26px] tracking-tight font-bold text-slate-800">Vencimientos</h1>
+          <p className="text-sm text-slate-400 mt-0.5">Control de fechas y vencimientos</p>
+        </div>
         <button onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium">
+          className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-lg hover:shadow-lg hover:shadow-blue-500/25 text-sm font-medium">
           <Plus className="w-4 h-4" /> Nuevo Vencimiento
         </button>
       </div>
@@ -72,7 +75,7 @@ export default function VencimientosV2({ onNavigate }: Props) {
       {loading ? (
         <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>
       ) : vencimientos.length === 0 ? (
-        <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
+        <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50 p-12 text-center">
           <Calendar className="w-12 h-12 mx-auto text-slate-300 mb-3" />
           <p className="text-slate-500">No hay vencimientos cargados</p>
         </div>
@@ -118,7 +121,7 @@ function VencimientoSection({ title, items, color, onDelete }: {
       <h2 className="text-sm font-semibold text-slate-600 mb-2 flex items-center gap-2">
         {iconMap[color]} {title} ({items.length})
       </h2>
-      <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
+      <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50 divide-y divide-slate-100/80">
         {items.map(v => (
           <div key={v.id} className={`p-4 flex items-center gap-4 border-l-4 ${bgMap[color]}`}>
             <div className="flex-1">
@@ -163,8 +166,8 @@ function NuevoVencimientoModal({ onClose, onCreated }: { onClose: () => void; on
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
         <div className="flex items-center justify-between p-5 border-b border-slate-200">
           <h2 className="text-lg font-bold text-slate-800">Nuevo Vencimiento</h2>
           <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
@@ -173,7 +176,7 @@ function NuevoVencimientoModal({ onClose, onCreated }: { onClose: () => void; on
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Cliente *</label>
             <select required value={form.cliente_id} onChange={e => setForm({...form, cliente_id: e.target.value})}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors">
               <option value="">Seleccionar...</option>
               {clientes.map(c => <option key={c.id} value={c.id}>{c.razon_social}</option>)}
             </select>
@@ -181,7 +184,7 @@ function NuevoVencimientoModal({ onClose, onCreated }: { onClose: () => void; on
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Tipo</label>
             <select value={form.tipo} onChange={e => setForm({...form, tipo: e.target.value})}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors">
               <option value="certificado">Certificado</option>
               <option value="registro">Registro</option>
               <option value="habilitacion">Habilitación</option>
@@ -191,16 +194,16 @@ function NuevoVencimientoModal({ onClose, onCreated }: { onClose: () => void; on
             <label className="block text-sm font-medium text-slate-700 mb-1">Descripción *</label>
             <input required value={form.descripcion} onChange={e => setForm({...form, descripcion: e.target.value})}
               placeholder="Ej: Certificado INAL producto X"
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Fecha de Vencimiento *</label>
             <input type="date" required value={form.fecha_vencimiento} onChange={e => setForm({...form, fecha_vencimiento: e.target.value})}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-slate-300 rounded-lg">Cancelar</button>
-            <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+            <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:shadow-lg hover:shadow-blue-500/25 disabled:opacity-50">
               {saving ? 'Guardando...' : 'Crear'}
             </button>
           </div>

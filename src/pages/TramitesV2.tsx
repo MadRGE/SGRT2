@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Plus, Search, FileText, ChevronRight, Loader2, Filter } from 'lucide-react';
+import { Plus, Search, FileText, ChevronRight, Loader2 } from 'lucide-react';
 
 interface Props {
   onNavigate: (page: any) => void;
@@ -80,10 +80,13 @@ export default function TramitesV2({ onNavigate }: Props) {
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-800">Trámites</h1>
+        <div>
+          <h1 className="text-[26px] tracking-tight font-bold text-slate-800">Trámites</h1>
+          <p className="text-sm text-slate-400 mt-0.5">Seguimiento de todos los trámites</p>
+        </div>
         <button
           onClick={() => onNavigate({ type: 'nuevo-tramite' })}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+          className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-lg hover:shadow-lg hover:shadow-blue-500/25 transition-colors text-sm font-medium"
         >
           <Plus className="w-4 h-4" />
           Nuevo Trámite
@@ -99,13 +102,13 @@ export default function TramitesV2({ onNavigate }: Props) {
             placeholder="Buscar trámite, cliente u organismo..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors"
           />
         </div>
         <select
           value={filtroEstado}
           onChange={(e) => setFiltroEstado(e.target.value)}
-          className="px-3 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors"
         >
           {ESTADOS.map(e => (
             <option key={e.value} value={e.value}>{e.label}</option>
@@ -117,12 +120,12 @@ export default function TramitesV2({ onNavigate }: Props) {
       {loading ? (
         <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>
       ) : filtered.length === 0 ? (
-        <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
+        <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50 p-12 text-center">
           <FileText className="w-12 h-12 mx-auto text-slate-300 mb-3" />
           <p className="text-slate-500">{search || filtroEstado !== 'todos' ? 'No se encontraron trámites' : 'No hay trámites cargados'}</p>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
+        <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50 divide-y divide-slate-100/80">
           {filtered.map((t) => (
             <button
               key={t.id}

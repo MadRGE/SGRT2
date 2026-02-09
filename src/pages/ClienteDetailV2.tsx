@@ -105,9 +105,12 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
       </button>
 
       {/* Info del cliente */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
+      <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50 p-6">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-xl font-bold text-slate-800">{cliente.razon_social}</h1>
+          <div>
+            <h1 className="text-[26px] tracking-tight font-bold text-slate-800">{cliente.razon_social}</h1>
+            <p className="text-sm text-slate-400 mt-0.5">Detalle del cliente</p>
+          </div>
           {!editing ? (
             <button onClick={() => setEditing(true)} className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700">
               <Pencil className="w-4 h-4" /> Editar
@@ -117,7 +120,7 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
               <button onClick={() => { setEditing(false); setEditForm(cliente); }} className="flex items-center gap-1 text-sm text-slate-600">
                 <X className="w-4 h-4" /> Cancelar
               </button>
-              <button onClick={handleSave} className="flex items-center gap-1 text-sm text-white bg-blue-600 px-3 py-1 rounded-lg hover:bg-blue-700">
+              <button onClick={handleSave} className="flex items-center gap-1 text-sm text-white bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-1 rounded-lg hover:shadow-lg hover:shadow-blue-500/25">
                 <Save className="w-4 h-4" /> Guardar
               </button>
             </div>
@@ -129,37 +132,37 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1">Razón Social</label>
               <input value={editForm.razon_social || ''} onChange={e => setEditForm({...editForm, razon_social: e.target.value})}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1">CUIT</label>
               <input value={editForm.cuit || ''} onChange={e => setEditForm({...editForm, cuit: e.target.value})}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1">RNE</label>
               <input value={editForm.rne || ''} onChange={e => setEditForm({...editForm, rne: e.target.value})}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1">Email</label>
               <input value={editForm.email || ''} onChange={e => setEditForm({...editForm, email: e.target.value})}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1">Teléfono</label>
               <input value={editForm.telefono || ''} onChange={e => setEditForm({...editForm, telefono: e.target.value})}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1">Contacto</label>
               <input value={editForm.contacto_nombre || ''} onChange={e => setEditForm({...editForm, contacto_nombre: e.target.value})}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
             <div className="col-span-2">
               <label className="block text-xs font-medium text-slate-500 mb-1">Notas</label>
               <textarea value={editForm.notas || ''} onChange={e => setEditForm({...editForm, notas: e.target.value})} rows={3}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
           </div>
         ) : (
@@ -176,12 +179,12 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
       </div>
 
       {/* Tramites del cliente */}
-      <div className="bg-white rounded-xl border border-slate-200">
+      <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50">
         <div className="flex items-center justify-between p-4 border-b border-slate-100">
           <h2 className="font-semibold text-slate-800">Trámites ({tramites.length})</h2>
           <button
             onClick={() => onNavigate({ type: 'nuevo-tramite', clienteId })}
-            className="flex items-center gap-1 text-sm bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700"
+            className="flex items-center gap-1 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-3 py-1.5 rounded-lg hover:shadow-lg hover:shadow-blue-500/25"
           >
             <Plus className="w-4 h-4" /> Nuevo Trámite
           </button>
@@ -193,7 +196,7 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
             <p>Este cliente no tiene trámites</p>
           </div>
         ) : (
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-slate-100/80">
             {tramites.map((t) => (
               <button
                 key={t.id}
