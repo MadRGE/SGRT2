@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { ArrowLeft, Plus, FileText, ChevronRight, Loader2, Pencil, Save, X, Shield, Trash2, Briefcase } from 'lucide-react';
+import { ArrowLeft, Plus, FileText, ChevronRight, Loader2, Pencil, Save, X, Shield, Trash2, Briefcase, FolderOpen, CheckCircle2, AlertTriangle } from 'lucide-react';
 
 interface Props {
   clienteId: string;
@@ -53,6 +53,17 @@ interface TramiteSuelto {
   fecha_vencimiento: string | null;
 }
 
+interface DocumentoCliente {
+  id: string;
+  nombre: string;
+  categoria: string;
+  estado: string;
+  fecha_emision: string | null;
+  fecha_vencimiento: string | null;
+  notas: string | null;
+  created_at: string;
+}
+
 const TRAMITE_ESTADO_LABELS: Record<string, string> = {
   consulta: 'Consulta', presupuestado: 'Presupuestado', en_curso: 'En Curso',
   esperando_cliente: 'Esp. Cliente', esperando_organismo: 'Esp. Organismo',
@@ -89,6 +100,33 @@ const PRIORIDAD_COLORS: Record<string, string> = {
   baja: 'bg-slate-300',
 };
 
+const DOC_CATEGORIAS = [
+  { value: 'general', label: 'General' },
+  { value: 'societario', label: 'Societario' },
+  { value: 'fiscal', label: 'Fiscal' },
+  { value: 'comercio_exterior', label: 'Comercio Exterior' },
+  { value: 'tecnico', label: 'Tecnico' },
+];
+
+const DOC_ESTADOS = [
+  { value: 'vigente', label: 'Vigente', color: 'bg-green-100 text-green-700' },
+  { value: 'vencido', label: 'Vencido', color: 'bg-red-100 text-red-700' },
+  { value: 'pendiente', label: 'Pendiente', color: 'bg-yellow-100 text-yellow-700' },
+];
+
+const DOCS_COMUNES = [
+  'Constancia de CUIT',
+  'Constancia de Inscripcion AFIP',
+  'Estatuto Social / Contrato Social',
+  'Acta de Directorio',
+  'Poder del representante',
+  'DNI del firmante',
+  'Ultimo balance',
+  'Constancia de domicilio fiscal',
+  'Habilitacion municipal',
+  'Certificado de libre deuda AFIP',
+];
+
 const REGISTRO_TIPOS = [
   { value: 'RNE', label: 'RNE' },
   { value: 'RNEE', label: 'RNEE' },
@@ -114,12 +152,14 @@ const REGISTRO_ESTADOS = [
 export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
   const [cliente, setCliente] = useState<Cliente | null>(null);
   const [registros, setRegistros] = useState<Registro[]>([]);
+  const [documentosCliente, setDocumentosCliente] = useState<DocumentoCliente[]>([]);
   const [gestiones, setGestiones] = useState<Gestion[]>([]);
   const [tramitesSueltos, setTramitesSueltos] = useState<TramiteSuelto[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState<Partial<Cliente>>({});
   const [showRegistroForm, setShowRegistroForm] = useState(false);
+  const [showDocClienteForm, setShowDocClienteForm] = useState(false);
 
   useEffect(() => { loadData(); }, [clienteId]);
 
@@ -139,6 +179,13 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
         .eq('cliente_id', clienteId)
         .order('tipo', { ascending: true });
       setRegistros(r || []);
+
+      const { data: dc } = await supabase
+        .from('documentos_cliente')
+        .select('*')
+        .eq('cliente_id', clienteId)
+        .order('categoria', { ascending: true });
+      setDocumentosCliente(dc || []);
 
       const { data: g } = await supabase
         .from('gestiones')
@@ -183,6 +230,18 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
   const handleDeleteRegistro = async (id: string) => {
     if (!confirm('Eliminar este registro/habilitacion?')) return;
     await supabase.from('registros_cliente').delete().eq('id', id);
+    loadData();
+  };
+
+  const handleDeleteDocCliente = async (id: string) => {
+    if (!confirm('Eliminar este documento? Los tramites que lo referencian perderan el vinculo.')) return;
+    await supabase.from('documentos_cliente').delete().eq('id', id);
+    loadData();
+  };
+
+  const handleToggleDocEstado = async (doc: DocumentoCliente) => {
+    const nextEstado = doc.estado === 'vigente' ? 'vencido' : doc.estado === 'vencido' ? 'pendiente' : 'vigente';
+    await supabase.from('documentos_cliente').update({ estado: nextEstado, updated_at: new Date().toISOString() }).eq('id', doc.id);
     loadData();
   };
 
@@ -347,7 +406,79 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
         )}
       </div>
 
-      {/* 3. Gestiones */}
+      {/* 3. Documentos del Cliente (repositorio reutilizable) */}
+      <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50">
+        <div className="flex items-center justify-between p-4 border-b border-slate-100">
+          <h2 className="font-semibold text-slate-800 flex items-center gap-2">
+            <FolderOpen className="w-4 h-4 text-slate-400" />
+            Documentos del Cliente ({documentosCliente.length})
+          </h2>
+          <button
+            onClick={() => setShowDocClienteForm(true)}
+            className="flex items-center gap-1 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-3 py-1.5 rounded-lg hover:shadow-lg hover:shadow-blue-500/25"
+          >
+            <Plus className="w-4 h-4" /> Agregar
+          </button>
+        </div>
+
+        {documentosCliente.length === 0 ? (
+          <div className="p-8 text-center text-slate-400">
+            <FolderOpen className="w-10 h-10 mx-auto mb-2 opacity-50" />
+            <p>Sin documentos cargados</p>
+            <p className="text-xs mt-1">Los documentos del cliente (CUIT, Estatuto, Poder, etc.) se cargan una vez y se reutilizan en todos sus tramites.</p>
+            <button onClick={() => setShowDocClienteForm(true)} className="mt-3 text-xs text-blue-600 font-semibold hover:text-blue-700">
+              Cargar primer documento
+            </button>
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-100/80">
+            {documentosCliente.map((doc) => {
+              const isVencido = doc.estado === 'vencido' || (doc.fecha_vencimiento && new Date(doc.fecha_vencimiento) < new Date());
+              return (
+                <div key={doc.id} className="p-4 flex items-center gap-3">
+                  {isVencido ? (
+                    <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                  ) : doc.estado === 'vigente' ? (
+                    <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
+                  ) : (
+                    <div className="w-4 h-4 rounded-full border-2 border-yellow-400 flex-shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-slate-800 truncate">{doc.nombre}</span>
+                      <span className="text-[10px] font-medium text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                        {DOC_CATEGORIAS.find(c => c.value === doc.categoria)?.label || doc.categoria}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 mt-0.5">
+                      {doc.fecha_vencimiento && (
+                        <span className={`text-xs ${isVencido ? 'text-red-600 font-medium' : 'text-slate-400'}`}>
+                          Vence: {new Date(doc.fecha_vencimiento).toLocaleDateString('es-AR')}
+                        </span>
+                      )}
+                      {doc.notas && <span className="text-xs text-slate-400 truncate">{doc.notas}</span>}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleToggleDocEstado(doc)}
+                    className={`text-xs font-medium px-2.5 py-1 rounded-full transition-all hover:opacity-80 ${
+                      DOC_ESTADOS.find(e => e.value === doc.estado)?.color || 'bg-slate-100 text-slate-600'
+                    }`}
+                    title="Click para cambiar estado"
+                  >
+                    {DOC_ESTADOS.find(e => e.value === doc.estado)?.label || doc.estado}
+                  </button>
+                  <button onClick={() => handleDeleteDocCliente(doc.id)} className="text-slate-300 hover:text-red-500 transition-colors p-1">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* 4. Gestiones */}
       <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50">
         <div className="flex items-center justify-between p-4 border-b border-slate-100">
           <h2 className="font-semibold text-slate-800 flex items-center gap-2">
@@ -413,7 +544,7 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
         )}
       </div>
 
-      {/* 4. Tramites sueltos (without gestion) */}
+      {/* 5. Tramites sueltos (without gestion) */}
       {tramitesSueltos.length > 0 && (
         <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50">
           <div className="flex items-center justify-between p-4 border-b border-slate-100">
@@ -458,6 +589,16 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
           clienteId={clienteId}
           onClose={() => setShowRegistroForm(false)}
           onCreated={() => { setShowRegistroForm(false); loadData(); }}
+        />
+      )}
+
+      {/* Modal nuevo documento cliente */}
+      {showDocClienteForm && (
+        <NuevoDocClienteModal
+          clienteId={clienteId}
+          existingDocs={documentosCliente}
+          onClose={() => setShowDocClienteForm(false)}
+          onCreated={() => { setShowDocClienteForm(false); loadData(); }}
         />
       )}
     </div>
@@ -553,6 +694,125 @@ function NuevoRegistroModal({ clienteId, onClose, onCreated }: { clienteId: stri
             <label className="block text-sm font-medium text-slate-700 mb-1">Notas</label>
             <textarea value={form.notas} onChange={e => setForm({ ...form, notas: e.target.value })} rows={2}
               placeholder="Observaciones adicionales..."
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-2">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50">Cancelar</button>
+            <button type="submit" disabled={saving}
+              className="px-4 py-2 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:shadow-lg hover:shadow-blue-500/25 disabled:opacity-50">
+              {saving ? 'Guardando...' : 'Crear'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function NuevoDocClienteModal({ clienteId, existingDocs, onClose, onCreated }: {
+  clienteId: string;
+  existingDocs: DocumentoCliente[];
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const [form, setForm] = useState({
+    nombre: '', categoria: 'general', estado: 'vigente',
+    fecha_emision: '', fecha_vencimiento: '', notas: '',
+  });
+  const [saving, setSaving] = useState(false);
+
+  const existingNames = existingDocs.map(d => d.nombre.toLowerCase());
+  const sugeridos = DOCS_COMUNES.filter(name => !existingNames.includes(name.toLowerCase()));
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    const { error } = await supabase.from('documentos_cliente').insert({
+      cliente_id: clienteId,
+      nombre: form.nombre,
+      categoria: form.categoria,
+      estado: form.estado,
+      fecha_emision: form.fecha_emision || null,
+      fecha_vencimiento: form.fecha_vencimiento || null,
+      notas: form.notas || null,
+    });
+    if (!error) onCreated();
+    setSaving(false);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-5 border-b border-slate-200">
+          <h2 className="text-lg font-bold text-slate-800">Nuevo Documento del Cliente</h2>
+          <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+        </div>
+
+        {/* Sugeridos - docs comunes que aun no tiene */}
+        {sugeridos.length > 0 && (
+          <div className="px-5 pt-4">
+            <p className="text-xs font-medium text-slate-500 mb-2">Documentos comunes (click para agregar):</p>
+            <div className="flex flex-wrap gap-1.5">
+              {sugeridos.map(name => (
+                <button
+                  key={name}
+                  onClick={() => setForm({ ...form, nombre: name })}
+                  className={`text-xs px-2.5 py-1 rounded-full border transition-all ${
+                    form.nombre === name
+                      ? 'bg-blue-100 text-blue-700 border-blue-300'
+                      : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-blue-300 hover:text-blue-600'
+                  }`}
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Nombre del documento *</label>
+            <input required value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })}
+              placeholder="Ej: Constancia de CUIT"
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Categoria</label>
+              <select value={form.categoria} onChange={e => setForm({ ...form, categoria: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors">
+                {DOC_CATEGORIAS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Estado</label>
+              <select value={form.estado} onChange={e => setForm({ ...form, estado: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors">
+                {DOC_ESTADOS.map(e => <option key={e.value} value={e.value}>{e.label}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Fecha Emision</label>
+              <input type="date" value={form.fecha_emision} onChange={e => setForm({ ...form, fecha_emision: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Fecha Vencimiento</label>
+              <input type="date" value={form.fecha_vencimiento} onChange={e => setForm({ ...form, fecha_vencimiento: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Notas</label>
+            <textarea value={form.notas} onChange={e => setForm({ ...form, notas: e.target.value })} rows={2}
+              placeholder="Observaciones..."
               className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
           </div>
 

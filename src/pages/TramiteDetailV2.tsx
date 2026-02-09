@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { ArrowLeft, Clock, Loader2, Save, Pencil, X, Plus, FileCheck, Trash2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Clock, Loader2, Save, Pencil, X, Plus, FileCheck, Trash2, CheckCircle2, AlertCircle, Link2 } from 'lucide-react';
 
 interface Props {
   tramiteId: string;
@@ -35,7 +35,16 @@ interface Documento {
   estado: string;
   obligatorio: boolean;
   responsable: string | null;
+  documento_cliente_id: string | null;
   created_at: string;
+}
+
+interface DocCliente {
+  id: string;
+  nombre: string;
+  estado: string;
+  categoria: string;
+  fecha_vencimiento: string | null;
 }
 
 interface Seguimiento {
@@ -109,6 +118,8 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState<Partial<Tramite>>({});
   const [showDocForm, setShowDocForm] = useState(false);
+  const [showLinkDocForm, setShowLinkDocForm] = useState(false);
+  const [docsCliente, setDocsCliente] = useState<DocCliente[]>([]);
   const [docForm, setDocForm] = useState({ nombre: '', obligatorio: false, responsable: '' });
   const [savingDoc, setSavingDoc] = useState(false);
 
@@ -140,6 +151,16 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
         .order('created_at', { ascending: false });
 
       setSeguimientos(s || []);
+
+      // Load client documents for linking
+      if (t?.cliente_id) {
+        const { data: clientDocs } = await supabase
+          .from('documentos_cliente')
+          .select('id, nombre, estado, categoria, fecha_vencimiento')
+          .eq('cliente_id', t.cliente_id)
+          .order('nombre', { ascending: true });
+        setDocsCliente(clientDocs || []);
+      }
     } catch (e) {
       console.warn('Error:', e);
     }
@@ -280,6 +301,26 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
     if (!confirm('¿Eliminar este documento?')) return;
     await supabase.from('documentos_tramite').delete().eq('id', docId);
     loadData();
+  };
+
+  const handleLinkDocCliente = async (docCliente: DocCliente) => {
+    // Check if this client doc is already linked to this tramite
+    const alreadyLinked = documentos.some(d => d.documento_cliente_id === docCliente.id);
+    if (alreadyLinked) return;
+
+    const { error } = await supabase.from('documentos_tramite').insert({
+      tramite_id: tramiteId,
+      nombre: docCliente.nombre,
+      documento_cliente_id: docCliente.id,
+      estado: docCliente.estado === 'vigente' ? 'aprobado' : 'pendiente',
+      obligatorio: true,
+      responsable: null,
+    });
+
+    if (!error) {
+      setShowLinkDocForm(false);
+      loadData();
+    }
   };
 
   if (loading) {
@@ -492,12 +533,22 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
             <FileCheck className="w-4 h-4 text-slate-400" />
             Documentacion ({docsTotal})
           </h2>
-          <button
-            onClick={() => setShowDocForm(!showDocForm)}
-            className="flex items-center gap-1 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-3 py-1.5 rounded-lg hover:shadow-lg hover:shadow-blue-500/25"
-          >
-            <Plus className="w-4 h-4" /> Agregar Documento
-          </button>
+          <div className="flex gap-2">
+            {docsCliente.length > 0 && (
+              <button
+                onClick={() => setShowLinkDocForm(!showLinkDocForm)}
+                className="flex items-center gap-1 text-sm border border-blue-300 text-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors"
+              >
+                <Link2 className="w-4 h-4" /> Del Cliente
+              </button>
+            )}
+            <button
+              onClick={() => setShowDocForm(!showDocForm)}
+              className="flex items-center gap-1 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-3 py-1.5 rounded-lg hover:shadow-lg hover:shadow-blue-500/25"
+            >
+              <Plus className="w-4 h-4" /> Nuevo
+            </button>
+          </div>
         </div>
 
         {/* Inline add document form */}
@@ -552,6 +603,49 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
           </div>
         )}
 
+        {/* Link client document panel */}
+        {showLinkDocForm && (
+          <div className="p-4 border-b border-slate-100 bg-blue-50/50">
+            <p className="text-xs font-medium text-slate-600 mb-2">Documentos disponibles del cliente (click para vincular):</p>
+            <div className="flex flex-wrap gap-2">
+              {docsCliente.map(dc => {
+                const alreadyLinked = documentos.some(d => d.documento_cliente_id === dc.id);
+                const isVencido = dc.estado === 'vencido' || (dc.fecha_vencimiento && new Date(dc.fecha_vencimiento) < new Date());
+                return (
+                  <button
+                    key={dc.id}
+                    onClick={() => !alreadyLinked && handleLinkDocCliente(dc)}
+                    disabled={alreadyLinked}
+                    className={`text-xs px-3 py-1.5 rounded-full border transition-all flex items-center gap-1.5 ${
+                      alreadyLinked
+                        ? 'bg-green-50 text-green-600 border-green-200 cursor-default'
+                        : isVencido
+                        ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100'
+                        : 'bg-white text-slate-700 border-slate-200 hover:border-blue-300 hover:text-blue-600'
+                    }`}
+                  >
+                    {alreadyLinked ? (
+                      <CheckCircle2 className="w-3 h-3" />
+                    ) : isVencido ? (
+                      <AlertCircle className="w-3 h-3" />
+                    ) : (
+                      <Link2 className="w-3 h-3" />
+                    )}
+                    {dc.nombre}
+                    {alreadyLinked && <span className="text-[10px]">vinculado</span>}
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              onClick={() => setShowLinkDocForm(false)}
+              className="mt-2 text-xs text-slate-500 hover:text-slate-700"
+            >
+              Cerrar
+            </button>
+          </div>
+        )}
+
         {/* Progress summary */}
         {docsTotal > 0 && (
           <div className="px-4 pt-3 pb-1">
@@ -594,6 +688,11 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
                     <span className="text-sm font-medium text-slate-800 truncate">{doc.nombre}</span>
                     {doc.obligatorio && (
                       <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">REQ</span>
+                    )}
+                    {doc.documento_cliente_id && (
+                      <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                        <Link2 className="w-2.5 h-2.5" /> CLIENTE
+                      </span>
                     )}
                   </div>
                   {doc.responsable && (
