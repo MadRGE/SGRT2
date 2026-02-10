@@ -82,9 +82,11 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
         }
       });
 
-    supabase.from('tramite_tipos').select('*').eq('activo', true).order('organismo').order('nombre')
+    supabase.from('tramite_tipos').select('id,codigo,nombre,organismo,categoria,subcategoria,plataforma,plazo_dias,costo_organismo,honorarios,documentacion_obligatoria,observaciones,activo')
+      .eq('activo', true).order('organismo')
       .then(({ data, error }) => {
-        console.log('CATALOGO:', { data: data?.length, error });
+        console.log('CATALOGO:', { count: data?.length, error, first: data?.[0] });
+        if (error) console.error('CATALOGO ERROR:', error.message, error.details, error.hint);
         if (data) setCatalogo(data as TramiteTipo[]);
       });
   }, [gestionId]);
