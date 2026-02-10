@@ -54,21 +54,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const loadUserData = async (userId: string) => {
-    try {
-      const { data } = await supabase
-        .from('usuarios')
-        .select('rol, cliente_id')
-        .eq('auth_id', userId)
-        .maybeSingle();
-
-      if (data) {
-        setUserRole(data.rol);
-        setClienteId(data.cliente_id);
-      }
-    } catch {
-      // Table may not exist yet
-    }
+  const loadUserData = async (_userId: string) => {
+    // Solo consultant app - no need for usuarios table lookup
+    setUserRole('admin');
+    setClienteId(null);
     setLoading(false);
   };
 
@@ -98,16 +87,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (error) return { error };
-
-      if (data.user) {
-        await supabase.from('usuarios').insert({
-          auth_id: data.user.id,
-          email,
-          nombre,
-          rol,
-        });
-      }
-
       return { error: null };
     } catch (error) {
       return { error: error as Error };
