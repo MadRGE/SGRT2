@@ -66,27 +66,25 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
   });
 
   useEffect(() => {
-    supabase.from('clientes').select('id, razon_social, banda_precio').order('razon_social')
-      .then(({ data }) => { if (data) setClientes(data as Cliente[]); });
+    supabase.from('clientes').select('id, razon_social').order('razon_social')
+      .then(({ data }) => { if (data) setClientes(data.map(c => ({ ...c, banda_precio: null })) as Cliente[]); });
 
-    supabase.from('gestiones').select('id, nombre, cliente_id, clientes(razon_social)').order('nombre')
+    supabase.from('gestiones').select('id, nombre, cliente_id').order('nombre')
       .then(({ data }) => {
         if (data) {
-          setGestiones(data as Gestion[]);
+          setGestiones(data.map(g => ({ ...g, clientes: null })) as Gestion[]);
           if (gestionId) {
-            const gestion = (data as Gestion[]).find(g => g.id === gestionId);
+            const gestion = data.find((g: any) => g.id === gestionId);
             if (gestion) {
-              setForm(prev => ({ ...prev, cliente_id: gestion.cliente_id }));
+              setForm(prev => ({ ...prev, cliente_id: (gestion as any).cliente_id }));
             }
           }
         }
       });
 
-    supabase.from('tramite_tipos').select('id,codigo,nombre,organismo,categoria,subcategoria,plataforma,plazo_dias,costo_organismo,honorarios,documentacion_obligatoria,observaciones,activo')
-      .eq('activo', true).order('organismo')
+    supabase.from('tramite_tipos').select('*').eq('activo', true).order('organismo')
       .then(({ data, error }) => {
-        console.log('CATALOGO:', { count: data?.length, error, first: data?.[0] });
-        if (error) console.error('CATALOGO ERROR:', error.message, error.details, error.hint);
+        console.log('CATALOGO:', { count: data?.length, error });
         if (data) setCatalogo(data as TramiteTipo[]);
       });
   }, [gestionId]);
