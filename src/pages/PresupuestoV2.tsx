@@ -82,6 +82,8 @@ export default function PresupuestoV2({ gestionId, onNavigate }: Props) {
   const today = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' });
   const numero = `PRES-${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${gestionId.slice(0, 4).toUpperCase()}`;
 
+  const cliente = gestion.clientes;
+
   // Calculate totals using band pricing
   const bandaCliente = cliente?.banda_precio || 1;
   const bandaLabel = bandaCliente === 3 ? 'Urgente' : bandaCliente === 2 ? 'Prioritario' : 'Estandar';
@@ -111,8 +113,6 @@ export default function PresupuestoV2({ gestionId, onNavigate }: Props) {
   const subtotalHonorarios = items.reduce((sum, i) => sum + i.honorarios, 0);
   const subtotalTasas = items.reduce((sum, i) => sum + i.tasa, 0);
   const totalGeneral = subtotalHonorarios + subtotalTasas;
-
-  const cliente = gestion.clientes;
 
   return (
     <div className="max-w-4xl mx-auto space-y-4">
