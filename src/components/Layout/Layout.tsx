@@ -13,7 +13,8 @@ export type Page =
   | { type: 'vencimientos' }
   | { type: 'nuevo-tramite'; gestionId?: string; clienteId?: string }
   | { type: 'nueva-gestion'; clienteId?: string }
-  | { type: 'nuevo-cliente' };
+  | { type: 'nuevo-cliente' }
+  | { type: 'presupuesto'; gestionId: string };
 
 type NavPage = 'dashboard' | 'clientes' | 'gestiones' | 'tramites' | 'vencimientos';
 

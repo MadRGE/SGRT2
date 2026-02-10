@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { ArrowLeft, Plus, FileText, ChevronRight, Loader2, Pencil, Save, X, FolderOpen, BarChart3 } from 'lucide-react';
+import { ArrowLeft, Plus, FileText, ChevronRight, Loader2, Pencil, Save, X, FolderOpen, BarChart3, Receipt } from 'lucide-react';
 
 interface Props {
   gestionId: string;
@@ -188,6 +188,14 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
             }`}>
               {gestion.prioridad?.charAt(0).toUpperCase() + gestion.prioridad?.slice(1)}
             </span>
+            {totalTramites > 0 && (
+              <button
+                onClick={() => onNavigate({ type: 'presupuesto', gestionId })}
+                className="flex items-center gap-1 text-sm border border-green-300 text-green-700 px-3 py-1.5 rounded-lg hover:bg-green-50 transition-colors"
+              >
+                <Receipt className="w-4 h-4" /> Presupuesto
+              </button>
+            )}
             {!editing && (
               <button onClick={() => setEditing(true)} className="text-sm text-blue-600 hover:text-blue-700">
                 Editar
