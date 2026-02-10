@@ -83,7 +83,7 @@ export default function TramitesV2({ onNavigate }: Props) {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-[26px] tracking-tight font-bold text-slate-800">Trámites</h1>
-          <p className="text-sm text-slate-400 mt-0.5">Seguimiento de todos los trámites</p>
+          <p className="text-sm text-slate-400 mt-0.5">Procesos regulatorios dentro de tus gestiones</p>
         </div>
         <button
           onClick={() => onNavigate({ type: 'nuevo-tramite' })}

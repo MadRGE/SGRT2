@@ -171,7 +171,7 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
             <h1 className="text-[26px] tracking-tight font-bold text-slate-800">{gestion.nombre}</h1>
-            <p className="text-sm text-slate-400 mt-0.5">Detalle de la gestion</p>
+          <p className="text-sm text-slate-400 mt-0.5">Proyecto y sus tramites asociados</p>
             <button
               onClick={() => onNavigate({ type: 'cliente', id: gestion.cliente_id })}
               className="text-sm text-blue-600 hover:text-blue-700 mt-1"

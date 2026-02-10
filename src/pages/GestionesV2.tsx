@@ -114,7 +114,7 @@ export default function GestionesV2({ onNavigate }: Props) {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-[26px] tracking-tight font-bold text-slate-800">Gestiones</h1>
-          <p className="text-sm text-slate-400 mt-0.5">Proyectos y procesos regulatorios</p>
+          <p className="text-sm text-slate-400 mt-0.5">Tus proyectos y trabajos contratados</p>
         </div>
         <button
           onClick={() => onNavigate({ type: 'nueva-gestion' })}

@@ -8,16 +8,11 @@ interface Props {
   onNavigate: (page: any) => void;
 }
 
-interface Cliente {
-  id: string;
-  razon_social: string;
-}
-
 interface Gestion {
   id: string;
   nombre: string;
   cliente_id: string;
-  clientes: { razon_social: string } | null;
+  cliente_nombre: string;
 }
 
 interface TramiteTipo {
@@ -39,7 +34,6 @@ const ORGANISMOS_CATALOGO = ['INAL', 'ANMAT', 'SENASA', 'INTI', 'SEDRONAR', 'CIT
 const PLATAFORMAS = ['TAD', 'TADO', 'VUCE', 'SIGSA', 'Otro'];
 
 export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Props) {
-  const [clientes, setClientes] = useState<Cliente[]>([]);
   const [gestiones, setGestiones] = useState<Gestion[]>([]);
   const [catalogo, setCatalogo] = useState<TramiteTipo[]>([]);
   const [loading, setLoading] = useState(false);
@@ -52,7 +46,7 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
     cliente_id: clienteId || '',
     tramite_tipo_id: '',
     titulo: '',
-    tipo: 'importacion',
+    tipo: 'registro',
     organismo: '',
     plataforma: '',
     prioridad: 'normal',
@@ -62,17 +56,24 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
   });
 
   useEffect(() => {
-    supabase.from('clientes').select('id, razon_social').order('razon_social')
-      .then(({ data }) => { if (data) setClientes(data as Cliente[]); });
-
-    supabase.from('gestiones').select('id, nombre, cliente_id').order('nombre')
+    // Load gestiones with client name
+    supabase.from('gestiones').select('id, nombre, cliente_id, clientes(razon_social)')
+      .not('estado', 'in', '("finalizado","archivado")')
+      .order('created_at', { ascending: false })
       .then(({ data }) => {
         if (data) {
-          setGestiones(data.map(g => ({ ...g, clientes: null })) as Gestion[]);
+          const mapped = data.map((g: any) => ({
+            id: g.id,
+            nombre: g.nombre,
+            cliente_id: g.cliente_id,
+            cliente_nombre: g.clientes?.razon_social || '',
+          }));
+          setGestiones(mapped);
+          // If gestionId was provided, auto-set cliente_id
           if (gestionId) {
-            const gestion = data.find((g: any) => g.id === gestionId);
+            const gestion = mapped.find(g => g.id === gestionId);
             if (gestion) {
-              setForm(prev => ({ ...prev, cliente_id: (gestion as any).cliente_id }));
+              setForm(prev => ({ ...prev, cliente_id: gestion.cliente_id }));
             }
           }
         }
@@ -93,9 +94,11 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
         cliente_id: gestion ? gestion.cliente_id : prev.cliente_id,
       }));
     } else {
-      setForm(prev => ({ ...prev, gestion_id: '' }));
+      setForm(prev => ({ ...prev, gestion_id: '', cliente_id: '' }));
     }
   };
+
+  const selectedGestion = gestiones.find(g => g.id === form.gestion_id);
 
   const handleSelectTipo = (tipo: TramiteTipo) => {
     setSelectedTipo(tipo);
@@ -126,12 +129,13 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.gestion_id) return;
     setLoading(true);
 
     const { data, error } = await supabase
       .from('tramites')
       .insert({
-        gestion_id: form.gestion_id || null,
+        gestion_id: form.gestion_id,
         cliente_id: form.cliente_id,
         tramite_tipo_id: form.tramite_tipo_id || null,
         titulo: form.titulo,
@@ -170,7 +174,7 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
     if (gestionId) {
       onNavigate({ type: 'gestion', id: gestionId });
     } else {
-      onNavigate({ type: 'tramites' });
+      onNavigate({ type: 'gestiones' });
     }
   };
 
@@ -196,8 +200,36 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
         <ArrowLeft className="w-4 h-4" /> Volver
       </button>
 
-      {/* Catalog selector */}
-      {showCatalogo && (
+      {/* Step 1: Select gestion */}
+      <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50 p-6">
+        <h1 className="text-[26px] tracking-tight font-bold text-slate-800 mb-1">Nuevo Tramite</h1>
+        <p className="text-sm text-slate-400 mt-0.5 mb-4">Agrega un proceso regulatorio a una gestion</p>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Gestion (proyecto) *</label>
+          <select
+            required
+            value={form.gestion_id}
+            onChange={e => handleGestionChange(e.target.value)}
+            className={inputClass}
+          >
+            <option value="">Seleccionar gestion...</option>
+            {gestiones.map(g => (
+              <option key={g.id} value={g.id}>
+                {g.nombre} — {g.cliente_nombre}
+              </option>
+            ))}
+          </select>
+          {selectedGestion && (
+            <p className="text-xs text-slate-400 mt-1">
+              Cliente: <span className="text-slate-600 font-medium">{selectedGestion.cliente_nombre}</span>
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Step 2: Select from catalog (only if gestion selected) */}
+      {form.gestion_id && showCatalogo && (
         <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50">
           <div className="p-4 border-b border-slate-100">
             <div className="flex items-center gap-2 mb-3">
@@ -306,139 +338,128 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
         </div>
       )}
 
-      {/* Form */}
-      <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50 p-6">
-        <h1 className="text-[26px] tracking-tight font-bold text-slate-800 mb-1">Nuevo Tramite</h1>
-        <p className="text-sm text-slate-400 mt-0.5 mb-6">Crea un nuevo tramite de importacion o exportacion</p>
+      {/* Step 3: Form details (only if gestion selected) */}
+      {form.gestion_id && (
+        <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50 p-6">
+          <h2 className="font-semibold text-slate-800 mb-4">Datos del tramite</h2>
 
-        {/* Selected tipo badge */}
-        {selectedTipo && (
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center gap-3">
-            <BookOpen className="w-4 h-4 text-blue-600 flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-blue-800 truncate">{selectedTipo.nombre}</p>
-              <div className="flex items-center gap-3 mt-0.5">
-                <span className="text-xs text-blue-600">{selectedTipo.organismo}</span>
-                <span className="text-xs text-blue-500 font-mono">{selectedTipo.codigo}</span>
-                {selectedTipo.plazo_dias && <span className="text-xs text-blue-500">{selectedTipo.plazo_dias} dias</span>}
+          {/* Selected tipo badge */}
+          {selectedTipo && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center gap-3">
+              <BookOpen className="w-4 h-4 text-blue-600 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-blue-800 truncate">{selectedTipo.nombre}</p>
+                <div className="flex items-center gap-3 mt-0.5">
+                  <span className="text-xs text-blue-600">{selectedTipo.organismo}</span>
+                  <span className="text-xs text-blue-500 font-mono">{selectedTipo.codigo}</span>
+                  {selectedTipo.plazo_dias && <span className="text-xs text-blue-500">{selectedTipo.plazo_dias} dias</span>}
+                </div>
               </div>
+              <div className="text-right flex-shrink-0">
+                {selectedTipo.costo_organismo ? (
+                  <p className="text-xs text-blue-500">Tasa: ${selectedTipo.costo_organismo.toLocaleString('es-AR')}</p>
+                ) : null}
+              </div>
+              <button onClick={handleClearTipo} className="p-1 text-blue-400 hover:text-blue-600">
+                <X className="w-4 h-4" />
+              </button>
             </div>
-            <div className="text-right flex-shrink-0">
-              {selectedTipo.costo_organismo ? (
-                <p className="text-xs text-blue-500">Tasa: ${selectedTipo.costo_organismo.toLocaleString('es-AR')}</p>
-              ) : null}
-            </div>
-            <button onClick={handleClearTipo} className="p-1 text-blue-400 hover:text-blue-600">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Gestion</label>
-            <select value={form.gestion_id} onChange={e => handleGestionChange(e.target.value)} className={inputClass}>
-              <option value="">Sin gestion asociada</option>
-              {gestiones.map(g => (
-                <option key={g.id} value={g.id}>
-                  {g.nombre}{g.clientes ? ` — ${g.clientes.razon_social}` : ''}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Cliente *</label>
-            <select required value={form.cliente_id} onChange={e => setForm({ ...form, cliente_id: e.target.value })} className={inputClass}>
-              <option value="">Seleccionar cliente...</option>
-              {clientes.map(c => <option key={c.id} value={c.id}>{c.razon_social}</option>)}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Titulo *</label>
-            <input required value={form.titulo} onChange={e => setForm({ ...form, titulo: e.target.value })}
-              placeholder="Ej: Registro de producto cosmetico"
-              className={inputClass} />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Tipo</label>
-              <select value={form.tipo} onChange={e => setForm({ ...form, tipo: e.target.value })} className={inputClass}>
-                <option value="importacion">Importacion</option>
-                <option value="exportacion">Exportacion</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Organismo</label>
-              <select value={form.organismo} onChange={e => setForm({ ...form, organismo: e.target.value })} className={inputClass}>
-                <option value="">Sin definir</option>
-                {ORGANISMOS_CATALOGO.map(o => <option key={o} value={o}>{o}</option>)}
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Plataforma</label>
-              <select value={form.plataforma} onChange={e => setForm({ ...form, plataforma: e.target.value })} className={inputClass}>
-                <option value="">Sin definir</option>
-                {PLATAFORMAS.map(p => <option key={p} value={p}>{p}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Prioridad</label>
-              <select value={form.prioridad} onChange={e => setForm({ ...form, prioridad: e.target.value })} className={inputClass}>
-                <option value="baja">Baja</option>
-                <option value="normal">Normal</option>
-                <option value="alta">Alta</option>
-                <option value="urgente">Urgente</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Fecha Vencimiento</label>
-              <input type="date" value={form.fecha_vencimiento} onChange={e => setForm({ ...form, fecha_vencimiento: e.target.value })}
-                className={inputClass} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Honorarios Gestion ($)</label>
-              <input type="number" value={form.monto_presupuesto} onChange={e => setForm({ ...form, monto_presupuesto: e.target.value })}
-                placeholder="0.00"
-                className={inputClass} />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Descripcion</label>
-            <textarea value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })} rows={3}
-              placeholder="Detalles del tramite..."
-              className={inputClass} />
-          </div>
-
-          {!showCatalogo && !selectedTipo && (
-            <button
-              type="button"
-              onClick={() => setShowCatalogo(true)}
-              className="text-xs text-blue-600 hover:text-blue-700 font-medium"
-            >
-              Seleccionar del catalogo
-            </button>
           )}
 
-          <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={handleBack}
-              className="px-4 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50">Cancelar</button>
-            <button type="submit" disabled={loading}
-              className="px-4 py-2 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:shadow-lg hover:shadow-blue-500/25 disabled:opacity-50">
-              {loading ? <><Loader2 className="w-4 h-4 animate-spin inline mr-1" /> Creando...</> : 'Crear Tramite'}
-            </button>
-          </div>
-        </form>
-      </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Titulo del tramite *</label>
+              <input required value={form.titulo} onChange={e => setForm({ ...form, titulo: e.target.value })}
+                placeholder="Ej: Registro de producto cosmetico"
+                className={inputClass} />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Tipo de proceso</label>
+                <select value={form.tipo} onChange={e => setForm({ ...form, tipo: e.target.value })} className={inputClass}>
+                  <option value="registro">Registro</option>
+                  <option value="habilitacion">Habilitacion</option>
+                  <option value="certificacion">Certificacion</option>
+                  <option value="importacion">Importacion</option>
+                  <option value="exportacion">Exportacion</option>
+                  <option value="inspeccion">Inspeccion</option>
+                  <option value="autorizacion">Autorizacion</option>
+                  <option value="renovacion">Renovacion</option>
+                  <option value="modificacion">Modificacion</option>
+                  <option value="otro">Otro</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Organismo</label>
+                <select value={form.organismo} onChange={e => setForm({ ...form, organismo: e.target.value })} className={inputClass}>
+                  <option value="">Sin definir</option>
+                  {ORGANISMOS_CATALOGO.map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Plataforma</label>
+                <select value={form.plataforma} onChange={e => setForm({ ...form, plataforma: e.target.value })} className={inputClass}>
+                  <option value="">Sin definir</option>
+                  {PLATAFORMAS.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Prioridad</label>
+                <select value={form.prioridad} onChange={e => setForm({ ...form, prioridad: e.target.value })} className={inputClass}>
+                  <option value="baja">Baja</option>
+                  <option value="normal">Normal</option>
+                  <option value="alta">Alta</option>
+                  <option value="urgente">Urgente</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Fecha Vencimiento</label>
+                <input type="date" value={form.fecha_vencimiento} onChange={e => setForm({ ...form, fecha_vencimiento: e.target.value })}
+                  className={inputClass} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Honorarios ($)</label>
+                <input type="number" value={form.monto_presupuesto} onChange={e => setForm({ ...form, monto_presupuesto: e.target.value })}
+                  placeholder="0.00"
+                  className={inputClass} />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Descripcion</label>
+              <textarea value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })} rows={3}
+                placeholder="Detalles del tramite..."
+                className={inputClass} />
+            </div>
+
+            {!showCatalogo && !selectedTipo && (
+              <button
+                type="button"
+                onClick={() => setShowCatalogo(true)}
+                className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+              >
+                Seleccionar del catalogo
+              </button>
+            )}
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button type="button" onClick={handleBack}
+                className="px-4 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50">Cancelar</button>
+              <button type="submit" disabled={loading || !form.gestion_id}
+                className="px-4 py-2 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:shadow-lg hover:shadow-blue-500/25 disabled:opacity-50">
+                {loading ? <><Loader2 className="w-4 h-4 animate-spin inline mr-1" /> Creando...</> : 'Crear Tramite'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
