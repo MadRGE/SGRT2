@@ -83,7 +83,10 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
       });
 
     supabase.from('tramite_tipos').select('*').eq('activo', true).order('organismo').order('nombre')
-      .then(({ data }) => { if (data) setCatalogo(data as TramiteTipo[]); });
+      .then(({ data, error }) => {
+        console.log('CATALOGO:', { data: data?.length, error });
+        if (data) setCatalogo(data as TramiteTipo[]);
+      });
   }, [gestionId]);
 
   const handleGestionChange = (gestionIdValue: string) => {
