@@ -18,8 +18,6 @@ interface GestionData {
     cuit: string | null;
     email: string | null;
     telefono: string | null;
-    direccion: string | null;
-    banda_precio: number | null;
   } | null;
 }
 
@@ -32,9 +30,6 @@ interface TramiteRow {
   tramite_tipos: {
     costo_organismo: number | null;
     honorarios: number | null;
-    precio_banda_1: number | null;
-    precio_banda_2: number | null;
-    precio_banda_3: number | null;
     plazo_dias: number | null;
   } | null;
 }
@@ -53,14 +48,14 @@ export default function PresupuestoV2({ gestionId, onNavigate }: Props) {
     setLoading(true);
     const { data: g } = await supabase
       .from('gestiones')
-      .select('id, nombre, descripcion, estado, fecha_inicio, clientes(razon_social, cuit, email, telefono, direccion, banda_precio)')
+      .select('id, nombre, descripcion, estado, fecha_inicio, clientes(razon_social, cuit, email, telefono)')
       .eq('id', gestionId)
       .single();
     if (g) setGestion(g as any);
 
     const { data: t } = await supabase
       .from('tramites')
-      .select('id, titulo, organismo, plataforma, monto_presupuesto, tramite_tipos(costo_organismo, honorarios, precio_banda_1, precio_banda_2, precio_banda_3, plazo_dias)')
+      .select('id, titulo, organismo, plataforma, monto_presupuesto, tramite_tipos(costo_organismo, honorarios, plazo_dias)')
       .eq('gestion_id', gestionId)
       .order('created_at', { ascending: true });
     setTramites((t as any) || []);
@@ -84,19 +79,11 @@ export default function PresupuestoV2({ gestionId, onNavigate }: Props) {
 
   const cliente = gestion.clientes;
 
-  // Calculate totals using band pricing
-  const bandaCliente = cliente?.banda_precio || 1;
-  const bandaLabel = bandaCliente === 3 ? 'Urgente' : bandaCliente === 2 ? 'Prioritario' : 'Estandar';
-
   const items = tramites.map(t => {
-    // Priority: monto_presupuesto (manual override) > band price > honorarios
+    // Priority: monto_presupuesto (manual override) > honorarios from catalog
     let honorarios = t.monto_presupuesto || 0;
     if (!honorarios && t.tramite_tipos) {
-      const tt = t.tramite_tipos;
-      if (bandaCliente === 3 && (tt.precio_banda_3 || 0) > 0) honorarios = tt.precio_banda_3!;
-      else if (bandaCliente === 2 && (tt.precio_banda_2 || 0) > 0) honorarios = tt.precio_banda_2!;
-      else if ((tt.precio_banda_1 || 0) > 0) honorarios = tt.precio_banda_1!;
-      else honorarios = tt.honorarios || 0;
+      honorarios = t.tramite_tipos.honorarios || 0;
     }
     const tasa = t.tramite_tipos?.costo_organismo || 0;
     return {
@@ -159,18 +146,12 @@ export default function PresupuestoV2({ gestionId, onNavigate }: Props) {
         <div className="px-8 py-5 border-b border-slate-100 print:border-slate-200 bg-slate-50/50 print:bg-slate-50">
           <div className="flex items-center gap-2 mb-2">
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Cliente</p>
-            <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full print:hidden ${
-              bandaCliente === 3 ? 'bg-red-100 text-red-700' : bandaCliente === 2 ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'
-            }`}>
-              Banda {bandaCliente} - {bandaLabel}
-            </span>
           </div>
           <div className="grid grid-cols-2 gap-x-8 gap-y-1">
             <p className="text-sm font-semibold text-slate-800">{cliente?.razon_social || 'Sin cliente'}</p>
             {cliente?.cuit && <p className="text-sm text-slate-600">CUIT: {cliente.cuit}</p>}
             {cliente?.email && <p className="text-sm text-slate-600">{cliente.email}</p>}
             {cliente?.telefono && <p className="text-sm text-slate-600">{cliente.telefono}</p>}
-            {cliente?.direccion && <p className="text-sm text-slate-600 col-span-2">{cliente.direccion}</p>}
           </div>
           <div className="mt-3 pt-3 border-t border-slate-200">
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Gestion</p>

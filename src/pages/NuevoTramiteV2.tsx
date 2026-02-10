@@ -11,7 +11,6 @@ interface Props {
 interface Cliente {
   id: string;
   razon_social: string;
-  banda_precio: number | null;
 }
 
 interface Gestion {
@@ -32,9 +31,6 @@ interface TramiteTipo {
   plazo_dias: number | null;
   costo_organismo: number | null;
   honorarios: number | null;
-  precio_banda_1: number | null;
-  precio_banda_2: number | null;
-  precio_banda_3: number | null;
   documentacion_obligatoria: string[] | null;
   observaciones: string | null;
 }
@@ -67,7 +63,7 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
 
   useEffect(() => {
     supabase.from('clientes').select('id, razon_social').order('razon_social')
-      .then(({ data }) => { if (data) setClientes(data.map(c => ({ ...c, banda_precio: null })) as Cliente[]); });
+      .then(({ data }) => { if (data) setClientes(data as Cliente[]); });
 
     supabase.from('gestiones').select('id, nombre, cliente_id').order('nombre')
       .then(({ data }) => {
@@ -83,8 +79,7 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
       });
 
     supabase.from('tramite_tipos').select('*').order('organismo')
-      .then(({ data, error }) => {
-        console.log('CATALOGO:', { count: data?.length, error });
+      .then(({ data }) => {
         if (data) setCatalogo(data as TramiteTipo[]);
       });
   }, [gestionId]);
@@ -102,24 +97,9 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
     }
   };
 
-  const getPriceForBanda = (tipo: TramiteTipo, banda: number): number => {
-    if (banda === 3 && (tipo.precio_banda_3 || 0) > 0) return tipo.precio_banda_3!;
-    if (banda === 2 && (tipo.precio_banda_2 || 0) > 0) return tipo.precio_banda_2!;
-    if ((tipo.precio_banda_1 || 0) > 0) return tipo.precio_banda_1!;
-    return tipo.honorarios || 0;
-  };
-
-  const getClientBanda = (): number => {
-    const clienteId = form.cliente_id;
-    if (!clienteId) return 1;
-    const cliente = clientes.find(c => c.id === clienteId);
-    return cliente?.banda_precio || 1;
-  };
-
   const handleSelectTipo = (tipo: TramiteTipo) => {
     setSelectedTipo(tipo);
-    const banda = getClientBanda();
-    const precio = getPriceForBanda(tipo, banda);
+    const precio = tipo.honorarios || 0;
     setForm(prev => ({
       ...prev,
       tramite_tipo_id: tipo.id,
@@ -292,9 +272,9 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
                       </div>
                     </div>
                     <div className="text-right flex-shrink-0">
-                      {(tipo.precio_banda_1 || tipo.honorarios) ? (
+                      {tipo.honorarios ? (
                         <span className="text-sm font-semibold text-green-700">
-                          ${(tipo.precio_banda_1 || tipo.honorarios || 0).toLocaleString('es-AR')}
+                          ${tipo.honorarios.toLocaleString('es-AR')}
                         </span>
                       ) : (
                         <span className="text-xs text-slate-400">Sin precio</span>
