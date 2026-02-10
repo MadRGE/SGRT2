@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { LayoutDashboard, Users, FileText, LogOut, Calendar, Briefcase } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, LogOut, Calendar, Briefcase, DollarSign } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 export type Page =
@@ -13,9 +13,11 @@ export type Page =
   | { type: 'vencimientos' }
   | { type: 'nuevo-tramite'; gestionId?: string; clienteId?: string }
   | { type: 'nueva-gestion'; clienteId?: string }
-  | { type: 'nuevo-cliente' };
+  | { type: 'nuevo-cliente' }
+  | { type: 'presupuesto'; gestionId: string }
+  | { type: 'precios' };
 
-type NavPage = 'dashboard' | 'clientes' | 'gestiones' | 'tramites' | 'vencimientos';
+type NavPage = 'dashboard' | 'clientes' | 'gestiones' | 'tramites' | 'vencimientos' | 'precios';
 
 interface LayoutProps {
   children: ReactNode;
@@ -28,6 +30,7 @@ const NAV_ITEMS: { nav: NavPage; label: string; icon: typeof LayoutDashboard }[]
   { nav: 'gestiones', label: 'Gestiones', icon: Briefcase },
   { nav: 'tramites', label: 'Trámites', icon: FileText },
   { nav: 'clientes', label: 'Clientes', icon: Users },
+  { nav: 'precios', label: 'Precios', icon: DollarSign },
   { nav: 'vencimientos', label: 'Vencimientos', icon: Calendar },
 ];
 
