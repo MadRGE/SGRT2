@@ -264,7 +264,7 @@ export default function PortalClienteV2({ clienteId, onNavigate }: Props) {
                       const docsTotal = tDocs.length;
 
                       return (
-                        <div key={t.id} className="px-4 py-3 pl-12">
+                        <div key={t.id} onClick={() => onNavigate({ type: 'tramite', id: t.id })} className="px-4 py-3 pl-12 cursor-pointer hover:bg-slate-50 transition-colors">
                           <div className="flex items-center gap-3">
                             {/* Semaforo */}
                             <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
@@ -290,6 +290,7 @@ export default function PortalClienteV2({ clienteId, onNavigate }: Props) {
                             <span className={`text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap ${ESTADO_ICONS[t.estado] || 'bg-slate-100 text-slate-600'}`}>
                               {ESTADO_LABELS[t.estado] || t.estado}
                             </span>
+                            <ChevronRight className="w-4 h-4 text-slate-300" />
                           </div>
 
                           {/* Progress bar */}
