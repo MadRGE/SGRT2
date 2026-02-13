@@ -333,7 +333,17 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
 
   const progreso = tramite.progreso ?? 0;
   const docsAprobados = documentos.filter(d => d.estado === 'aprobado').length;
+  const docsPendientes = documentos.filter(d => d.estado === 'pendiente' && d.obligatorio);
+  const docsRechazados = documentos.filter(d => d.estado === 'rechazado');
   const docsTotal = documentos.length;
+
+  // Sort: pending obligatorio first, then pending optional, then presentado, then rechazado, then aprobado
+  const docsSorted = [...documentos].sort((a, b) => {
+    const order: Record<string, number> = { pendiente: 0, rechazado: 1, presentado: 2, aprobado: 3, vencido: 1 };
+    const aScore = (order[a.estado] ?? 2) + (a.obligatorio ? -0.5 : 0);
+    const bScore = (order[b.estado] ?? 2) + (b.obligatorio ? -0.5 : 0);
+    return aScore - bScore;
+  });
 
   const backTarget = tramite.gestion_id
     ? { type: 'gestion', id: tramite.gestion_id }
@@ -526,6 +536,36 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
         )}
       </div>
 
+      {/* ===== ALERT: MISSING DOCS ===== */}
+      {(docsPendientes.length > 0 || docsRechazados.length > 0) && (
+        <div className={`rounded-2xl p-4 border-2 ${docsRechazados.length > 0 ? 'bg-red-50 border-red-200' : 'bg-yellow-50 border-yellow-200'}`}>
+          <div className="flex items-center gap-2 mb-2">
+            <AlertCircle className={`w-5 h-5 ${docsRechazados.length > 0 ? 'text-red-600' : 'text-yellow-600'}`} />
+            <h3 className={`font-semibold text-sm ${docsRechazados.length > 0 ? 'text-red-800' : 'text-yellow-800'}`}>
+              {docsPendientes.length > 0 && `${docsPendientes.length} documento${docsPendientes.length > 1 ? 's' : ''} obligatorio${docsPendientes.length > 1 ? 's' : ''} pendiente${docsPendientes.length > 1 ? 's' : ''}`}
+              {docsPendientes.length > 0 && docsRechazados.length > 0 && ' · '}
+              {docsRechazados.length > 0 && `${docsRechazados.length} rechazado${docsRechazados.length > 1 ? 's' : ''}`}
+            </h3>
+          </div>
+          <div className="space-y-1 ml-7">
+            {docsPendientes.map(d => (
+              <div key={d.id} className="flex items-center gap-2 text-sm text-yellow-800">
+                <div className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
+                <span>{d.nombre}</span>
+                {d.responsable && <span className="text-xs opacity-60">({d.responsable})</span>}
+              </div>
+            ))}
+            {docsRechazados.map(d => (
+              <div key={d.id} className="flex items-center gap-2 text-sm text-red-700">
+                <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                <span>{d.nombre}</span>
+                <span className="text-xs font-medium">- Rechazado, debe presentar nuevamente</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ===== DOCUMENTOS CARD ===== */}
       <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50">
         <div className="flex items-center justify-between p-4 border-b border-slate-100">
@@ -674,58 +714,75 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
           </div>
         ) : (
           <div className="divide-y divide-slate-100/80">
-            {documentos.map((doc) => (
-              <div key={doc.id} className="p-4 flex items-center gap-3">
-                {/* Obligatorio indicator */}
-                {doc.obligatorio ? (
-                  <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0" title="Obligatorio" />
-                ) : (
-                  <div className="w-4 h-4 flex-shrink-0" />
-                )}
+            {docsSorted.map((doc) => {
+              const isPending = doc.estado === 'pendiente';
+              const isApproved = doc.estado === 'aprobado';
+              const isRejected = doc.estado === 'rechazado';
 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-slate-800 truncate">{doc.nombre}</span>
-                    {doc.obligatorio && (
-                      <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">REQ</span>
-                    )}
-                    {doc.documento_cliente_id && (
-                      <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded flex items-center gap-0.5">
-                        <Link2 className="w-2.5 h-2.5" /> CLIENTE
+              return (
+                <div key={doc.id} className={`p-4 flex items-center gap-3 ${
+                  isPending && doc.obligatorio ? 'bg-yellow-50/40' :
+                  isRejected ? 'bg-red-50/40' : ''
+                }`}>
+                  {/* Checklist icon */}
+                  {isApproved ? (
+                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                  ) : isRejected ? (
+                    <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                  ) : doc.estado === 'presentado' ? (
+                    <Clock className="w-5 h-5 text-blue-500 flex-shrink-0" />
+                  ) : doc.obligatorio ? (
+                    <div className="w-5 h-5 rounded-full border-2 border-yellow-400 flex-shrink-0" />
+                  ) : (
+                    <div className="w-5 h-5 rounded-full border-2 border-slate-300 flex-shrink-0" />
+                  )}
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm font-medium truncate ${isApproved ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
+                        {doc.nombre}
                       </span>
+                      {doc.obligatorio && !isApproved && (
+                        <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">OBLIGATORIO</span>
+                      )}
+                      {doc.documento_cliente_id && (
+                        <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                          <Link2 className="w-2.5 h-2.5" /> CLIENTE
+                        </span>
+                      )}
+                    </div>
+                    {doc.responsable && (
+                      <span className="text-xs text-slate-400">Responsable: {doc.responsable}</span>
                     )}
                   </div>
-                  {doc.responsable && (
-                    <span className="text-xs text-slate-400">Responsable: {doc.responsable}</span>
-                  )}
-                </div>
 
-                {/* Estado badge - clickable to cycle */}
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => handleCycleDocEstado(doc)}
-                    className={`text-xs font-medium px-2.5 py-1 rounded-full transition-all hover:opacity-80 ${DOC_ESTADO_COLORS[doc.estado] || 'bg-slate-100 text-slate-600'}`}
-                    title="Click para cambiar estado"
-                  >
-                    {DOC_ESTADO_LABELS[doc.estado] || doc.estado}
-                  </button>
-                  {doc.estado === 'presentado' && (
+                  {/* Estado badge - clickable to cycle */}
+                  <div className="flex items-center gap-1.5">
                     <button
-                      onClick={() => handleSetDocRechazado(doc)}
-                      className="text-xs text-red-400 hover:text-red-600 transition-colors px-1"
-                      title="Rechazar"
+                      onClick={() => handleCycleDocEstado(doc)}
+                      className={`text-xs font-medium px-2.5 py-1 rounded-full transition-all hover:opacity-80 ${DOC_ESTADO_COLORS[doc.estado] || 'bg-slate-100 text-slate-600'}`}
+                      title="Click para cambiar estado"
                     >
-                      <X className="w-3.5 h-3.5" />
+                      {DOC_ESTADO_LABELS[doc.estado] || doc.estado}
                     </button>
-                  )}
-                </div>
+                    {doc.estado === 'presentado' && (
+                      <button
+                        onClick={() => handleSetDocRechazado(doc)}
+                        className="text-xs text-red-400 hover:text-red-600 transition-colors px-1"
+                        title="Rechazar"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
 
-                {/* Delete */}
-                <button onClick={() => handleDeleteDoc(doc.id)} className="text-slate-300 hover:text-red-500 transition-colors p-1">
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
+                  {/* Delete */}
+                  <button onClick={() => handleDeleteDoc(doc.id)} className="text-slate-300 hover:text-red-500 transition-colors p-1">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

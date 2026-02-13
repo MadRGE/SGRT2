@@ -80,8 +80,7 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
       });
 
     supabase.from('tramite_tipos').select('*').order('nombre')
-      .then(({ data, error }) => {
-        console.log('CATALOGO:', { count: data?.length, error: error?.message });
+      .then(({ data }) => {
         if (data) setCatalogo(data as TramiteTipo[]);
       });
   }, [gestionId]);
@@ -289,33 +288,48 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
                   <button
                     key={tipo.id}
                     onClick={() => handleSelectTipo(tipo)}
-                    className="w-full text-left px-4 py-3 hover:bg-blue-50/50 transition-colors flex items-start gap-3"
+                    className="w-full text-left px-4 py-3 hover:bg-blue-50/50 transition-colors"
                   >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-mono text-slate-400">{tipo.codigo}</span>
-                        {tipo.categoria && (
-                          <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">{tipo.categoria}</span>
+                    <div className="flex items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-mono text-slate-400">{tipo.codigo}</span>
+                          {tipo.categoria && (
+                            <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">{tipo.categoria}</span>
+                          )}
+                        </div>
+                        <p className="text-sm font-medium text-slate-800 mt-0.5">{tipo.nombre}</p>
+                        <div className="flex items-center gap-3 mt-1">
+                          {tipo.plataforma && <span className="text-[10px] text-slate-400">{tipo.plataforma}</span>}
+                          {tipo.plazo_dias && <span className="text-[10px] text-slate-400">{tipo.plazo_dias} dias</span>}
+                          {tipo.documentacion_obligatoria?.length ? (
+                            <span className="text-[10px] text-amber-600 font-medium">{tipo.documentacion_obligatoria.length} docs requeridos</span>
+                          ) : null}
+                        </div>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        {tipo.honorarios ? (
+                          <span className="text-sm font-semibold text-green-700">
+                            ${tipo.honorarios.toLocaleString('es-AR')}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-slate-400">Sin precio</span>
                         )}
-                      </div>
-                      <p className="text-sm font-medium text-slate-800 mt-0.5">{tipo.nombre}</p>
-                      <div className="flex items-center gap-3 mt-1">
-                        {tipo.plataforma && <span className="text-[10px] text-slate-400">{tipo.plataforma}</span>}
-                        {tipo.plazo_dias && <span className="text-[10px] text-slate-400">{tipo.plazo_dias} dias</span>}
+                        {tipo.costo_organismo ? (
+                          <p className="text-[10px] text-slate-400">Tasa: ${tipo.costo_organismo.toLocaleString('es-AR')}</p>
+                        ) : null}
                       </div>
                     </div>
-                    <div className="text-right flex-shrink-0">
-                      {tipo.honorarios ? (
-                        <span className="text-sm font-semibold text-green-700">
-                          ${tipo.honorarios.toLocaleString('es-AR')}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-slate-400">Sin precio</span>
-                      )}
-                      {tipo.costo_organismo ? (
-                        <p className="text-[10px] text-slate-400">Tasa: ${tipo.costo_organismo.toLocaleString('es-AR')}</p>
-                      ) : null}
-                    </div>
+                    {/* Preview required docs */}
+                    {tipo.documentacion_obligatoria?.length ? (
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {tipo.documentacion_obligatoria.map((doc, i) => (
+                          <span key={i} className="text-[10px] bg-amber-50 text-amber-700 border border-amber-100 px-1.5 py-0.5 rounded">
+                            {doc}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
                   </button>
                 ))}
               </div>
@@ -346,24 +360,40 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
 
           {/* Selected tipo badge */}
           {selectedTipo && (
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center gap-3">
-              <BookOpen className="w-4 h-4 text-blue-600 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-blue-800 truncate">{selectedTipo.nombre}</p>
-                <div className="flex items-center gap-3 mt-0.5">
-                  <span className="text-xs text-blue-600">{selectedTipo.organismo}</span>
-                  <span className="text-xs text-blue-500 font-mono">{selectedTipo.codigo}</span>
-                  {selectedTipo.plazo_dias && <span className="text-xs text-blue-500">{selectedTipo.plazo_dias} dias</span>}
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-xl">
+              <div className="flex items-center gap-3">
+                <BookOpen className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-blue-800 truncate">{selectedTipo.nombre}</p>
+                  <div className="flex items-center gap-3 mt-0.5">
+                    <span className="text-xs text-blue-600">{selectedTipo.organismo}</span>
+                    <span className="text-xs text-blue-500 font-mono">{selectedTipo.codigo}</span>
+                    {selectedTipo.plazo_dias && <span className="text-xs text-blue-500">{selectedTipo.plazo_dias} dias</span>}
+                  </div>
                 </div>
+                <div className="text-right flex-shrink-0">
+                  {selectedTipo.costo_organismo ? (
+                    <p className="text-xs text-blue-500">Tasa: ${selectedTipo.costo_organismo.toLocaleString('es-AR')}</p>
+                  ) : null}
+                </div>
+                <button onClick={handleClearTipo} className="p-1 text-blue-400 hover:text-blue-600">
+                  <X className="w-4 h-4" />
+                </button>
               </div>
-              <div className="text-right flex-shrink-0">
-                {selectedTipo.costo_organismo ? (
-                  <p className="text-xs text-blue-500">Tasa: ${selectedTipo.costo_organismo.toLocaleString('es-AR')}</p>
-                ) : null}
-              </div>
-              <button onClick={handleClearTipo} className="p-1 text-blue-400 hover:text-blue-600">
-                <X className="w-4 h-4" />
-              </button>
+              {selectedTipo.documentacion_obligatoria?.length ? (
+                <div className="mt-2 pt-2 border-t border-blue-200/50">
+                  <p className="text-[10px] font-semibold text-blue-700 uppercase tracking-wide mb-1">
+                    {selectedTipo.documentacion_obligatoria.length} documentos se cargaran automaticamente:
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {selectedTipo.documentacion_obligatoria.map((doc, i) => (
+                      <span key={i} className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
+                        {doc}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </div>
           )}
 
