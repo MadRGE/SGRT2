@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Briefcase, Plus, Search, ChevronRight, Loader2 } from 'lucide-react';
+import { Briefcase, Plus, Search, ChevronRight, Loader2, AlertTriangle } from 'lucide-react';
 
 interface Props {
   onNavigate: (page: any) => void;
@@ -8,6 +8,7 @@ interface Props {
 
 interface TramiteResumen {
   estado: string;
+  semaforo: string | null;
 }
 
 interface Gestion {
@@ -31,7 +32,7 @@ const ESTADOS = [
 ];
 
 const ESTADO_COLORS: Record<string, string> = {
-  relevamiento: 'bg-slate-100 text-slate-600',
+  relevamiento: 'bg-purple-100 text-purple-700',
   en_curso: 'bg-blue-100 text-blue-700',
   en_espera: 'bg-yellow-100 text-yellow-700',
   finalizado: 'bg-green-100 text-green-700',
@@ -72,7 +73,10 @@ function buildProgressSummary(tramites: TramiteResumen[]) {
   const otros = total - aprobados - enCurso - esperando - problemas;
   if (otros > 0) segments.push({ label: 'Otros', count: otros, color: 'bg-slate-300' });
 
-  return { total, segments };
+  // Compute attention items
+  const needsAttention = (counts['esperando_cliente'] || 0) + (counts['observado'] || 0);
+
+  return { total, segments, needsAttention, aprobados };
 }
 
 export default function GestionesV2({ onNavigate }: Props) {
@@ -88,7 +92,7 @@ export default function GestionesV2({ onNavigate }: Props) {
     try {
       const { data } = await supabase
         .from('gestiones')
-        .select('id, nombre, estado, prioridad, fecha_inicio, created_at, clientes(razon_social), tramites(estado)')
+        .select('id, nombre, estado, prioridad, fecha_inicio, created_at, clientes(razon_social), tramites(estado, semaforo)')
         .order('created_at', { ascending: false });
 
       setGestiones((data as any) || []);
@@ -108,13 +112,23 @@ export default function GestionesV2({ onNavigate }: Props) {
     return true;
   });
 
+  // Summary counts
+  const totalActive = gestiones.filter(g => !['finalizado', 'archivado'].includes(g.estado)).length;
+  const totalAttention = gestiones.reduce((sum, g) => {
+    const p = buildProgressSummary(g.tramites || []);
+    return sum + (p?.needsAttention || 0);
+  }, 0);
+
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-[26px] tracking-tight font-bold text-slate-800">Gestiones</h1>
-          <p className="text-sm text-slate-400 mt-0.5">Tus proyectos y trabajos contratados</p>
+          <p className="text-sm text-slate-400 mt-0.5">
+            {totalActive} activas
+            {totalAttention > 0 && <span className="text-yellow-600 ml-2">· {totalAttention} requieren atencion</span>}
+          </p>
         </div>
         <button
           onClick={() => onNavigate({ type: 'nueva-gestion' })}
@@ -173,6 +187,7 @@ export default function GestionesV2({ onNavigate }: Props) {
           {filtered.map((g) => {
             const progress = buildProgressSummary(g.tramites || []);
             const tramitesCount = g.tramites?.length || 0;
+            const hasRedSemaforo = g.tramites?.some(t => t.semaforo === 'rojo');
 
             return (
               <button
@@ -189,14 +204,24 @@ export default function GestionesV2({ onNavigate }: Props) {
 
                 {/* Main content */}
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-slate-800 truncate">{g.nombre}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-slate-800 truncate">{g.nombre}</p>
+                    {(progress?.needsAttention ?? 0) > 0 && (
+                      <span className="flex items-center gap-0.5 text-xs text-yellow-700 bg-yellow-100 px-1.5 py-0.5 rounded-full flex-shrink-0">
+                        <AlertTriangle className="w-3 h-3" /> {progress!.needsAttention}
+                      </span>
+                    )}
+                    {hasRedSemaforo && (
+                      <div className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" title="Tiene tramites con semaforo rojo" />
+                    )}
+                  </div>
                   <div className="flex items-center gap-2 mt-0.5">
                     {(g.clientes as any)?.razon_social && (
                       <span className="text-xs text-slate-500">{(g.clientes as any).razon_social}</span>
                     )}
                     {g.fecha_inicio && (
                       <span className="text-xs text-slate-400">
-                        Inicio: {new Date(g.fecha_inicio).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        · {new Date(g.fecha_inicio).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}
                       </span>
                     )}
                   </div>
@@ -215,7 +240,7 @@ export default function GestionesV2({ onNavigate }: Props) {
                         ))}
                       </div>
                       <span className="text-xs text-slate-400 whitespace-nowrap">
-                        {tramitesCount} {tramitesCount === 1 ? 'tramite' : 'tramites'}
+                        {progress.aprobados}/{tramitesCount}
                       </span>
                     </div>
                   )}
