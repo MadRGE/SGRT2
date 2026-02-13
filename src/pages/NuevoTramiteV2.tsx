@@ -79,7 +79,7 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
         }
       });
 
-    supabase.from('tramite_tipos').select('*').order('organismo')
+    supabase.from('tramite_tipos').select('*').order('nombre')
       .then(({ data, error }) => {
         console.log('CATALOGO:', { count: data?.length, error: error?.message });
         if (data) setCatalogo(data as TramiteTipo[]);

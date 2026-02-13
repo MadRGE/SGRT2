@@ -32,7 +32,6 @@ export default function PreciosV2() {
       .from('tramite_tipos')
       .select('id, codigo, nombre, organismo, categoria, costo_organismo, honorarios')
       .eq('activo', true)
-      .order('organismo')
       .order('nombre');
     setTipos((t as TramiteTipo[]) || []);
     setLoading(false);
