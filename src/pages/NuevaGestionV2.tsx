@@ -60,8 +60,8 @@ export default function NuevaGestionV2({ clienteId, onNavigate }: Props) {
       </button>
 
       <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50 p-6">
-        <h1 className="text-[26px] tracking-tight font-bold text-slate-800 mb-1">Nueva Gesti\u00f3n</h1>
-        <p className="text-sm text-slate-400 mt-0.5 mb-6">Crea un nuevo proyecto o contenedor de tr\u00e1mites</p>
+        <h1 className="text-[26px] tracking-tight font-bold text-slate-800 mb-1">Nueva Gestión</h1>
+        <p className="text-sm text-slate-400 mt-0.5 mb-6">Crea un nuevo proyecto o contenedor de trámites</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -76,14 +76,14 @@ export default function NuevaGestionV2({ clienteId, onNavigate }: Props) {
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Nombre *</label>
             <input required value={form.nombre} onChange={e => setForm({...form, nombre: e.target.value})}
-              placeholder={"Ej: Importaci\u00f3n l\u00ednea cosm\u00e9ticos 2026"}
+              placeholder="Ej: Importación línea cosméticos 2026"
               className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Descripci\u00f3n</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Descripción</label>
             <textarea value={form.descripcion} onChange={e => setForm({...form, descripcion: e.target.value})} rows={3}
-              placeholder={"Detalles de la gesti\u00f3n..."}
+              placeholder="Detalles de la gestión..."
               className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
           </div>
 
@@ -117,7 +117,7 @@ export default function NuevaGestionV2({ clienteId, onNavigate }: Props) {
               className="px-4 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50">Cancelar</button>
             <button type="submit" disabled={loading}
               className="px-4 py-2 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:shadow-lg hover:shadow-blue-500/25 disabled:opacity-50">
-              {loading ? <><Loader2 className="w-4 h-4 animate-spin inline mr-1" /> Creando...</> : 'Crear Gesti\u00f3n'}
+              {loading ? <><Loader2 className="w-4 h-4 animate-spin inline mr-1" /> Creando...</> : 'Crear Gestión'}
             </button>
           </div>
         </form>

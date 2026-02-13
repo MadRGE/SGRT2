@@ -4,6 +4,7 @@ import { Plus, Search, Users, ChevronRight, Loader2, X, Shield } from 'lucide-re
 
 interface Props {
   onNavigate: (page: any) => void;
+  autoOpen?: boolean;
 }
 
 interface Cliente {
@@ -18,11 +19,11 @@ interface Cliente {
   registros_count?: number;
 }
 
-export default function ClientesV2({ onNavigate }: Props) {
+export default function ClientesV2({ onNavigate, autoOpen }: Props) {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState(!!autoOpen);
 
   useEffect(() => { loadClientes(); }, []);
 

@@ -24,7 +24,7 @@ interface TramiteRow {
   organismo: string | null;
   estado: string;
   semaforo: string | null;
-  clientes: { razon_social: string } | null;
+  gestiones: { nombre: string; clientes: { razon_social: string } | null } | null;
 }
 
 interface VencimientoRow {
@@ -148,10 +148,10 @@ export default function DashboardV2({ onNavigate }: Props) {
 
       setGestiones((gestionesData as any) || []);
 
-      // Tramites que requieren atencion
+      // Tramites que requieren atencion (mostrar gestion padre)
       const { data: tramitesData } = await supabase
         .from('tramites')
-        .select('id, titulo, organismo, estado, semaforo, clientes(razon_social)')
+        .select('id, titulo, organismo, estado, semaforo, gestiones(nombre, clientes(razon_social))')
         .or('semaforo.eq.rojo,semaforo.eq.amarillo,estado.eq.esperando_cliente,estado.eq.observado')
         .order('created_at', { ascending: false })
         .limit(8);
@@ -357,10 +357,18 @@ export default function DashboardV2({ onNavigate }: Props) {
                         </p>
                         <p className="text-[11px] text-slate-400 mt-0.5 truncate">
                           {t.organismo && <span>{t.organismo}</span>}
-                          {t.organismo && (t.clientes as any)?.razon_social && (
+                          {t.organismo && (t.gestiones as any)?.nombre && (
                             <span className="mx-1 text-slate-300">·</span>
                           )}
-                          {(t.clientes as any)?.razon_social}
+                          {(t.gestiones as any)?.nombre && (
+                            <span>{(t.gestiones as any).nombre}</span>
+                          )}
+                          {(t.gestiones as any)?.clientes?.razon_social && (
+                            <>
+                              <span className="mx-1 text-slate-300">·</span>
+                              <span>{(t.gestiones as any).clientes.razon_social}</span>
+                            </>
+                          )}
                         </p>
                       </div>
                       <span

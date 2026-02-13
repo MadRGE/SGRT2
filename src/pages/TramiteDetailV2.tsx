@@ -328,17 +328,27 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
   }
 
   if (!tramite) {
-    return <div className="text-center py-20 text-slate-500">Tramite no encontrado</div>;
+    return <div className="text-center py-20 text-slate-500">Trámite no encontrado</div>;
   }
 
   const progreso = tramite.progreso ?? 0;
   const docsAprobados = documentos.filter(d => d.estado === 'aprobado').length;
+  const docsPendientes = documentos.filter(d => d.estado === 'pendiente' && d.obligatorio);
+  const docsRechazados = documentos.filter(d => d.estado === 'rechazado');
   const docsTotal = documentos.length;
+
+  // Sort: pending obligatorio first, then pending optional, then presentado, then rechazado, then aprobado
+  const docsSorted = [...documentos].sort((a, b) => {
+    const order: Record<string, number> = { pendiente: 0, rechazado: 1, presentado: 2, aprobado: 3, vencido: 1 };
+    const aScore = (order[a.estado] ?? 2) + (a.obligatorio ? -0.5 : 0);
+    const bScore = (order[b.estado] ?? 2) + (b.obligatorio ? -0.5 : 0);
+    return aScore - bScore;
+  });
 
   const backTarget = tramite.gestion_id
     ? { type: 'gestion', id: tramite.gestion_id }
     : { type: 'tramites' };
-  const backLabel = tramite.gestion_id ? 'Volver a Gestion' : 'Volver a Tramites';
+  const backLabel = tramite.gestion_id ? 'Volver a Gestión' : 'Volver a Trámites';
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -352,7 +362,7 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
             <h1 className="text-[26px] tracking-tight font-bold text-slate-800">{tramite.titulo}</h1>
-            <p className="text-sm text-slate-400 mt-0.5">Detalle del tramite</p>
+            <p className="text-sm text-slate-400 mt-0.5">Detalle del trámite</p>
             <button
               onClick={() => onNavigate({ type: 'cliente', id: tramite.cliente_id })}
               className="text-sm text-blue-600 hover:text-blue-700 mt-1 block"
@@ -364,7 +374,7 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
                 onClick={() => onNavigate({ type: 'gestion', id: tramite.gestion_id })}
                 className="text-xs text-indigo-600 hover:text-indigo-700 mt-1 block"
               >
-                Gestion: {(tramite.gestiones as any)?.nombre}
+                Gestión: {(tramite.gestiones as any)?.nombre}
               </button>
             )}
           </div>
@@ -396,7 +406,7 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
 
         {/* Semaforo selector */}
         <div className="flex items-center gap-4 mb-4">
-          <span className="text-xs font-medium text-slate-500">Semaforo:</span>
+          <span className="text-xs font-medium text-slate-500">Semáforo:</span>
           <div className="flex items-center gap-2">
             {SEMAFORO_OPTIONS.map((s) => (
               <button
@@ -440,7 +450,7 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
           <div className="space-y-4 pt-4 border-t border-slate-100">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">Titulo</label>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Título</label>
                 <input value={editForm.titulo || ''} onChange={e => setEditForm({...editForm, titulo: e.target.value})}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
               </div>
@@ -448,8 +458,8 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
                 <label className="block text-xs font-medium text-slate-500 mb-1">Tipo</label>
                 <select value={editForm.tipo || 'importacion'} onChange={e => setEditForm({...editForm, tipo: e.target.value})}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors">
-                  <option value="importacion">Importacion</option>
-                  <option value="exportacion">Exportacion</option>
+                  <option value="importacion">Importación</option>
+                  <option value="exportacion">Exportación</option>
                 </select>
               </div>
               <div>
@@ -492,7 +502,7 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
               </div>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Descripcion</label>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Descripción</label>
               <textarea value={editForm.descripcion || ''} onChange={e => setEditForm({...editForm, descripcion: e.target.value})} rows={2}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
@@ -512,7 +522,7 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-x-8 gap-y-3 pt-4 border-t border-slate-100">
-            <InfoField label="Tipo" value={tramite.tipo === 'importacion' ? 'Importacion' : 'Exportacion'} />
+            <InfoField label="Tipo" value={tramite.tipo === 'importacion' ? 'Importación' : 'Exportación'} />
             <InfoField label="Organismo" value={tramite.organismo} />
             <InfoField label="Prioridad" value={tramite.prioridad?.charAt(0).toUpperCase() + tramite.prioridad?.slice(1)} />
             <InfoField label="Plataforma" value={tramite.plataforma} />
@@ -520,18 +530,48 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
             <InfoField label="Fecha Inicio" value={tramite.fecha_inicio ? new Date(tramite.fecha_inicio).toLocaleDateString('es-AR') : null} />
             <InfoField label="Vencimiento" value={tramite.fecha_vencimiento ? new Date(tramite.fecha_vencimiento).toLocaleDateString('es-AR') : null} />
             {tramite.monto_presupuesto != null && <InfoField label="Presupuesto" value={`$${tramite.monto_presupuesto.toLocaleString('es-AR')}`} />}
-            {tramite.descripcion && <div className="col-span-2"><InfoField label="Descripcion" value={tramite.descripcion} /></div>}
+            {tramite.descripcion && <div className="col-span-2"><InfoField label="Descripción" value={tramite.descripcion} /></div>}
             {tramite.notas && <div className="col-span-2"><InfoField label="Notas" value={tramite.notas} /></div>}
           </div>
         )}
       </div>
+
+      {/* ===== ALERT: MISSING DOCS ===== */}
+      {(docsPendientes.length > 0 || docsRechazados.length > 0) && (
+        <div className={`rounded-2xl p-4 border-2 ${docsRechazados.length > 0 ? 'bg-red-50 border-red-200' : 'bg-yellow-50 border-yellow-200'}`}>
+          <div className="flex items-center gap-2 mb-2">
+            <AlertCircle className={`w-5 h-5 ${docsRechazados.length > 0 ? 'text-red-600' : 'text-yellow-600'}`} />
+            <h3 className={`font-semibold text-sm ${docsRechazados.length > 0 ? 'text-red-800' : 'text-yellow-800'}`}>
+              {docsPendientes.length > 0 && `${docsPendientes.length} documento${docsPendientes.length > 1 ? 's' : ''} obligatorio${docsPendientes.length > 1 ? 's' : ''} pendiente${docsPendientes.length > 1 ? 's' : ''}`}
+              {docsPendientes.length > 0 && docsRechazados.length > 0 && ' · '}
+              {docsRechazados.length > 0 && `${docsRechazados.length} rechazado${docsRechazados.length > 1 ? 's' : ''}`}
+            </h3>
+          </div>
+          <div className="space-y-1 ml-7">
+            {docsPendientes.map(d => (
+              <div key={d.id} className="flex items-center gap-2 text-sm text-yellow-800">
+                <div className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
+                <span>{d.nombre}</span>
+                {d.responsable && <span className="text-xs opacity-60">({d.responsable})</span>}
+              </div>
+            ))}
+            {docsRechazados.map(d => (
+              <div key={d.id} className="flex items-center gap-2 text-sm text-red-700">
+                <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                <span>{d.nombre}</span>
+                <span className="text-xs font-medium">- Rechazado, debe presentar nuevamente</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ===== DOCUMENTOS CARD ===== */}
       <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50">
         <div className="flex items-center justify-between p-4 border-b border-slate-100">
           <h2 className="font-semibold text-slate-800 flex items-center gap-2">
             <FileCheck className="w-4 h-4 text-slate-400" />
-            Documentacion ({docsTotal})
+            Documentación ({docsTotal})
           </h2>
           <div className="flex gap-2">
             {docsCliente.length > 0 && (
@@ -674,58 +714,75 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
           </div>
         ) : (
           <div className="divide-y divide-slate-100/80">
-            {documentos.map((doc) => (
-              <div key={doc.id} className="p-4 flex items-center gap-3">
-                {/* Obligatorio indicator */}
-                {doc.obligatorio ? (
-                  <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0" title="Obligatorio" />
-                ) : (
-                  <div className="w-4 h-4 flex-shrink-0" />
-                )}
+            {docsSorted.map((doc) => {
+              const isPending = doc.estado === 'pendiente';
+              const isApproved = doc.estado === 'aprobado';
+              const isRejected = doc.estado === 'rechazado';
 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-slate-800 truncate">{doc.nombre}</span>
-                    {doc.obligatorio && (
-                      <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">REQ</span>
-                    )}
-                    {doc.documento_cliente_id && (
-                      <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded flex items-center gap-0.5">
-                        <Link2 className="w-2.5 h-2.5" /> CLIENTE
+              return (
+                <div key={doc.id} className={`p-4 flex items-center gap-3 ${
+                  isPending && doc.obligatorio ? 'bg-yellow-50/40' :
+                  isRejected ? 'bg-red-50/40' : ''
+                }`}>
+                  {/* Checklist icon */}
+                  {isApproved ? (
+                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                  ) : isRejected ? (
+                    <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                  ) : doc.estado === 'presentado' ? (
+                    <Clock className="w-5 h-5 text-blue-500 flex-shrink-0" />
+                  ) : doc.obligatorio ? (
+                    <div className="w-5 h-5 rounded-full border-2 border-yellow-400 flex-shrink-0" />
+                  ) : (
+                    <div className="w-5 h-5 rounded-full border-2 border-slate-300 flex-shrink-0" />
+                  )}
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm font-medium truncate ${isApproved ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
+                        {doc.nombre}
                       </span>
+                      {doc.obligatorio && !isApproved && (
+                        <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">OBLIGATORIO</span>
+                      )}
+                      {doc.documento_cliente_id && (
+                        <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                          <Link2 className="w-2.5 h-2.5" /> CLIENTE
+                        </span>
+                      )}
+                    </div>
+                    {doc.responsable && (
+                      <span className="text-xs text-slate-400">Responsable: {doc.responsable}</span>
                     )}
                   </div>
-                  {doc.responsable && (
-                    <span className="text-xs text-slate-400">Responsable: {doc.responsable}</span>
-                  )}
-                </div>
 
-                {/* Estado badge - clickable to cycle */}
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => handleCycleDocEstado(doc)}
-                    className={`text-xs font-medium px-2.5 py-1 rounded-full transition-all hover:opacity-80 ${DOC_ESTADO_COLORS[doc.estado] || 'bg-slate-100 text-slate-600'}`}
-                    title="Click para cambiar estado"
-                  >
-                    {DOC_ESTADO_LABELS[doc.estado] || doc.estado}
-                  </button>
-                  {doc.estado === 'presentado' && (
+                  {/* Estado badge - clickable to cycle */}
+                  <div className="flex items-center gap-1.5">
                     <button
-                      onClick={() => handleSetDocRechazado(doc)}
-                      className="text-xs text-red-400 hover:text-red-600 transition-colors px-1"
-                      title="Rechazar"
+                      onClick={() => handleCycleDocEstado(doc)}
+                      className={`text-xs font-medium px-2.5 py-1 rounded-full transition-all hover:opacity-80 ${DOC_ESTADO_COLORS[doc.estado] || 'bg-slate-100 text-slate-600'}`}
+                      title="Click para cambiar estado"
                     >
-                      <X className="w-3.5 h-3.5" />
+                      {DOC_ESTADO_LABELS[doc.estado] || doc.estado}
                     </button>
-                  )}
-                </div>
+                    {doc.estado === 'presentado' && (
+                      <button
+                        onClick={() => handleSetDocRechazado(doc)}
+                        className="text-xs text-red-400 hover:text-red-600 transition-colors px-1"
+                        title="Rechazar"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
 
-                {/* Delete */}
-                <button onClick={() => handleDeleteDoc(doc.id)} className="text-slate-300 hover:text-red-500 transition-colors p-1">
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
+                  {/* Delete */}
+                  <button onClick={() => handleDeleteDoc(doc.id)} className="text-slate-300 hover:text-red-500 transition-colors p-1">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
@@ -760,7 +817,7 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
         {seguimientos.length === 0 ? (
           <div className="p-8 text-center text-slate-400">
             <Clock className="w-8 h-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">Sin seguimientos todavia</p>
+            <p className="text-sm">Sin seguimientos todavía</p>
           </div>
         ) : (
           <div className="divide-y divide-slate-100/80">
@@ -770,7 +827,7 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
                 <div className="flex-1">
                   <p className="text-sm text-slate-700">{s.descripcion}</p>
                   <p className="text-xs text-slate-400 mt-1">
-                    {new Date(s.created_at).toLocaleDateString('es-AR', {
+                    {new Date(s.created_at).toLocaleString('es-AR', {
                       day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
                     })}
                   </p>

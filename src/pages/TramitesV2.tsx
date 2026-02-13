@@ -15,7 +15,7 @@ interface Tramite {
   prioridad: string;
   fecha_vencimiento: string | null;
   created_at: string;
-  clientes: { razon_social: string } | null;
+  gestiones: { nombre: string; clientes: { razon_social: string } | null } | null;
 }
 
 const ESTADOS = [
@@ -56,7 +56,7 @@ export default function TramitesV2({ onNavigate }: Props) {
     try {
       const { data } = await supabase
         .from('tramites')
-        .select('id, titulo, estado, tipo, organismo, prioridad, fecha_vencimiento, created_at, clientes(razon_social)')
+        .select('id, titulo, estado, tipo, organismo, prioridad, fecha_vencimiento, created_at, gestiones(nombre, clientes(razon_social))')
         .order('created_at', { ascending: false });
 
       setTramites((data as any) || []);
@@ -71,7 +71,8 @@ export default function TramitesV2({ onNavigate }: Props) {
     if (search.trim()) {
       const s = search.toLowerCase();
       return t.titulo.toLowerCase().includes(s) ||
-        (t.clientes as any)?.razon_social?.toLowerCase().includes(s) ||
+        (t.gestiones as any)?.nombre?.toLowerCase().includes(s) ||
+        (t.gestiones as any)?.clientes?.razon_social?.toLowerCase().includes(s) ||
         t.organismo?.toLowerCase().includes(s);
     }
     return true;
@@ -82,7 +83,7 @@ export default function TramitesV2({ onNavigate }: Props) {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-[26px] tracking-tight font-bold text-slate-800">Trámites</h1>
-          <p className="text-sm text-slate-400 mt-0.5">Seguimiento de todos los trámites</p>
+          <p className="text-sm text-slate-400 mt-0.5">Procesos regulatorios dentro de tus gestiones</p>
         </div>
         <button
           onClick={() => onNavigate({ type: 'nuevo-tramite' })}
@@ -140,8 +141,12 @@ export default function TramitesV2({ onNavigate }: Props) {
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-slate-800 truncate">{t.titulo}</p>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-xs text-slate-500">{(t.clientes as any)?.razon_social}</span>
-                  <span className="text-xs text-slate-400 capitalize">{t.tipo}</span>
+                  {(t.gestiones as any)?.nombre && (
+                    <span className="text-xs text-blue-600 font-medium">{(t.gestiones as any).nombre}</span>
+                  )}
+                  {(t.gestiones as any)?.clientes?.razon_social && (
+                    <span className="text-xs text-slate-500">{(t.gestiones as any).clientes.razon_social}</span>
+                  )}
                   {t.organismo && <span className="text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">{t.organismo}</span>}
                 </div>
               </div>

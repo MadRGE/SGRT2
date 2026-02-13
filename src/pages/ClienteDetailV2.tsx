@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { ArrowLeft, Plus, FileText, ChevronRight, Loader2, Pencil, Save, X, Shield, Trash2, Briefcase, FolderOpen, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Plus, FileText, ChevronRight, Loader2, Pencil, Save, X, Shield, Trash2, Briefcase, FolderOpen, CheckCircle2, AlertTriangle, Eye } from 'lucide-react';
 
 interface Props {
   clienteId: string;
@@ -272,9 +272,14 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
             <p className="text-sm text-slate-400 mt-0.5">Detalle del cliente</p>
           </div>
           {!editing ? (
-            <button onClick={() => setEditing(true)} className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700">
-              <Pencil className="w-4 h-4" /> Editar
-            </button>
+            <div className="flex items-center gap-3">
+              <button onClick={() => onNavigate({ type: 'portal-cliente', clienteId })} className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 border border-slate-200 px-3 py-1 rounded-lg hover:bg-slate-50">
+                <Eye className="w-4 h-4" /> Ver Portal
+              </button>
+              <button onClick={() => setEditing(true)} className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700">
+                <Pencil className="w-4 h-4" /> Editar
+              </button>
+            </div>
           ) : (
             <div className="flex gap-2">
               <button onClick={() => { setEditing(false); setEditForm(cliente); }} className="flex items-center gap-1 text-sm text-slate-600">
