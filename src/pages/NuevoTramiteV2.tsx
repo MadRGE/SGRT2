@@ -202,18 +202,18 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
 
       {/* Step 1: Select gestion */}
       <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50 p-6">
-        <h1 className="text-[26px] tracking-tight font-bold text-slate-800 mb-1">Nuevo Tramite</h1>
-        <p className="text-sm text-slate-400 mt-0.5 mb-4">Agrega un proceso regulatorio a una gestion</p>
+        <h1 className="text-[26px] tracking-tight font-bold text-slate-800 mb-1">Nuevo Trámite</h1>
+        <p className="text-sm text-slate-400 mt-0.5 mb-4">Agrega un proceso regulatorio a una gestión</p>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Gestion (proyecto) *</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Gestión (proyecto) *</label>
           <select
             required
             value={form.gestion_id}
             onChange={e => handleGestionChange(e.target.value)}
             className={inputClass}
           >
-            <option value="">Seleccionar gestion...</option>
+            <option value="">Seleccionar gestión...</option>
             {gestiones.map(g => (
               <option key={g.id} value={g.id}>
                 {g.nombre} — {g.cliente_nombre}
@@ -234,7 +234,7 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
           <div className="p-4 border-b border-slate-100">
             <div className="flex items-center gap-2 mb-3">
               <BookOpen className="w-4 h-4 text-blue-600" />
-              <h2 className="font-semibold text-slate-800">Catalogo de Tramites</h2>
+              <h2 className="font-semibold text-slate-800">Catálogo de Trámites</h2>
               <span className="text-xs text-slate-400 ml-auto">{catalogo.length} tipos disponibles</span>
             </div>
 
@@ -271,7 +271,7 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
               <input
                 value={searchCatalogo}
                 onChange={e => setSearchCatalogo(e.target.value)}
-                placeholder="Buscar por nombre, codigo o categoria..."
+                placeholder="Buscar por nombre, código o categoría..."
                 className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors"
               />
             </div>
@@ -301,7 +301,7 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
                         <p className="text-sm font-medium text-slate-800 mt-0.5">{tipo.nombre}</p>
                         <div className="flex items-center gap-3 mt-1">
                           {tipo.plataforma && <span className="text-[10px] text-slate-400">{tipo.plataforma}</span>}
-                          {tipo.plazo_dias && <span className="text-[10px] text-slate-400">{tipo.plazo_dias} dias</span>}
+                          {tipo.plazo_dias && <span className="text-[10px] text-slate-400">{tipo.plazo_dias} días</span>}
                           {tipo.documentacion_obligatoria?.length ? (
                             <span className="text-[10px] text-amber-600 font-medium">{tipo.documentacion_obligatoria.length} docs requeridos</span>
                           ) : null}
@@ -336,7 +336,7 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
             ))}
             {filteredCatalogo.length === 0 && (
               <div className="p-8 text-center text-slate-400">
-                <p className="text-sm">No se encontraron tramites en el catalogo</p>
+                <p className="text-sm">No se encontraron trámites en el catálogo</p>
               </div>
             )}
           </div>
@@ -347,7 +347,7 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
               onClick={() => setShowCatalogo(false)}
               className="text-xs text-slate-500 hover:text-blue-600 transition-colors"
             >
-              Omitir catalogo y crear tramite manual
+              Omitir catálogo y crear trámite manual
             </button>
           </div>
         </div>
@@ -356,7 +356,7 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
       {/* Step 3: Form details (only if gestion selected) */}
       {form.gestion_id && (
         <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50 p-6">
-          <h2 className="font-semibold text-slate-800 mb-4">Datos del tramite</h2>
+          <h2 className="font-semibold text-slate-800 mb-4">Datos del trámite</h2>
 
           {/* Selected tipo badge */}
           {selectedTipo && (
@@ -368,7 +368,7 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
                   <div className="flex items-center gap-3 mt-0.5">
                     <span className="text-xs text-blue-600">{selectedTipo.organismo}</span>
                     <span className="text-xs text-blue-500 font-mono">{selectedTipo.codigo}</span>
-                    {selectedTipo.plazo_dias && <span className="text-xs text-blue-500">{selectedTipo.plazo_dias} dias</span>}
+                    {selectedTipo.plazo_dias && <span className="text-xs text-blue-500">{selectedTipo.plazo_dias} días</span>}
                   </div>
                 </div>
                 <div className="text-right flex-shrink-0">
@@ -383,7 +383,7 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
               {selectedTipo.documentacion_obligatoria?.length ? (
                 <div className="mt-2 pt-2 border-t border-blue-200/50">
                   <p className="text-[10px] font-semibold text-blue-700 uppercase tracking-wide mb-1">
-                    {selectedTipo.documentacion_obligatoria.length} documentos se cargaran automaticamente:
+                    {selectedTipo.documentacion_obligatoria.length} documentos se cargarán automáticamente:
                   </p>
                   <div className="flex flex-wrap gap-1">
                     {selectedTipo.documentacion_obligatoria.map((doc, i) => (
@@ -399,9 +399,9 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Titulo del tramite *</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Título del trámite *</label>
               <input required value={form.titulo} onChange={e => setForm({ ...form, titulo: e.target.value })}
-                placeholder="Ej: Registro de producto cosmetico"
+                placeholder="Ej: Registro de producto cosmético"
                 className={inputClass} />
             </div>
 
@@ -410,14 +410,14 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
                 <label className="block text-sm font-medium text-slate-700 mb-1">Tipo de proceso</label>
                 <select value={form.tipo} onChange={e => setForm({ ...form, tipo: e.target.value })} className={inputClass}>
                   <option value="registro">Registro</option>
-                  <option value="habilitacion">Habilitacion</option>
-                  <option value="certificacion">Certificacion</option>
-                  <option value="importacion">Importacion</option>
-                  <option value="exportacion">Exportacion</option>
-                  <option value="inspeccion">Inspeccion</option>
-                  <option value="autorizacion">Autorizacion</option>
-                  <option value="renovacion">Renovacion</option>
-                  <option value="modificacion">Modificacion</option>
+                  <option value="habilitacion">Habilitación</option>
+                  <option value="certificacion">Certificación</option>
+                  <option value="importacion">Importación</option>
+                  <option value="exportacion">Exportación</option>
+                  <option value="inspeccion">Inspección</option>
+                  <option value="autorizacion">Autorización</option>
+                  <option value="renovacion">Renovación</option>
+                  <option value="modificacion">Modificación</option>
                   <option value="otro">Otro</option>
                 </select>
               </div>
@@ -464,9 +464,9 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Descripcion</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Descripción</label>
               <textarea value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })} rows={3}
-                placeholder="Detalles del tramite..."
+                placeholder="Detalles del trámite..."
                 className={inputClass} />
             </div>
 
@@ -476,7 +476,7 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
                 onClick={() => setShowCatalogo(true)}
                 className="text-xs text-blue-600 hover:text-blue-700 font-medium"
               >
-                Seleccionar del catalogo
+                Seleccionar del catálogo
               </button>
             )}
 
@@ -485,7 +485,7 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
                 className="px-4 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50">Cancelar</button>
               <button type="submit" disabled={loading || !form.gestion_id}
                 className="px-4 py-2 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:shadow-lg hover:shadow-blue-500/25 disabled:opacity-50">
-                {loading ? <><Loader2 className="w-4 h-4 animate-spin inline mr-1" /> Creando...</> : 'Crear Tramite'}
+                {loading ? <><Loader2 className="w-4 h-4 animate-spin inline mr-1" /> Creando...</> : 'Crear Trámite'}
               </button>
             </div>
           </form>

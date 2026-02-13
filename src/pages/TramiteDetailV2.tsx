@@ -328,7 +328,7 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
   }
 
   if (!tramite) {
-    return <div className="text-center py-20 text-slate-500">Tramite no encontrado</div>;
+    return <div className="text-center py-20 text-slate-500">Trámite no encontrado</div>;
   }
 
   const progreso = tramite.progreso ?? 0;
@@ -348,7 +348,7 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
   const backTarget = tramite.gestion_id
     ? { type: 'gestion', id: tramite.gestion_id }
     : { type: 'tramites' };
-  const backLabel = tramite.gestion_id ? 'Volver a Gestion' : 'Volver a Tramites';
+  const backLabel = tramite.gestion_id ? 'Volver a Gestión' : 'Volver a Trámites';
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -362,7 +362,7 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
             <h1 className="text-[26px] tracking-tight font-bold text-slate-800">{tramite.titulo}</h1>
-            <p className="text-sm text-slate-400 mt-0.5">Detalle del tramite</p>
+            <p className="text-sm text-slate-400 mt-0.5">Detalle del trámite</p>
             <button
               onClick={() => onNavigate({ type: 'cliente', id: tramite.cliente_id })}
               className="text-sm text-blue-600 hover:text-blue-700 mt-1 block"
@@ -374,7 +374,7 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
                 onClick={() => onNavigate({ type: 'gestion', id: tramite.gestion_id })}
                 className="text-xs text-indigo-600 hover:text-indigo-700 mt-1 block"
               >
-                Gestion: {(tramite.gestiones as any)?.nombre}
+                Gestión: {(tramite.gestiones as any)?.nombre}
               </button>
             )}
           </div>
@@ -406,7 +406,7 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
 
         {/* Semaforo selector */}
         <div className="flex items-center gap-4 mb-4">
-          <span className="text-xs font-medium text-slate-500">Semaforo:</span>
+          <span className="text-xs font-medium text-slate-500">Semáforo:</span>
           <div className="flex items-center gap-2">
             {SEMAFORO_OPTIONS.map((s) => (
               <button
@@ -450,7 +450,7 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
           <div className="space-y-4 pt-4 border-t border-slate-100">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">Titulo</label>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Título</label>
                 <input value={editForm.titulo || ''} onChange={e => setEditForm({...editForm, titulo: e.target.value})}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
               </div>
@@ -458,8 +458,8 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
                 <label className="block text-xs font-medium text-slate-500 mb-1">Tipo</label>
                 <select value={editForm.tipo || 'importacion'} onChange={e => setEditForm({...editForm, tipo: e.target.value})}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors">
-                  <option value="importacion">Importacion</option>
-                  <option value="exportacion">Exportacion</option>
+                  <option value="importacion">Importación</option>
+                  <option value="exportacion">Exportación</option>
                 </select>
               </div>
               <div>
@@ -502,7 +502,7 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
               </div>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Descripcion</label>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Descripción</label>
               <textarea value={editForm.descripcion || ''} onChange={e => setEditForm({...editForm, descripcion: e.target.value})} rows={2}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
@@ -522,7 +522,7 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-x-8 gap-y-3 pt-4 border-t border-slate-100">
-            <InfoField label="Tipo" value={tramite.tipo === 'importacion' ? 'Importacion' : 'Exportacion'} />
+            <InfoField label="Tipo" value={tramite.tipo === 'importacion' ? 'Importación' : 'Exportación'} />
             <InfoField label="Organismo" value={tramite.organismo} />
             <InfoField label="Prioridad" value={tramite.prioridad?.charAt(0).toUpperCase() + tramite.prioridad?.slice(1)} />
             <InfoField label="Plataforma" value={tramite.plataforma} />
@@ -530,7 +530,7 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
             <InfoField label="Fecha Inicio" value={tramite.fecha_inicio ? new Date(tramite.fecha_inicio).toLocaleDateString('es-AR') : null} />
             <InfoField label="Vencimiento" value={tramite.fecha_vencimiento ? new Date(tramite.fecha_vencimiento).toLocaleDateString('es-AR') : null} />
             {tramite.monto_presupuesto != null && <InfoField label="Presupuesto" value={`$${tramite.monto_presupuesto.toLocaleString('es-AR')}`} />}
-            {tramite.descripcion && <div className="col-span-2"><InfoField label="Descripcion" value={tramite.descripcion} /></div>}
+            {tramite.descripcion && <div className="col-span-2"><InfoField label="Descripción" value={tramite.descripcion} /></div>}
             {tramite.notas && <div className="col-span-2"><InfoField label="Notas" value={tramite.notas} /></div>}
           </div>
         )}
@@ -571,7 +571,7 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
         <div className="flex items-center justify-between p-4 border-b border-slate-100">
           <h2 className="font-semibold text-slate-800 flex items-center gap-2">
             <FileCheck className="w-4 h-4 text-slate-400" />
-            Documentacion ({docsTotal})
+            Documentación ({docsTotal})
           </h2>
           <div className="flex gap-2">
             {docsCliente.length > 0 && (
@@ -817,7 +817,7 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
         {seguimientos.length === 0 ? (
           <div className="p-8 text-center text-slate-400">
             <Clock className="w-8 h-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">Sin seguimientos todavia</p>
+            <p className="text-sm">Sin seguimientos todavía</p>
           </div>
         ) : (
           <div className="divide-y divide-slate-100/80">
@@ -827,7 +827,7 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
                 <div className="flex-1">
                   <p className="text-sm text-slate-700">{s.descripcion}</p>
                   <p className="text-xs text-slate-400 mt-1">
-                    {new Date(s.created_at).toLocaleDateString('es-AR', {
+                    {new Date(s.created_at).toLocaleString('es-AR', {
                       day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
                     })}
                   </p>

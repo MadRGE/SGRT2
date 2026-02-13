@@ -127,7 +127,7 @@ export default function GestionesV2({ onNavigate }: Props) {
           <h1 className="text-[26px] tracking-tight font-bold text-slate-800">Gestiones</h1>
           <p className="text-sm text-slate-400 mt-0.5">
             {totalActive} activas
-            {totalAttention > 0 && <span className="text-yellow-600 ml-2">· {totalAttention} requieren atencion</span>}
+            {totalAttention > 0 && <span className="text-yellow-600 ml-2">· {totalAttention} requieren atención</span>}
           </p>
         </div>
         <button
@@ -135,7 +135,7 @@ export default function GestionesV2({ onNavigate }: Props) {
           className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-lg hover:shadow-lg hover:shadow-blue-500/25 transition-colors text-sm font-medium"
         >
           <Plus className="w-4 h-4" />
-          Nueva Gestion
+          Nueva Gestión
         </button>
       </div>
 
@@ -178,7 +178,7 @@ export default function GestionesV2({ onNavigate }: Props) {
               onClick={() => onNavigate({ type: 'nueva-gestion' })}
               className="mt-3 text-sm text-blue-600 hover:text-blue-700 font-medium"
             >
-              Crear primera gestion
+              Crear primera gestión
             </button>
           )}
         </div>
@@ -212,7 +212,7 @@ export default function GestionesV2({ onNavigate }: Props) {
                       </span>
                     )}
                     {hasRedSemaforo && (
-                      <div className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" title="Tiene tramites con semaforo rojo" />
+                      <div className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" title="Tiene trámites con semáforo rojo" />
                     )}
                   </div>
                   <div className="flex items-center gap-2 mt-0.5">
@@ -246,7 +246,7 @@ export default function GestionesV2({ onNavigate }: Props) {
                   )}
                   {!progress && (
                     <div className="mt-2">
-                      <span className="text-xs text-slate-400">Sin tramites</span>
+                      <span className="text-xs text-slate-400">Sin trámites</span>
                     </div>
                   )}
                 </div>

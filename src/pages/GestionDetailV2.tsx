@@ -219,7 +219,7 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
   }
 
   if (!gestion) {
-    return <div className="text-center py-20 text-slate-500">Gestion no encontrada</div>;
+    return <div className="text-center py-20 text-slate-500">Gestión no encontrada</div>;
   }
 
   // ===== Computed data =====
@@ -269,7 +269,7 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
             <h1 className="text-[26px] tracking-tight font-bold text-slate-800">{gestion.nombre}</h1>
-            <p className="text-sm text-slate-400 mt-0.5">Proyecto y sus tramites asociados</p>
+            <p className="text-sm text-slate-400 mt-0.5">Proyecto y sus trámites asociados</p>
             <button
               onClick={() => onNavigate({ type: 'cliente', id: gestion.cliente_id })}
               className="text-sm text-blue-600 hover:text-blue-700 mt-1"
@@ -321,11 +321,11 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
 
         {/* Quick stats row */}
         <div className="grid grid-cols-5 gap-3 pt-4 border-t border-slate-100">
-          <MiniStat label="Tramites" value={totalTramites} />
+          <MiniStat label="Trámites" value={totalTramites} />
           <MiniStat label="Aprobados" value={tramitesAprobados} color={tramitesAprobados > 0 ? 'text-green-600' : undefined} />
           <MiniStat label="Avance" value={`${progresoGeneral}%`} />
           <MiniStat label="Pendientes" value={pendingCount} color={pendingCount > 0 ? 'text-yellow-600' : undefined} />
-          {diasActivos != null && <MiniStat label="Dias activo" value={diasActivos} />}
+          {diasActivos != null && <MiniStat label="Días activo" value={diasActivos} />}
           {diasActivos == null && totalPresupuesto > 0 && <MiniStat label="Presupuesto" value={`$${(totalPresupuesto / 1000).toFixed(0)}k`} />}
         </div>
 
@@ -357,7 +357,7 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
               </div>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Descripcion</label>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Descripción</label>
               <textarea value={editForm.descripcion || ''} onChange={e => setEditForm({ ...editForm, descripcion: e.target.value })} rows={2}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
@@ -382,7 +382,7 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
           <div className="grid grid-cols-2 gap-x-8 gap-y-3 pt-4 mt-4 border-t border-slate-100">
             <InfoField label="Fecha Inicio" value={gestion.fecha_inicio ? new Date(gestion.fecha_inicio).toLocaleDateString('es-AR') : null} />
             <InfoField label="Fecha Cierre" value={gestion.fecha_cierre ? new Date(gestion.fecha_cierre).toLocaleDateString('es-AR') : null} />
-            {gestion.descripcion && <div className="col-span-2"><InfoField label="Descripcion" value={gestion.descripcion} /></div>}
+            {gestion.descripcion && <div className="col-span-2"><InfoField label="Descripción" value={gestion.descripcion} /></div>}
             {gestion.observaciones && <div className="col-span-2"><InfoField label="Observaciones" value={gestion.observaciones} /></div>}
           </div>
         )}
@@ -393,7 +393,7 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
         <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-2">
             <AlertTriangle className="w-4 h-4 text-yellow-600" />
-            <h3 className="font-semibold text-yellow-800 text-sm">Requiere atencion ({pendingCount})</h3>
+            <h3 className="font-semibold text-yellow-800 text-sm">Requiere atención ({pendingCount})</h3>
           </div>
           <div className="space-y-1.5">
             {esperandoCliente.map(t => (
@@ -421,7 +421,7 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
 
       {/* ===== TABS ===== */}
       <div className="flex gap-2">
-        <TabBtn active={tab === 'tramites'} onClick={() => setTab('tramites')} count={totalTramites}>Tramites</TabBtn>
+        <TabBtn active={tab === 'tramites'} onClick={() => setTab('tramites')} count={totalTramites}>Trámites</TabBtn>
         <TabBtn active={tab === 'actividad'} onClick={() => setTab('actividad')} count={seguimientos.length}>Actividad</TabBtn>
         <TabBtn active={tab === 'resumen'} onClick={() => setTab('resumen')}>Resumen</TabBtn>
       </div>
@@ -459,25 +459,25 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
             <div className="flex items-center justify-between p-4 border-b border-slate-100">
               <h2 className="font-semibold text-slate-800 flex items-center gap-2">
                 <FolderOpen className="w-4 h-4 text-slate-400" />
-                Tramites ({totalTramites})
+                Trámites ({totalTramites})
               </h2>
               <button
                 onClick={() => onNavigate({ type: 'nuevo-tramite', gestionId })}
                 className="flex items-center gap-1 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-3 py-1.5 rounded-lg hover:shadow-lg hover:shadow-blue-500/25"
               >
-                <Plus className="w-4 h-4" /> Nuevo Tramite
+                <Plus className="w-4 h-4" /> Nuevo Trámite
               </button>
             </div>
 
             {totalTramites === 0 ? (
               <div className="p-8 text-center text-slate-400">
                 <FileText className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                <p>Esta gestion no tiene tramites</p>
+                <p>Esta gestión no tiene trámites</p>
                 <button
                   onClick={() => onNavigate({ type: 'nuevo-tramite', gestionId })}
                   className="mt-2 text-xs text-blue-600 font-semibold hover:text-blue-700"
                 >
-                  Crear el primer tramite
+                  Crear el primer trámite
                 </button>
               </div>
             ) : (
@@ -581,7 +581,7 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
           {seguimientos.length === 0 ? (
             <div className="p-8 text-center text-slate-400">
               <Clock className="w-8 h-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">Sin actividad todavia</p>
+              <p className="text-sm">Sin actividad todavía</p>
             </div>
           ) : (
             <div className="divide-y divide-slate-100/80">
@@ -613,7 +613,7 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
                           </button>
                         )}
                         {!tramite && s.gestion_id && (
-                          <span className="text-xs text-slate-300">Gestion</span>
+                          <span className="text-xs text-slate-300">Gestión</span>
                         )}
                       </div>
                     </div>
@@ -641,13 +641,13 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
               </div>
               <div className="text-center p-3 bg-slate-50 rounded-xl">
                 <p className="text-2xl font-bold text-slate-800">{totalTramites}</p>
-                <p className="text-xs text-slate-400 mt-0.5">Tramites</p>
+                <p className="text-xs text-slate-400 mt-0.5">Trámites</p>
               </div>
               <div className="text-center p-3 bg-slate-50 rounded-xl">
                 <p className="text-2xl font-bold text-slate-800">
                   {totalTramites > 0 ? `$${Math.round(totalPresupuesto / totalTramites).toLocaleString('es-AR')}` : '$0'}
                 </p>
-                <p className="text-xs text-slate-400 mt-0.5">Promedio por tramite</p>
+                <p className="text-xs text-slate-400 mt-0.5">Promedio por trámite</p>
               </div>
             </div>
           </div>
@@ -656,10 +656,10 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
           <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50 p-6">
             <h2 className="font-semibold text-slate-800 flex items-center gap-2 mb-4">
               <BarChart3 className="w-4 h-4 text-slate-400" />
-              Estado de tramites
+              Estado de trámites
             </h2>
             {totalTramites === 0 ? (
-              <p className="text-sm text-slate-400">Sin tramites</p>
+              <p className="text-sm text-slate-400">Sin trámites</p>
             ) : (
               <div className="space-y-2">
                 {progressEstados.filter(e => (estadoCounts[e.key] || 0) > 0).map(e => {
@@ -692,7 +692,7 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
                   <div className="w-2 h-2 bg-blue-500 rounded-full" />
                   <span className="text-sm text-slate-600">Inicio:</span>
                   <span className="text-sm font-medium text-slate-800">{new Date(gestion.fecha_inicio).toLocaleDateString('es-AR')}</span>
-                  {diasActivos != null && <span className="text-xs text-slate-400">({diasActivos} dias)</span>}
+                  {diasActivos != null && <span className="text-xs text-slate-400">({diasActivos} días)</span>}
                 </div>
               )}
               {gestion.fecha_cierre && (
@@ -722,7 +722,7 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
             <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50 p-6">
               <h2 className="font-semibold text-slate-800 flex items-center gap-2 mb-4">
                 <FileCheck className="w-4 h-4 text-slate-400" />
-                Documentacion ({docsTramite.filter(d => d.estado === 'aprobado').length}/{docsTramite.length} aprobados)
+                Documentación ({docsTramite.filter(d => d.estado === 'aprobado').length}/{docsTramite.length} aprobados)
               </h2>
               <div className="w-full h-3 rounded-full overflow-hidden flex bg-slate-100 mb-3">
                 <div className="h-full bg-green-500" style={{ width: `${(docsTramite.filter(d => d.estado === 'aprobado').length / docsTramite.length) * 100}%` }} />
@@ -796,6 +796,6 @@ function formatDate(iso: string): string {
 
   if (hours < 1) return 'Hace minutos';
   if (hours < 24) return `Hace ${Math.floor(hours)} hs`;
-  if (days < 7) return `Hace ${Math.floor(days)} dias`;
+  if (days < 7) return `Hace ${Math.floor(days)} días`;
   return d.toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' });
 }
