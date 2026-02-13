@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { Loader2, AlertCircle, Mail, CheckCircle, ArrowLeft } from 'lucide-react';
+import { Loader2, AlertCircle, Mail, CheckCircle, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 
 interface Props {
   onSwitchToSignUp: () => void;
@@ -14,6 +14,7 @@ export default function Login({ onSwitchToSignUp }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,9 +101,15 @@ export default function Login({ onSwitchToSignUp }: Props) {
                 ¿Olvidaste?
               </button>
             </div>
-            <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors"
-              placeholder="••••••••" disabled={loading} />
+            <div className="relative">
+              <input type={showPassword ? 'text' : 'password'} required value={password} onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-3.5 py-2.5 pr-10 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors"
+                placeholder="••••••••" disabled={loading} />
+              <button type="button" onClick={() => setShowPassword(!showPassword)} tabIndex={-1}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
           <button type="submit" disabled={loading}
             className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-blue-500/25 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
