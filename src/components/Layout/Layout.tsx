@@ -1,5 +1,5 @@
-import { ReactNode } from 'react';
-import { LayoutDashboard, Users, FileText, LogOut, Calendar, Briefcase, DollarSign } from 'lucide-react';
+import { ReactNode, useState, useEffect, useRef } from 'react';
+import { LayoutDashboard, Users, FileText, LogOut, Calendar, Briefcase, DollarSign, Plus, X } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 export type Page =
@@ -35,8 +35,38 @@ const NAV_ITEMS: { nav: NavPage; label: string; icon: typeof LayoutDashboard }[]
   { nav: 'vencimientos', label: 'Vencimientos', icon: Calendar },
 ];
 
+const QUICK_ACTIONS = [
+  { label: 'Nuevo Cliente', icon: Users, color: 'from-emerald-500 to-green-600', page: { type: 'nuevo-cliente' } as Page },
+  { label: 'Nueva Gestión', icon: Briefcase, color: 'from-blue-500 to-indigo-600', page: { type: 'nueva-gestion' } as Page },
+  { label: 'Nuevo Trámite', icon: FileText, color: 'from-violet-500 to-purple-600', page: { type: 'nuevo-tramite' } as Page },
+];
+
 export default function Layout({ children, currentNav, onNavigate }: LayoutProps) {
   const { user, signOut } = useAuth();
+  const [quickOpen, setQuickOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close on click outside
+  useEffect(() => {
+    if (!quickOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setQuickOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [quickOpen]);
+
+  // Close on Escape
+  useEffect(() => {
+    if (!quickOpen) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setQuickOpen(false);
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [quickOpen]);
 
   return (
     <div className="min-h-screen bg-[#f5f7fb] flex">
@@ -98,6 +128,60 @@ export default function Layout({ children, currentNav, onNavigate }: LayoutProps
       <main className="ml-[220px] flex-1 p-8 min-h-screen">
         {children}
       </main>
+
+      {/* ===== FAB: Quick Create ===== */}
+      <div ref={menuRef} className="fixed bottom-6 right-6 z-50">
+        {/* Menu items - fly up from button */}
+        {quickOpen && (
+          <>
+            {/* Backdrop overlay */}
+            <div className="fixed inset-0 bg-black/20 -z-10 backdrop-blur-[2px]" />
+
+            <div className="absolute bottom-16 right-0 flex flex-col gap-2 items-end">
+              {QUICK_ACTIONS.map((action, i) => {
+                const Icon = action.icon;
+                return (
+                  <button
+                    key={action.label}
+                    onClick={() => { onNavigate(action.page); setQuickOpen(false); }}
+                    className="flex items-center gap-3 pl-4 pr-3 py-2.5 bg-white rounded-xl shadow-lg shadow-slate-900/10 border border-slate-200/80 hover:shadow-xl hover:scale-[1.02] transition-all duration-200 group whitespace-nowrap"
+                    style={{ animationDelay: `${i * 50}ms`, animation: 'fab-slide-up 0.2s ease-out both' }}
+                  >
+                    <span className="text-sm font-medium text-slate-700 group-hover:text-slate-900">{action.label}</span>
+                    <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${action.color} flex items-center justify-center shadow-sm`}>
+                      <Icon className="w-4 h-4 text-white" />
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {/* Main FAB button */}
+        <button
+          onClick={() => setQuickOpen(!quickOpen)}
+          className={`w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 ${
+            quickOpen
+              ? 'bg-slate-700 shadow-slate-700/30 rotate-0'
+              : 'bg-gradient-to-br from-blue-500 to-indigo-600 shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 hover:scale-105'
+          }`}
+        >
+          {quickOpen ? (
+            <X className="w-6 h-6 text-white" />
+          ) : (
+            <Plus className="w-6 h-6 text-white" />
+          )}
+        </button>
+      </div>
+
+      {/* FAB animation keyframes */}
+      <style>{`
+        @keyframes fab-slide-up {
+          from { opacity: 0; transform: translateY(8px) scale(0.95); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+      `}</style>
     </div>
   );
 }

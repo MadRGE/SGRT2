@@ -40,6 +40,7 @@ function AppContent() {
     <Layout currentNav={currentNav()} onNavigate={navigate}>
       {page.type === 'dashboard' && <DashboardV2 onNavigate={navigate} />}
       {page.type === 'clientes' && <ClientesV2 onNavigate={navigate} />}
+      {page.type === 'nuevo-cliente' && <ClientesV2 onNavigate={navigate} autoOpen />}
       {page.type === 'cliente' && <ClienteDetailV2 clienteId={page.id} onNavigate={navigate} />}
       {page.type === 'gestiones' && <GestionesV2 onNavigate={navigate} />}
       {page.type === 'gestion' && <GestionDetailV2 gestionId={page.id} onNavigate={navigate} />}
