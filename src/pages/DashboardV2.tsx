@@ -177,9 +177,9 @@ export default function DashboardV2({ onNavigate }: Props) {
     const diff = Math.ceil((new Date(fecha).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
     if (diff < 0) return { text: `${Math.abs(diff)}d vencido`, pastDue: true, soon: false };
     if (diff === 0) return { text: 'Hoy', pastDue: false, soon: true };
-    if (diff === 1) return { text: 'Manana', pastDue: false, soon: true };
-    if (diff <= 30) return { text: `${diff} dias`, pastDue: false, soon: true };
-    return { text: `${diff} dias`, pastDue: false, soon: false };
+    if (diff === 1) return { text: 'Mañana', pastDue: false, soon: true };
+    if (diff <= 30) return { text: `${diff} días`, pastDue: false, soon: true };
+    return { text: `${diff} días`, pastDue: false, soon: false };
   };
 
   if (loading) {
@@ -214,7 +214,7 @@ export default function DashboardV2({ onNavigate }: Props) {
           />
           <KpiCard
             icon={FileText}
-            label="Tramites en Curso"
+            label="Trámites en Curso"
             value={stats.tramitesEnCurso}
             gradient="from-indigo-500 to-indigo-600"
             bgLight="bg-indigo-50"
@@ -223,7 +223,7 @@ export default function DashboardV2({ onNavigate }: Props) {
           />
           <KpiCard
             icon={AlertTriangle}
-            label="Semaforo Rojo"
+            label="Semáforo Rojo"
             value={stats.semaforoRojo}
             gradient="from-red-500 to-red-600"
             bgLight="bg-red-50"
@@ -232,7 +232,7 @@ export default function DashboardV2({ onNavigate }: Props) {
           />
           <KpiCard
             icon={Calendar}
-            label="Vencimientos Proximos"
+            label="Vencimientos Próximos"
             value={stats.vencimientosProximos}
             gradient="from-yellow-500 to-amber-500"
             bgLight="bg-amber-50"
@@ -270,7 +270,7 @@ export default function DashboardV2({ onNavigate }: Props) {
                     onClick={() => onNavigate({ type: 'nueva-gestion' })}
                     className="mt-2 text-xs text-blue-600 font-semibold hover:text-blue-700"
                   >
-                    Crear primera gestion
+                    Crear primera gestión
                   </button>
                 </div>
               ) : (
@@ -317,7 +317,7 @@ export default function DashboardV2({ onNavigate }: Props) {
               <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
                 <h2 className="font-semibold text-slate-800 text-[15px] flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4 text-slate-400" />
-                  Tramites que requieren atencion
+                  Trámites que requieren atención
                 </h2>
                 <button
                   onClick={() => onNavigate({ type: 'tramites' })}
@@ -349,7 +349,7 @@ export default function DashboardV2({ onNavigate }: Props) {
                         className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
                           t.semaforo ? SEMAFORO_COLORS[t.semaforo] || 'bg-slate-300' : 'bg-slate-300'
                         }`}
-                        title={t.semaforo ? `Semaforo: ${t.semaforo}` : undefined}
+                        title={t.semaforo ? `Semáforo: ${t.semaforo}` : undefined}
                       />
                       <div className="flex-1 min-w-0">
                         <p className="text-[13px] font-semibold text-slate-800 truncate">
@@ -392,7 +392,7 @@ export default function DashboardV2({ onNavigate }: Props) {
               <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
                 <h2 className="font-semibold text-slate-800 text-[15px] flex items-center gap-2">
                   <Clock className="w-4 h-4 text-slate-400" />
-                  Vencimientos Proximos
+                  Vencimientos Próximos
                 </h2>
                 <button
                   onClick={() => onNavigate({ type: 'vencimientos' })}
@@ -407,7 +407,7 @@ export default function DashboardV2({ onNavigate }: Props) {
                   <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
                     <Calendar className="w-6 h-6 text-emerald-300" />
                   </div>
-                  <p className="text-sm text-slate-400">Sin vencimientos proximos</p>
+                  <p className="text-sm text-slate-400">Sin vencimientos próximos</p>
                 </div>
               ) : (
                 <div>
