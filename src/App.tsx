@@ -17,6 +17,7 @@ import NuevoTramiteV2 from './pages/NuevoTramiteV2';
 import VencimientosV2 from './pages/VencimientosV2';
 import PresupuestoV2 from './pages/PresupuestoV2';
 import PreciosV2 from './pages/PreciosV2';
+import PortalClienteV2 from './pages/PortalClienteV2';
 
 function AppContent() {
   const [page, setPage] = useState<Page>({ type: 'dashboard' });
@@ -26,7 +27,7 @@ function AppContent() {
   const currentNav = () => {
     switch (page.type) {
       case 'dashboard': return 'dashboard' as const;
-      case 'clientes': case 'cliente': case 'nuevo-cliente': return 'clientes' as const;
+      case 'clientes': case 'cliente': case 'nuevo-cliente': case 'portal-cliente': return 'clientes' as const;
       case 'gestiones': case 'gestion': case 'nueva-gestion': case 'presupuesto': return 'gestiones' as const;
       case 'tramites': case 'tramite': case 'nuevo-tramite': return 'tramites' as const;
       case 'precios': return 'precios' as const;
@@ -47,6 +48,7 @@ function AppContent() {
       {page.type === 'tramite' && <TramiteDetailV2 tramiteId={page.id} onNavigate={navigate} />}
       {page.type === 'nuevo-tramite' && <NuevoTramiteV2 gestionId={page.gestionId} clienteId={page.clienteId} onNavigate={navigate} />}
       {page.type === 'presupuesto' && <PresupuestoV2 gestionId={page.gestionId} onNavigate={navigate} />}
+      {page.type === 'portal-cliente' && <PortalClienteV2 clienteId={page.clienteId} onNavigate={navigate} />}
       {page.type === 'precios' && <PreciosV2 />}
       {page.type === 'vencimientos' && <VencimientosV2 onNavigate={navigate} />}
     </Layout>

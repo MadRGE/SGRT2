@@ -15,7 +15,8 @@ export type Page =
   | { type: 'nueva-gestion'; clienteId?: string }
   | { type: 'nuevo-cliente' }
   | { type: 'presupuesto'; gestionId: string }
-  | { type: 'precios' };
+  | { type: 'precios' }
+  | { type: 'portal-cliente'; clienteId: string };
 
 type NavPage = 'dashboard' | 'clientes' | 'gestiones' | 'tramites' | 'vencimientos' | 'precios';
 
