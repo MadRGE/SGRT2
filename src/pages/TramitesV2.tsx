@@ -97,12 +97,9 @@ export default function TramitesV2({ onNavigate }: Props) {
                 {error ? 'No se pudo cargar el catálogo' : 'El catálogo está vacío'}
               </p>
               <p className="text-sm text-amber-600 mt-1">
-                RLS está bloqueando la lectura. Ejecutá esto en el <strong>SQL Editor</strong> de Supabase:
+                Ejecutá la migración <strong>66_fix_schema_and_reseed.sql</strong> en el <strong>SQL Editor</strong> de Supabase.
+                Esa migración agrega las columnas faltantes, carga los datos del catálogo (104 trámites INAL + ANMAT) y desactiva RLS.
               </p>
-              <pre className="mt-2 p-3 bg-white border border-amber-200 rounded-lg text-xs text-slate-700 overflow-x-auto whitespace-pre">
-{`ALTER TABLE tramite_tipos DISABLE ROW LEVEL SECURITY;
-NOTIFY pgrst, 'reload schema';`}
-              </pre>
               {error && <p className="text-xs text-amber-500 mt-2">Error: {error}</p>}
               <button onClick={loadCatalogo} className="mt-3 px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 transition-colors">
                 Reintentar
