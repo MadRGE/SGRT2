@@ -46,7 +46,6 @@ function mapRow(row: any): TramiteTipo {
   };
 }
 
-const ORGANISMOS_CATALOGO = ['INAL', 'ANMAT', 'SENASA', 'INTI', 'SEDRONAR', 'CITES', 'INASE', 'SIC'];
 const PLATAFORMAS = ['TAD', 'TADO', 'VUCE', 'SIGSA', 'Otro'];
 
 export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Props) {
@@ -100,6 +99,9 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
         if (data) setCatalogo(data.map(mapRow));
       });
   }, [gestionId]);
+
+  // Dynamic organismos from catalog data
+  const catalogoOrganismos = [...new Set(catalogo.map(t => t.organismo))].sort();
 
   const handleGestionChange = (gestionIdValue: string) => {
     if (gestionIdValue) {
@@ -280,7 +282,7 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
               >
                 Todos
               </button>
-              {ORGANISMOS_CATALOGO.map(org => {
+              {catalogoOrganismos.map(org => {
                 const count = catalogo.filter(t => t.organismo === org).length;
                 if (count === 0) return null;
                 return (
@@ -457,7 +459,7 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
                 <label className="block text-sm font-medium text-slate-700 mb-1">Organismo</label>
                 <select value={form.organismo} onChange={e => setForm({ ...form, organismo: e.target.value })} className={inputClass}>
                   <option value="">Sin definir</option>
-                  {ORGANISMOS_CATALOGO.map(o => <option key={o} value={o}>{o}</option>)}
+                  {catalogoOrganismos.map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
               </div>
             </div>
