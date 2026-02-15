@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, softDelete } from '../lib/supabase';
 import {
   ArrowLeft, Plus, FileText, ChevronRight, Loader2, Pencil, Save, X,
   FolderOpen, BarChart3, Receipt, AlertTriangle, Clock, CheckCircle2,
-  MessageSquare, Phone, Mail, FileCheck, Send
+  MessageSquare, Phone, Mail, FileCheck, Send, Trash2
 } from 'lucide-react';
 
 interface Props {
@@ -295,9 +295,22 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
               </button>
             )}
             {!editing && (
-              <button onClick={() => setEditing(true)} className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700">
-                <Pencil className="w-4 h-4" /> Editar
-              </button>
+              <>
+                <button onClick={() => setEditing(true)} className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700">
+                  <Pencil className="w-4 h-4" /> Editar
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!confirm('¿Eliminar esta gestión? Se enviará a la papelera.')) return;
+                    await softDelete('tramites', 'gestion_id', gestionId);
+                    await softDelete('gestiones', 'id', gestionId);
+                    onNavigate({ type: 'gestiones' });
+                  }}
+                  className="flex items-center gap-1 text-sm text-red-500 hover:text-red-700"
+                >
+                  <Trash2 className="w-4 h-4" /> Eliminar
+                </button>
+              </>
             )}
           </div>
         </div>

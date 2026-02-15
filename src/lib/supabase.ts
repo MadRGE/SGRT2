@@ -9,3 +9,41 @@ export const supabaseConfigured = !!(supabaseUrl && supabaseAnonKey);
 export const supabase: SupabaseClient<Database> = supabaseConfigured
   ? createClient<Database>(supabaseUrl, supabaseAnonKey)
   : createClient<Database>('https://placeholder.supabase.co', 'placeholder');
+
+// Soft-delete support: detecta si la columna deleted_at existe
+let _softDeleteReady: boolean | null = null;
+
+export async function checkSoftDelete(): Promise<boolean> {
+  // Solo cachear resultado positivo; si fue false, re-intentar
+  if (_softDeleteReady === true) return true;
+  try {
+    const { error } = await supabase
+      .from('clientes')
+      .select('deleted_at')
+      .limit(1);
+    _softDeleteReady = !error;
+  } catch {
+    _softDeleteReady = false;
+  }
+  return _softDeleteReady;
+}
+
+// Aplica filtro deleted_at solo si la columna existe
+export function filterActive<T>(query: any): any {
+  if (_softDeleteReady) {
+    return query.is('deleted_at', null);
+  }
+  return query;
+}
+
+// Intenta soft-delete, si falla hace hard-delete
+export async function softDelete(table: string, column: string, value: string): Promise<'soft' | 'hard'> {
+  const now = new Date().toISOString();
+  const { error } = await supabase.from(table).update({ deleted_at: now }).eq(column, value);
+  if (error) {
+    // Columna no existe, hacer hard-delete
+    await supabase.from(table).delete().eq(column, value);
+    return 'hard';
+  }
+  return 'soft';
+}

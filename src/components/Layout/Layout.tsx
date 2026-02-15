@@ -1,5 +1,5 @@
 import { ReactNode, useState, useEffect, useRef } from 'react';
-import { LayoutDashboard, Users, FileText, LogOut, Calendar, Briefcase, DollarSign, Plus, X } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, LogOut, Calendar, Briefcase, DollarSign, Plus, X, Trash2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 export type Page =
@@ -16,9 +16,10 @@ export type Page =
   | { type: 'nuevo-cliente' }
   | { type: 'presupuesto'; gestionId: string }
   | { type: 'precios' }
+  | { type: 'papelera' }
   | { type: 'portal-cliente'; clienteId: string };
 
-type NavPage = 'dashboard' | 'clientes' | 'gestiones' | 'tramites' | 'vencimientos' | 'precios';
+type NavPage = 'dashboard' | 'clientes' | 'gestiones' | 'tramites' | 'vencimientos' | 'precios' | 'papelera';
 
 interface LayoutProps {
   children: ReactNode;
@@ -33,12 +34,12 @@ const NAV_ITEMS: { nav: NavPage; label: string; icon: typeof LayoutDashboard }[]
   { nav: 'clientes', label: 'Clientes', icon: Users },
   { nav: 'precios', label: 'Precios', icon: DollarSign },
   { nav: 'vencimientos', label: 'Vencimientos', icon: Calendar },
+  { nav: 'papelera', label: 'Papelera', icon: Trash2 },
 ];
 
 const QUICK_ACTIONS = [
   { label: 'Nuevo Cliente', icon: Users, color: 'from-emerald-500 to-green-600', page: { type: 'nuevo-cliente' } as Page },
   { label: 'Nueva Gestión', icon: Briefcase, color: 'from-blue-500 to-indigo-600', page: { type: 'nueva-gestion' } as Page },
-  { label: 'Nuevo Trámite', icon: FileText, color: 'from-violet-500 to-purple-600', page: { type: 'nuevo-tramite' } as Page },
 ];
 
 export default function Layout({ children, currentNav, onNavigate }: LayoutProps) {

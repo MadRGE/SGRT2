@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, filterActive } from '../lib/supabase';
 import { ArrowLeft, Loader2, Search, BookOpen, X } from 'lucide-react';
 
 interface Props {
@@ -57,7 +57,7 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
 
   useEffect(() => {
     // Load gestiones with client name
-    supabase.from('gestiones').select('id, nombre, cliente_id, clientes(razon_social)')
+    filterActive(supabase.from('gestiones').select('id, nombre, cliente_id, clientes(razon_social)'))
       .not('estado', 'in', '("finalizado","archivado")')
       .order('created_at', { ascending: false })
       .then(({ data }) => {
@@ -127,33 +127,46 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
     setShowCatalogo(true);
   };
 
+  const [error, setError] = useState('');
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.gestion_id) return;
     setLoading(true);
+    setError('');
 
-    const { data, error } = await supabase
+    // Build insert payload - only include columns that have values
+    const payload: Record<string, any> = {
+      gestion_id: form.gestion_id,
+      cliente_id: form.cliente_id,
+      titulo: form.titulo,
+      tipo: form.tipo,
+      estado: 'consulta',
+      prioridad: form.prioridad,
+      semaforo: 'verde',
+      progreso: 0,
+    };
+    if (form.tramite_tipo_id) payload.tramite_tipo_id = form.tramite_tipo_id;
+    if (form.organismo) payload.organismo = form.organismo;
+    if (form.plataforma) payload.plataforma = form.plataforma;
+    if (form.fecha_vencimiento) payload.fecha_vencimiento = form.fecha_vencimiento;
+    if (form.monto_presupuesto) payload.monto_presupuesto = parseFloat(form.monto_presupuesto);
+    if (form.descripcion) payload.descripcion = form.descripcion;
+
+    const { data, error: insertError } = await supabase
       .from('tramites')
-      .insert({
-        gestion_id: form.gestion_id,
-        cliente_id: form.cliente_id,
-        tramite_tipo_id: form.tramite_tipo_id || null,
-        titulo: form.titulo,
-        tipo: form.tipo,
-        organismo: form.organismo || null,
-        plataforma: form.plataforma || null,
-        prioridad: form.prioridad,
-        fecha_vencimiento: form.fecha_vencimiento || null,
-        monto_presupuesto: form.monto_presupuesto ? parseFloat(form.monto_presupuesto) : null,
-        descripcion: form.descripcion || null,
-        estado: 'consulta',
-        semaforo: 'verde',
-        progreso: 0,
-      })
+      .insert(payload)
       .select()
       .single();
 
-    if (!error && data) {
+    if (insertError) {
+      console.error('Error creando trámite:', insertError);
+      setError(insertError.message || 'Error al crear el trámite');
+      setLoading(false);
+      return;
+    }
+
+    if (data) {
       // If tipo has documentacion_obligatoria, auto-create docs for the tramite
       if (selectedTipo?.documentacion_obligatoria?.length) {
         const docsToInsert = selectedTipo.documentacion_obligatoria.map(docName => ({
@@ -200,32 +213,35 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
         <ArrowLeft className="w-4 h-4" /> Volver
       </button>
 
-      {/* Step 1: Select gestion */}
+      {/* Header */}
       <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50 p-6">
         <h1 className="text-[26px] tracking-tight font-bold text-slate-800 mb-1">Nuevo Trámite</h1>
-        <p className="text-sm text-slate-400 mt-0.5 mb-4">Agrega un proceso regulatorio a una gestión</p>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Gestión (proyecto) *</label>
-          <select
-            required
-            value={form.gestion_id}
-            onChange={e => handleGestionChange(e.target.value)}
-            className={inputClass}
-          >
-            <option value="">Seleccionar gestión...</option>
-            {gestiones.map(g => (
-              <option key={g.id} value={g.id}>
-                {g.nombre} — {g.cliente_nombre}
-              </option>
-            ))}
-          </select>
-          {selectedGestion && (
-            <p className="text-xs text-slate-400 mt-1">
-              Cliente: <span className="text-slate-600 font-medium">{selectedGestion.cliente_nombre}</span>
-            </p>
-          )}
-        </div>
+        {selectedGestion ? (
+          <p className="text-sm text-slate-500 mt-0.5">
+            Gestión: <span className="font-medium text-slate-700">{selectedGestion.nombre}</span>
+            {selectedGestion.cliente_nombre && <> — <span className="text-slate-600">{selectedGestion.cliente_nombre}</span></>}
+          </p>
+        ) : (
+          <>
+            <p className="text-sm text-slate-400 mt-0.5 mb-4">Seleccioná una gestión para agregar el trámite</p>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Gestión (proyecto) *</label>
+              <select
+                required
+                value={form.gestion_id}
+                onChange={e => handleGestionChange(e.target.value)}
+                className={inputClass}
+              >
+                <option value="">Seleccionar gestión...</option>
+                {gestiones.map(g => (
+                  <option key={g.id} value={g.id}>
+                    {g.nombre} — {g.cliente_nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Step 2: Select from catalog (only if gestion selected) */}
@@ -478,6 +494,12 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
               >
                 Seleccionar del catálogo
               </button>
+            )}
+
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+                {error}
+              </div>
             )}
 
             <div className="flex justify-end gap-3 pt-2">

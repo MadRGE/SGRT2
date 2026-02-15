@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, filterActive } from '../lib/supabase';
 import { Briefcase, Plus, Search, ChevronRight, Loader2, AlertTriangle } from 'lucide-react';
 
 interface Props {
@@ -90,9 +90,9 @@ export default function GestionesV2({ onNavigate }: Props) {
   const loadGestiones = async () => {
     setLoading(true);
     try {
-      const { data } = await supabase
+      const { data } = await filterActive(supabase
         .from('gestiones')
-        .select('id, nombre, estado, prioridad, fecha_inicio, created_at, clientes(razon_social), tramites(estado, semaforo)')
+        .select('id, nombre, estado, prioridad, fecha_inicio, created_at, clientes(razon_social), tramites(estado, semaforo)'))
         .order('created_at', { ascending: false });
 
       setGestiones((data as any) || []);
