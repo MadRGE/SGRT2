@@ -183,15 +183,21 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
     setSavingSeg(false);
   };
 
+  const [saveError, setSaveError] = useState('');
+
   const handleChangeEstado = async (nuevoEstado: string) => {
     if (tramite?.estado === nuevoEstado) return;
+    setSaveError('');
 
     const { error } = await supabase
       .from('tramites')
       .update({ estado: nuevoEstado, updated_at: new Date().toISOString() })
       .eq('id', tramiteId);
 
-    if (!error) {
+    if (error) {
+      console.error('Error cambiando estado:', error);
+      setSaveError(error.message || 'Error al cambiar estado. Ejecutá la migración 69.');
+    } else {
       await supabase.from('seguimientos').insert({
         tramite_id: tramiteId,
         descripcion: `Estado cambiado a: ${ESTADO_LABELS[nuevoEstado] || nuevoEstado}`,
@@ -234,6 +240,7 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
   };
 
   const handleSaveEdit = async () => {
+    setSaveError('');
     const { error } = await supabase
       .from('tramites')
       .update({
@@ -251,7 +258,10 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
       })
       .eq('id', tramiteId);
 
-    if (!error) {
+    if (error) {
+      console.error('Error guardando trámite:', error);
+      setSaveError(error.message || 'Error al guardar. Ejecutá la migración 69 en el SQL Editor.');
+    } else {
       setEditing(false);
       loadData();
     }
@@ -468,10 +478,18 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
               </div>
               <div>
                 <label className="block text-xs font-medium text-slate-500 mb-1">Tipo</label>
-                <select value={editForm.tipo || 'importacion'} onChange={e => setEditForm({...editForm, tipo: e.target.value})}
+                <select value={editForm.tipo || 'registro'} onChange={e => setEditForm({...editForm, tipo: e.target.value})}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors">
+                  <option value="registro">Registro</option>
+                  <option value="habilitacion">Habilitación</option>
+                  <option value="certificacion">Certificación</option>
                   <option value="importacion">Importación</option>
                   <option value="exportacion">Exportación</option>
+                  <option value="inspeccion">Inspección</option>
+                  <option value="autorizacion">Autorización</option>
+                  <option value="renovacion">Renovación</option>
+                  <option value="modificacion">Modificación</option>
+                  <option value="otro">Otro</option>
                 </select>
               </div>
               <div>
@@ -523,8 +541,13 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
               <textarea value={editForm.notas || ''} onChange={e => setEditForm({...editForm, notas: e.target.value})} rows={2}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
+            {saveError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+                {saveError}
+              </div>
+            )}
             <div className="flex justify-end gap-2">
-              <button onClick={() => { setEditing(false); setEditForm(tramite); }} className="px-4 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50">
+              <button onClick={() => { setEditing(false); setEditForm(tramite); setSaveError(''); }} className="px-4 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50">
                 <X className="w-4 h-4 inline mr-1" /> Cancelar
               </button>
               <button onClick={handleSaveEdit} className="px-4 py-2 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:shadow-lg hover:shadow-blue-500/25">

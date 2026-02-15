@@ -159,12 +159,14 @@ function NuevoClienteModal({ onClose, onCreated }: { onClose: () => void; onCrea
     origen: 'directo', referido_por: ''
   });
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
+    setError('');
 
-    const { data, error } = await supabase
+    const { data, error: insertError } = await supabase
       .from('clientes')
       .insert({
         razon_social: form.razon_social,
@@ -178,7 +180,14 @@ function NuevoClienteModal({ onClose, onCreated }: { onClose: () => void; onCrea
       .select()
       .single();
 
-    if (!error && data) {
+    if (insertError) {
+      console.error('Error creando cliente:', insertError);
+      setError(insertError.message || 'Error al crear el cliente. Ejecutá la migración 69 en el SQL Editor de Supabase.');
+      setSaving(false);
+      return;
+    }
+
+    if (data) {
       onCreated(data.id);
     }
     setSaving(false);
@@ -238,6 +247,11 @@ function NuevoClienteModal({ onClose, onCreated }: { onClose: () => void; onCrea
             </div>
           )}
           <p className="text-xs text-slate-400">Los registros (RNE, RNEE, habilitaciones) se cargan desde el detalle del cliente.</p>
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+              {error}
+            </div>
+          )}
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50">Cancelar</button>
             <button type="submit" disabled={saving}
