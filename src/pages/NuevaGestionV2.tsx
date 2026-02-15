@@ -167,11 +167,32 @@ export default function NuevaGestionV2({ clienteId, onNavigate }: Props) {
       if (tipo.plataforma) tramitePayload.plataforma = tipo.plataforma;
       if (tipo.honorarios) tramitePayload.monto_presupuesto = tipo.honorarios;
 
-      const { data: tramiteData, error: tramiteError } = await supabase
+      let { data: tramiteData, error: tramiteError } = await supabase
         .from('tramites')
         .insert(tramitePayload)
         .select()
         .single();
+
+      // Fallback: if schema cache error (tramite_tipo_id missing), retry without it
+      if (tramiteError?.message?.includes('schema cache')) {
+        const basicPayload: Record<string, any> = {
+          gestion_id: gestionData.id,
+          cliente_id: selectedCliente,
+          titulo: tipo.nombre,
+          tipo: 'registro',
+          estado: 'consulta',
+          prioridad: form.prioridad,
+          semaforo: 'verde',
+          progreso: 0,
+        };
+        if (tipo.organismo) basicPayload.organismo = tipo.organismo;
+        if (tipo.plataforma) basicPayload.plataforma = tipo.plataforma;
+        if (tipo.honorarios) basicPayload.monto_presupuesto = tipo.honorarios;
+
+        const res = await supabase.from('tramites').insert(basicPayload).select().single();
+        tramiteData = res.data;
+        tramiteError = res.error;
+      }
 
       if (tramiteError) {
         console.error('Error creando trámite:', tramiteError);

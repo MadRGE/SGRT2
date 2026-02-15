@@ -180,9 +180,9 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
       .single();
 
     if (insertError) {
-      // If error is about missing column (cantidad_registros_envase), retry without it
-      if (insertError.message?.includes('schema cache') || insertError.message?.includes('cantidad_registros_envase')) {
-        const fallbackPayload: Record<string, any> = {
+      // If error is about missing column, retry with only guaranteed basic fields
+      if (insertError.message?.includes('schema cache')) {
+        const basicPayload: Record<string, any> = {
           gestion_id: form.gestion_id,
           cliente_id: form.cliente_id,
           titulo: form.titulo,
@@ -192,16 +192,16 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
           semaforo: 'verde',
           progreso: 0,
         };
-        if (form.tramite_tipo_id) fallbackPayload.tramite_tipo_id = form.tramite_tipo_id;
-        if (form.organismo) fallbackPayload.organismo = form.organismo;
-        if (form.plataforma) fallbackPayload.plataforma = form.plataforma;
-        if (form.fecha_vencimiento) fallbackPayload.fecha_vencimiento = form.fecha_vencimiento;
-        if (form.monto_presupuesto) fallbackPayload.monto_presupuesto = parseFloat(form.monto_presupuesto);
-        if (form.descripcion) fallbackPayload.descripcion = form.descripcion;
+        // Only add fields that are likely to exist in base schema
+        if (form.organismo) basicPayload.organismo = form.organismo;
+        if (form.plataforma) basicPayload.plataforma = form.plataforma;
+        if (form.fecha_vencimiento) basicPayload.fecha_vencimiento = form.fecha_vencimiento;
+        if (form.monto_presupuesto) basicPayload.monto_presupuesto = parseFloat(form.monto_presupuesto);
+        if (form.descripcion) basicPayload.descripcion = form.descripcion;
 
         const { data: d2, error: e2 } = await supabase
           .from('tramites')
-          .insert(fallbackPayload)
+          .insert(basicPayload)
           .select()
           .single();
 
