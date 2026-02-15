@@ -87,43 +87,24 @@ export default function TramitesV2({ onNavigate }: Props) {
         <p className="text-sm text-slate-400 mt-0.5">Catálogo de servicios por organismo</p>
       </div>
 
-      {/* Error state */}
-      {error && (
+      {/* Error or empty state */}
+      {(error || (!loading && catalogo.length === 0)) && (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6">
           <div className="flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-medium text-amber-800">No se pudo cargar el catálogo</p>
-              <p className="text-sm text-amber-600 mt-1">
-                Ejecutá la migración <code className="bg-amber-100 px-1 rounded">60_fix_rls_tramite_tipos_v2.sql</code> en el SQL Editor de Supabase.
+            <div className="flex-1">
+              <p className="text-sm font-medium text-amber-800">
+                {error ? 'No se pudo cargar el catálogo' : 'El catálogo está vacío'}
               </p>
               <p className="text-sm text-amber-600 mt-1">
-                Después ejecutá: <code className="bg-amber-100 px-1 rounded">NOTIFY pgrst, 'reload schema';</code>
+                RLS está bloqueando la lectura. Ejecutá esto en el <strong>SQL Editor</strong> de Supabase:
               </p>
-              <p className="text-xs text-amber-500 mt-2">Error: {error}</p>
-              <button onClick={loadCatalogo} className="mt-3 text-sm font-medium text-amber-700 hover:text-amber-900 underline">
-                Reintentar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Empty state - no data even without errors (RLS blocking silently) */}
-      {!error && catalogo.length === 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-medium text-amber-800">El catálogo está vacío</p>
-              <p className="text-sm text-amber-600 mt-1">
-                Si ya cargaste los datos, probablemente RLS está bloqueando la lectura.
-                Ejecutá la migración <code className="bg-amber-100 px-1 rounded">60_fix_rls_tramite_tipos_v2.sql</code> en el SQL Editor de Supabase.
-              </p>
-              <p className="text-sm text-amber-600 mt-1">
-                Después ejecutá: <code className="bg-amber-100 px-1 rounded">NOTIFY pgrst, 'reload schema';</code>
-              </p>
-              <button onClick={loadCatalogo} className="mt-3 text-sm font-medium text-amber-700 hover:text-amber-900 underline">
+              <pre className="mt-2 p-3 bg-white border border-amber-200 rounded-lg text-xs text-slate-700 overflow-x-auto whitespace-pre">
+{`ALTER TABLE tramite_tipos DISABLE ROW LEVEL SECURITY;
+NOTIFY pgrst, 'reload schema';`}
+              </pre>
+              {error && <p className="text-xs text-amber-500 mt-2">Error: {error}</p>}
+              <button onClick={loadCatalogo} className="mt-3 px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 transition-colors">
                 Reintentar
               </button>
             </div>
