@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, filterActive } from '../lib/supabase';
 import { ArrowLeft, Loader2, Search, BookOpen, X } from 'lucide-react';
 
 interface Props {
@@ -57,8 +57,7 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
 
   useEffect(() => {
     // Load gestiones with client name
-    supabase.from('gestiones').select('id, nombre, cliente_id, clientes(razon_social)')
-      .is('deleted_at', null)
+    filterActive(supabase.from('gestiones').select('id, nombre, cliente_id, clientes(razon_social)'))
       .not('estado', 'in', '("finalizado","archivado")')
       .order('created_at', { ascending: false })
       .then(({ data }) => {

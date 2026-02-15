@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, checkSoftDelete } from '../lib/supabase';
 import { ArrowLeft, Clock, Loader2, Save, Pencil, X, Plus, FileCheck, Trash2, CheckCircle2, AlertCircle, Link2 } from 'lucide-react';
 
 interface Props {
@@ -386,8 +386,14 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
                 </button>
                 <button
                   onClick={async () => {
-                    if (!confirm('¿Enviar este trámite a la papelera? Se puede recuperar en los próximos 30 días.')) return;
-                    await supabase.from('tramites').update({ deleted_at: new Date().toISOString() }).eq('id', tramite.id);
+                    const soft = await checkSoftDelete();
+                    if (soft) {
+                      if (!confirm('¿Enviar este trámite a la papelera? Se puede recuperar en los próximos 30 días.')) return;
+                      await supabase.from('tramites').update({ deleted_at: new Date().toISOString() }).eq('id', tramite.id);
+                    } else {
+                      if (!confirm('¿Eliminar este trámite de forma permanente?')) return;
+                      await supabase.from('tramites').delete().eq('id', tramite.id);
+                    }
                     onNavigate(backTarget);
                   }}
                   className="flex items-center gap-1 text-sm text-red-500 hover:text-red-700"

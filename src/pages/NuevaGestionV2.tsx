@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, filterActive } from '../lib/supabase';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 
 interface Props {
@@ -25,7 +25,7 @@ export default function NuevaGestionV2({ clienteId, onNavigate }: Props) {
   });
 
   useEffect(() => {
-    supabase.from('clientes').select('id, razon_social').is('deleted_at', null).order('razon_social')
+    filterActive(supabase.from('clientes').select('id, razon_social')).order('razon_social')
       .then(({ data }) => { if (data) setClientes(data); });
   }, []);
 

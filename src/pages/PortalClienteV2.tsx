@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, filterActive } from '../lib/supabase';
 import { ArrowLeft, Loader2, ChevronRight, CheckCircle2, AlertTriangle, Clock, FileText, Upload, MessageCircle, Phone } from 'lucide-react';
 
 interface Props {
@@ -98,13 +98,13 @@ export default function PortalClienteV2({ clienteId, onNavigate }: Props) {
     const { data: c } = await supabase.from('clientes').select('id, razon_social, cuit, email, telefono').eq('id', clienteId).single();
     if (c) setCliente(c);
 
-    const { data: g } = await supabase.from('gestiones').select('id, nombre, estado')
-      .eq('cliente_id', clienteId).is('deleted_at', null).order('created_at', { ascending: false });
+    const { data: g } = await filterActive(supabase.from('gestiones').select('id, nombre, estado')
+      .eq('cliente_id', clienteId)).order('created_at', { ascending: false });
     setGestiones(g || []);
 
-    const { data: t } = await supabase.from('tramites')
+    const { data: t } = await filterActive(supabase.from('tramites')
       .select('id, titulo, estado, organismo, progreso, semaforo, fecha_vencimiento, gestion_id')
-      .eq('cliente_id', clienteId).is('deleted_at', null).order('created_at', { ascending: false });
+      .eq('cliente_id', clienteId)).order('created_at', { ascending: false });
     setTramites(t || []);
 
     if (t && t.length > 0) {

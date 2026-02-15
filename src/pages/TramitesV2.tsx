@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, filterActive } from '../lib/supabase';
 import { Plus, Search, FileText, ChevronRight, Loader2 } from 'lucide-react';
 
 interface Props {
@@ -54,10 +54,9 @@ export default function TramitesV2({ onNavigate }: Props) {
   const loadTramites = async () => {
     setLoading(true);
     try {
-      const { data } = await supabase
+      const { data } = await filterActive(supabase
         .from('tramites')
-        .select('id, titulo, estado, tipo, organismo, prioridad, fecha_vencimiento, created_at, gestiones(nombre, clientes(razon_social))')
-        .is('deleted_at', null)
+        .select('id, titulo, estado, tipo, organismo, prioridad, fecha_vencimiento, created_at, gestiones(nombre, clientes(razon_social))'))
         .order('created_at', { ascending: false });
 
       setTramites((data as any) || []);

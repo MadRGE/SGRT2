@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, checkSoftDelete } from '../lib/supabase';
 import { Trash2, RotateCcw, Loader2, Users, Briefcase, FileText, AlertTriangle } from 'lucide-react';
 
 interface DeletedItem {
@@ -19,6 +19,12 @@ export default function PapeleraV2() {
 
   const loadPapelera = async () => {
     setLoading(true);
+    const supported = await checkSoftDelete();
+    if (!supported) {
+      setItems([]);
+      setLoading(false);
+      return;
+    }
     const now = Date.now();
 
     const [{ data: clientes }, { data: gestiones }, { data: tramites }] = await Promise.all([

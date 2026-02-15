@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, filterActive } from '../lib/supabase';
 import {
   Briefcase, FileText, AlertTriangle, Calendar,
   ChevronRight, Loader2, TrendingUp, Clock
@@ -108,24 +108,21 @@ export default function DashboardV2({ onNavigate }: Props) {
       const en30dias = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
       // KPI: Gestiones activas count
-      const { count: gestionesActivasCount } = await supabase
+      const { count: gestionesActivasCount } = await filterActive(supabase
         .from('gestiones')
-        .select('*', { count: 'exact', head: true })
-        .is('deleted_at', null)
+        .select('*', { count: 'exact', head: true }))
         .in('estado', ['relevamiento', 'en_curso', 'en_espera']);
 
       // KPI: Tramites en curso count
-      const { count: tramitesEnCursoCount } = await supabase
+      const { count: tramitesEnCursoCount } = await filterActive(supabase
         .from('tramites')
-        .select('*', { count: 'exact', head: true })
-        .is('deleted_at', null)
+        .select('*', { count: 'exact', head: true }))
         .eq('estado', 'en_curso');
 
       // KPI: Semaforo rojo count
-      const { count: semaforoRojoCount } = await supabase
+      const { count: semaforoRojoCount } = await filterActive(supabase
         .from('tramites')
-        .select('*', { count: 'exact', head: true })
-        .is('deleted_at', null)
+        .select('*', { count: 'exact', head: true }))
         .eq('semaforo', 'rojo');
 
       // KPI: Vencimientos proximos count (next 30 days including past due)
@@ -142,10 +139,9 @@ export default function DashboardV2({ onNavigate }: Props) {
       });
 
       // Gestiones activas list (not finalizado/archivado)
-      const { data: gestionesData } = await supabase
+      const { data: gestionesData } = await filterActive(supabase
         .from('gestiones')
-        .select('id, nombre, estado, prioridad, created_at, clientes(razon_social)')
-        .is('deleted_at', null)
+        .select('id, nombre, estado, prioridad, created_at, clientes(razon_social)'))
         .not('estado', 'in', '("finalizado","archivado")')
         .order('created_at', { ascending: false })
         .limit(8);
@@ -153,10 +149,9 @@ export default function DashboardV2({ onNavigate }: Props) {
       setGestiones((gestionesData as any) || []);
 
       // Tramites que requieren atencion (mostrar gestion padre)
-      const { data: tramitesData } = await supabase
+      const { data: tramitesData } = await filterActive(supabase
         .from('tramites')
-        .select('id, titulo, organismo, estado, semaforo, gestiones(nombre, clientes(razon_social))')
-        .is('deleted_at', null)
+        .select('id, titulo, organismo, estado, semaforo, gestiones(nombre, clientes(razon_social))'))
         .or('semaforo.eq.rojo,semaforo.eq.amarillo,estado.eq.esperando_cliente,estado.eq.observado')
         .order('created_at', { ascending: false })
         .limit(8);

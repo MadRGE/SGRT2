@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { checkSoftDelete } from './lib/supabase';
 import Login from './pages/Auth/Login';
 import SignUp from './pages/Auth/SignUp';
 import ResetPassword from './pages/Auth/ResetPassword';
@@ -22,6 +23,8 @@ import PapeleraV2 from './pages/PapeleraV2';
 
 function AppContent() {
   const [page, setPage] = useState<Page>({ type: 'dashboard' });
+
+  useEffect(() => { checkSoftDelete(); }, []);
 
   const navigate = (p: Page) => setPage(p);
 

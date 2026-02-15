@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, checkSoftDelete } from '../lib/supabase';
 import { ArrowLeft, Plus, FileText, ChevronRight, Loader2, Pencil, Save, X, Shield, Trash2, Briefcase, FolderOpen, CheckCircle2, AlertTriangle, Eye } from 'lucide-react';
 
 interface Props {
@@ -281,11 +281,19 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
               </button>
               <button
                 onClick={async () => {
-                  if (!confirm('¿Enviar este cliente a la papelera? Se puede recuperar en los próximos 30 días.')) return;
-                  const now = new Date().toISOString();
-                  await supabase.from('clientes').update({ deleted_at: now }).eq('id', clienteId);
-                  await supabase.from('gestiones').update({ deleted_at: now }).eq('cliente_id', clienteId);
-                  await supabase.from('tramites').update({ deleted_at: now }).eq('cliente_id', clienteId);
+                  const soft = await checkSoftDelete();
+                  if (soft) {
+                    if (!confirm('¿Enviar este cliente a la papelera? Se puede recuperar en los próximos 30 días.')) return;
+                    const now = new Date().toISOString();
+                    await supabase.from('clientes').update({ deleted_at: now }).eq('id', clienteId);
+                    await supabase.from('gestiones').update({ deleted_at: now }).eq('cliente_id', clienteId);
+                    await supabase.from('tramites').update({ deleted_at: now }).eq('cliente_id', clienteId);
+                  } else {
+                    if (!confirm('¿Eliminar este cliente de forma permanente?')) return;
+                    await supabase.from('tramites').delete().eq('cliente_id', clienteId);
+                    await supabase.from('gestiones').delete().eq('cliente_id', clienteId);
+                    await supabase.from('clientes').delete().eq('id', clienteId);
+                  }
                   onNavigate({ type: 'clientes' });
                 }}
                 className="flex items-center gap-1 text-sm text-red-500 hover:text-red-700"

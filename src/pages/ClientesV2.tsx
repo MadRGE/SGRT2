@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, filterActive } from '../lib/supabase';
 import { Plus, Search, Users, ChevronRight, Loader2, X, Shield } from 'lucide-react';
 
 interface Props {
@@ -30,10 +30,9 @@ export default function ClientesV2({ onNavigate, autoOpen }: Props) {
   const loadClientes = async () => {
     setLoading(true);
     try {
-      const { data } = await supabase
+      const { data } = await filterActive(supabase
         .from('clientes')
-        .select('*')
-        .is('deleted_at', null)
+        .select('*'))
         .order('razon_social');
 
       if (data) {
