@@ -27,7 +27,23 @@ interface TramiteTipo {
   costo_organismo: number | null;
   honorarios: number | null;
   documentacion_obligatoria: string[] | null;
-  observaciones: string | null;
+}
+
+// Map raw DB row to normalized interface (handles v4 and v5+ schema)
+function mapRow(row: any): TramiteTipo {
+  return {
+    id: row.id,
+    codigo: row.codigo,
+    nombre: row.nombre,
+    organismo: row.organismo || row.organismo_id || '',
+    categoria: row.categoria || row.rubro || null,
+    subcategoria: row.subcategoria || null,
+    plataforma: row.plataforma || row.plataforma_gestion || null,
+    plazo_dias: row.plazo_dias ?? row.sla_total_dias ?? null,
+    costo_organismo: row.costo_organismo ?? row.costo_tasas_base ?? null,
+    honorarios: row.honorarios ?? row.costo_honorarios_base ?? null,
+    documentacion_obligatoria: row.documentacion_obligatoria || null,
+  };
 }
 
 const ORGANISMOS_CATALOGO = ['INAL', 'ANMAT', 'SENASA', 'INTI', 'SEDRONAR', 'CITES', 'INASE', 'SIC'];
@@ -81,7 +97,7 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
 
     supabase.from('tramite_tipos').select('*').order('nombre')
       .then(({ data }) => {
-        if (data) setCatalogo(data as TramiteTipo[]);
+        if (data) setCatalogo(data.map(mapRow));
       });
   }, [gestionId]);
 
