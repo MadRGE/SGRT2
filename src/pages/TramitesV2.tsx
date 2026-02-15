@@ -57,6 +57,7 @@ export default function TramitesV2({ onNavigate }: Props) {
     const { data, error: fetchError } = await supabase
       .from('tramite_tipos')
       .select('*')
+      .order('organismo')
       .order('nombre');
 
     if (fetchError) {
@@ -65,8 +66,6 @@ export default function TramitesV2({ onNavigate }: Props) {
       setCatalogo([]);
     } else {
       const mapped = (data || []).map(mapRow);
-      // Sort by organismo then nombre
-      mapped.sort((a, b) => a.organismo.localeCompare(b.organismo) || a.nombre.localeCompare(b.nombre));
       setCatalogo(mapped);
       // Auto-select first organismo
       if (mapped.length > 0 && !selectedOrganismo) {
@@ -116,7 +115,7 @@ export default function TramitesV2({ onNavigate }: Props) {
                 {error ? 'No se pudo cargar el catálogo' : 'El catálogo está vacío'}
               </p>
               <p className="text-sm text-amber-600 mt-1">
-                Ejecutá la migración <strong>67_seed_catalogo_v4_schema.sql</strong> en el <strong>SQL Editor</strong> de Supabase
+                Ejecutá la migración <strong>68_seed_catalogo_final.sql</strong> en el <strong>SQL Editor</strong> de Supabase
                 para cargar los 104 trámites del catálogo (INAL + ANMAT PM).
               </p>
               {error && <p className="text-xs text-amber-500 mt-2">Error: {error}</p>}
