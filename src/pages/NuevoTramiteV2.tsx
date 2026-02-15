@@ -127,33 +127,46 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
     setShowCatalogo(true);
   };
 
+  const [error, setError] = useState('');
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.gestion_id) return;
     setLoading(true);
+    setError('');
 
-    const { data, error } = await supabase
+    // Build insert payload - only include columns that have values
+    const payload: Record<string, any> = {
+      gestion_id: form.gestion_id,
+      cliente_id: form.cliente_id,
+      titulo: form.titulo,
+      tipo: form.tipo,
+      estado: 'consulta',
+      prioridad: form.prioridad,
+      semaforo: 'verde',
+      progreso: 0,
+    };
+    if (form.tramite_tipo_id) payload.tramite_tipo_id = form.tramite_tipo_id;
+    if (form.organismo) payload.organismo = form.organismo;
+    if (form.plataforma) payload.plataforma = form.plataforma;
+    if (form.fecha_vencimiento) payload.fecha_vencimiento = form.fecha_vencimiento;
+    if (form.monto_presupuesto) payload.monto_presupuesto = parseFloat(form.monto_presupuesto);
+    if (form.descripcion) payload.descripcion = form.descripcion;
+
+    const { data, error: insertError } = await supabase
       .from('tramites')
-      .insert({
-        gestion_id: form.gestion_id,
-        cliente_id: form.cliente_id,
-        tramite_tipo_id: form.tramite_tipo_id || null,
-        titulo: form.titulo,
-        tipo: form.tipo,
-        organismo: form.organismo || null,
-        plataforma: form.plataforma || null,
-        prioridad: form.prioridad,
-        fecha_vencimiento: form.fecha_vencimiento || null,
-        monto_presupuesto: form.monto_presupuesto ? parseFloat(form.monto_presupuesto) : null,
-        descripcion: form.descripcion || null,
-        estado: 'consulta',
-        semaforo: 'verde',
-        progreso: 0,
-      })
+      .insert(payload)
       .select()
       .single();
 
-    if (!error && data) {
+    if (insertError) {
+      console.error('Error creando trámite:', insertError);
+      setError(insertError.message || 'Error al crear el trámite');
+      setLoading(false);
+      return;
+    }
+
+    if (data) {
       // If tipo has documentacion_obligatoria, auto-create docs for the tramite
       if (selectedTipo?.documentacion_obligatoria?.length) {
         const docsToInsert = selectedTipo.documentacion_obligatoria.map(docName => ({
@@ -478,6 +491,12 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
               >
                 Seleccionar del catálogo
               </button>
+            )}
+
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+                {error}
+              </div>
             )}
 
             <div className="flex justify-end gap-3 pt-2">
