@@ -153,32 +153,73 @@ export default function ClientesV2({ onNavigate, autoOpen }: Props) {
   );
 }
 
+const PROVINCIAS = [
+  'Buenos Aires', 'CABA', 'Catamarca', 'Chaco', 'Chubut', 'Córdoba', 'Corrientes',
+  'Entre Ríos', 'Formosa', 'Jujuy', 'La Pampa', 'La Rioja', 'Mendoza', 'Misiones',
+  'Neuquén', 'Río Negro', 'Salta', 'San Juan', 'San Luis', 'Santa Cruz', 'Santa Fe',
+  'Santiago del Estero', 'Tierra del Fuego', 'Tucumán'
+];
+
 function NuevoClienteModal({ onClose, onCreated }: { onClose: () => void; onCreated: (id: string) => void }) {
   const [form, setForm] = useState({
-    razon_social: '', cuit: '', email: '', telefono: ''
+    razon_social: '', cuit: '', email: '', telefono: '',
+    contacto_nombre: '', direccion: '', localidad: '', provincia: '',
+    rne: '', origen: 'directo', referido_por: '', notas: ''
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const inputClass = 'w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     setError('');
 
+    const payload: Record<string, any> = {
+      razon_social: form.razon_social,
+      cuit: form.cuit || null,
+      email: form.email || null,
+      telefono: form.telefono || null,
+    };
+    // Only include extra fields if they have values (avoids schema cache errors if migration not run)
+    if (form.contacto_nombre) payload.contacto_nombre = form.contacto_nombre;
+    if (form.direccion) payload.direccion = form.direccion;
+    if (form.localidad) payload.localidad = form.localidad;
+    if (form.provincia) payload.provincia = form.provincia;
+    if (form.rne) payload.rne = form.rne;
+    if (form.origen !== 'directo') payload.origen = form.origen;
+    if (form.referido_por) payload.referido_por = form.referido_por;
+    if (form.notas) payload.notas = form.notas;
+
     const { data, error: insertError } = await supabase
       .from('clientes')
-      .insert({
-        razon_social: form.razon_social,
-        cuit: form.cuit || null,
-        email: form.email || null,
-        telefono: form.telefono || null,
-      })
+      .insert(payload)
       .select()
       .single();
 
     if (insertError) {
-      console.error('Error creando cliente:', insertError);
-      setError(insertError.message || 'Error al crear el cliente. Ejecutá la migración 69 en el SQL Editor de Supabase.');
+      // If error is about missing column, retry with only basic fields
+      if (insertError.message?.includes('schema cache')) {
+        const { data: d2, error: e2 } = await supabase
+          .from('clientes')
+          .insert({
+            razon_social: form.razon_social,
+            cuit: form.cuit || null,
+            email: form.email || null,
+            telefono: form.telefono || null,
+          })
+          .select()
+          .single();
+        if (e2) {
+          setError(e2.message);
+          setSaving(false);
+          return;
+        }
+        if (d2) { onCreated(d2.id); }
+        setSaving(false);
+        return;
+      }
+      setError(insertError.message || 'Error al crear el cliente');
       setSaving(false);
       return;
     }
@@ -191,8 +232,8 @@ function NuevoClienteModal({ onClose, onCreated }: { onClose: () => void; onCrea
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg">
-        <div className="flex items-center justify-between p-5 border-b border-slate-200">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-5 border-b border-slate-200 sticky top-0 bg-white z-10">
           <h2 className="text-lg font-bold text-slate-800">Nuevo Cliente</h2>
           <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
         </div>
@@ -200,26 +241,81 @@ function NuevoClienteModal({ onClose, onCreated }: { onClose: () => void; onCrea
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Razón Social *</label>
             <input required value={form.razon_social} onChange={e => setForm({...form, razon_social: e.target.value})}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
+              className={inputClass} />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">CUIT</label>
               <input value={form.cuit} onChange={e => setForm({...form, cuit: e.target.value})} placeholder="30-12345678-9"
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
+                className={inputClass} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-              <input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
+              <label className="block text-sm font-medium text-slate-700 mb-1">RNE</label>
+              <input value={form.rne} onChange={e => setForm({...form, rne: e.target.value})} placeholder="Nro. de establecimiento"
+                className={inputClass} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Contacto</label>
+              <input value={form.contacto_nombre} onChange={e => setForm({...form, contacto_nombre: e.target.value})} placeholder="Nombre del contacto"
+                className={inputClass} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Teléfono</label>
+              <input value={form.telefono} onChange={e => setForm({...form, telefono: e.target.value})}
+                className={inputClass} />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Teléfono</label>
-            <input value={form.telefono} onChange={e => setForm({...form, telefono: e.target.value})}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
+            <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+            <input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})}
+              className={inputClass} />
           </div>
-          <p className="text-xs text-slate-400">Los registros (RNE, RNEE, habilitaciones) se cargan desde el detalle del cliente.</p>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Dirección</label>
+            <input value={form.direccion} onChange={e => setForm({...form, direccion: e.target.value})} placeholder="Calle y número"
+              className={inputClass} />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Localidad</label>
+              <input value={form.localidad} onChange={e => setForm({...form, localidad: e.target.value})}
+                className={inputClass} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Provincia</label>
+              <select value={form.provincia} onChange={e => setForm({...form, provincia: e.target.value})}
+                className={inputClass}>
+                <option value="">Seleccionar...</option>
+                {PROVINCIAS.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Origen</label>
+              <select value={form.origen} onChange={e => setForm({...form, origen: e.target.value})}
+                className={inputClass}>
+                <option value="directo">Directo</option>
+                <option value="referido_cliente">Referido por cliente</option>
+                <option value="referido_despachante">Referido por despachante</option>
+              </select>
+            </div>
+            {form.origen !== 'directo' && (
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Referido por</label>
+                <input value={form.referido_por} onChange={e => setForm({...form, referido_por: e.target.value})}
+                  className={inputClass} />
+              </div>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Notas</label>
+            <textarea value={form.notas} onChange={e => setForm({...form, notas: e.target.value})} rows={2}
+              placeholder="Observaciones generales..."
+              className={inputClass} />
+          </div>
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
               {error}

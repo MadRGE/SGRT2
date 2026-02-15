@@ -16,6 +16,10 @@ interface Cliente {
   contacto_nombre: string | null;
   origen: string;
   referido_por: string | null;
+  direccion: string | null;
+  localidad: string | null;
+  provincia: string | null;
+  rne: string | null;
   notas: string | null;
 }
 
@@ -127,6 +131,13 @@ const DOCS_COMUNES = [
   'Certificado de libre deuda AFIP',
 ];
 
+const PROVINCIAS = [
+  'Buenos Aires', 'CABA', 'Catamarca', 'Chaco', 'Chubut', 'Córdoba', 'Corrientes',
+  'Entre Ríos', 'Formosa', 'Jujuy', 'La Pampa', 'La Rioja', 'Mendoza', 'Misiones',
+  'Neuquén', 'Río Negro', 'Salta', 'San Juan', 'San Luis', 'Santa Cruz', 'Santa Fe',
+  'Santiago del Estero', 'Tierra del Fuego', 'Tucumán'
+];
+
 const REGISTRO_TIPOS = [
   { value: 'RNE', label: 'RNE' },
   { value: 'RNEE', label: 'RNEE' },
@@ -211,19 +222,39 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
 
   const handleSave = async () => {
     setSaveError('');
-    const { error } = await supabase
-      .from('clientes')
-      .update({
+    // Build payload dynamically — only include extra fields if they have values
+    const payload: Record<string, any> = {
+      razon_social: editForm.razon_social,
+      cuit: editForm.cuit || null,
+      email: editForm.email || null,
+      telefono: editForm.telefono || null,
+    };
+    // Extra fields (require migration 71)
+    if (editForm.contacto_nombre !== undefined) payload.contacto_nombre = editForm.contacto_nombre || null;
+    if (editForm.direccion !== undefined) payload.direccion = editForm.direccion || null;
+    if (editForm.localidad !== undefined) payload.localidad = editForm.localidad || null;
+    if (editForm.provincia !== undefined) payload.provincia = editForm.provincia || null;
+    if (editForm.rne !== undefined) payload.rne = editForm.rne || null;
+    if (editForm.origen !== undefined) payload.origen = editForm.origen || 'directo';
+    if (editForm.referido_por !== undefined) payload.referido_por = editForm.referido_por || null;
+    if (editForm.notas !== undefined) payload.notas = editForm.notas || null;
+
+    let { error } = await supabase.from('clientes').update(payload).eq('id', clienteId);
+
+    // If schema cache error, retry with basic fields only
+    if (error?.message?.includes('schema cache')) {
+      const res = await supabase.from('clientes').update({
         razon_social: editForm.razon_social,
         cuit: editForm.cuit || null,
         email: editForm.email || null,
         telefono: editForm.telefono || null,
-      })
-      .eq('id', clienteId);
+      }).eq('id', clienteId);
+      error = res.error;
+    }
 
     if (error) {
       console.error('Error guardando cliente:', error);
-      setSaveError(error.message || 'Error al guardar. Ejecutá la migración 69 en el SQL Editor.');
+      setSaveError(error.message || 'Error al guardar');
     } else {
       setEditing(false);
       loadData();
@@ -310,7 +341,7 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
         {editing ? (
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Razon Social</label>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Razón Social</label>
               <input value={editForm.razon_social || ''} onChange={e => setEditForm({ ...editForm, razon_social: e.target.value })}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
@@ -320,13 +351,55 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
             <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">RNE</label>
+              <input value={editForm.rne || ''} onChange={e => setEditForm({ ...editForm, rne: e.target.value })} placeholder="Nro. de establecimiento"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Contacto</label>
+              <input value={editForm.contacto_nombre || ''} onChange={e => setEditForm({ ...editForm, contacto_nombre: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
+            </div>
+            <div>
               <label className="block text-xs font-medium text-slate-500 mb-1">Email</label>
               <input value={editForm.email || ''} onChange={e => setEditForm({ ...editForm, email: e.target.value })}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Telefono</label>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Teléfono</label>
               <input value={editForm.telefono || ''} onChange={e => setEditForm({ ...editForm, telefono: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-xs font-medium text-slate-500 mb-1">Dirección</label>
+              <input value={editForm.direccion || ''} onChange={e => setEditForm({ ...editForm, direccion: e.target.value })} placeholder="Calle y número"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Localidad</label>
+              <input value={editForm.localidad || ''} onChange={e => setEditForm({ ...editForm, localidad: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Provincia</label>
+              <select value={editForm.provincia || ''} onChange={e => setEditForm({ ...editForm, provincia: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors">
+                <option value="">Seleccionar...</option>
+                {PROVINCIAS.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Origen</label>
+              <select value={editForm.origen || 'directo'} onChange={e => setEditForm({ ...editForm, origen: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors">
+                <option value="directo">Directo</option>
+                <option value="referido_cliente">Referido por cliente</option>
+                <option value="referido_despachante">Referido por despachante</option>
+              </select>
+            </div>
+            <div className="col-span-2">
+              <label className="block text-xs font-medium text-slate-500 mb-1">Notas</label>
+              <textarea value={editForm.notas || ''} onChange={e => setEditForm({ ...editForm, notas: e.target.value })} rows={2}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
             {saveError && (
@@ -338,10 +411,16 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
         ) : (
           <div className="grid grid-cols-2 gap-x-8 gap-y-3">
             <InfoField label="CUIT" value={cliente.cuit} />
-            <InfoField label="Email" value={cliente.email} />
-            <InfoField label="Telefono" value={cliente.telefono} />
+            <InfoField label="RNE" value={cliente.rne} />
             <InfoField label="Contacto" value={cliente.contacto_nombre} />
-            <InfoField label="Origen" value={cliente.origen === 'directo' ? 'Directo' : `Referido${cliente.referido_por ? ` por ${cliente.referido_por}` : ''}`} />
+            <InfoField label="Teléfono" value={cliente.telefono} />
+            <InfoField label="Email" value={cliente.email} />
+            <InfoField label="Origen" value={
+              !cliente.origen || cliente.origen === 'directo' ? 'Directo' :
+              cliente.origen === 'referido_cliente' ? `Referido por cliente${cliente.referido_por ? `: ${cliente.referido_por}` : ''}` :
+              `Referido por despachante${cliente.referido_por ? `: ${cliente.referido_por}` : ''}`
+            } />
+            {cliente.direccion && <InfoField label="Dirección" value={`${cliente.direccion}${cliente.localidad ? `, ${cliente.localidad}` : ''}${cliente.provincia ? `, ${cliente.provincia}` : ''}`} />}
             {cliente.notas && <div className="col-span-2"><InfoField label="Notas" value={cliente.notas} /></div>}
           </div>
         )}
