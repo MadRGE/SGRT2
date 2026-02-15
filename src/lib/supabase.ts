@@ -12,10 +12,11 @@ export const supabase: SupabaseClient<Database> = supabaseConfigured
 
 // Soft-delete support: detecta si la columna deleted_at existe
 let _softDeleteReady: boolean | null = null;
+let _softDeleteChecked = false;
 
 export async function checkSoftDelete(): Promise<boolean> {
-  // Solo cachear resultado positivo; si fue false, re-intentar
-  if (_softDeleteReady === true) return true;
+  if (_softDeleteChecked) return _softDeleteReady === true;
+  _softDeleteChecked = true;
   try {
     const { error } = await supabase
       .from('clientes')
@@ -25,7 +26,7 @@ export async function checkSoftDelete(): Promise<boolean> {
   } catch {
     _softDeleteReady = false;
   }
-  return _softDeleteReady;
+  return _softDeleteReady === true;
 }
 
 // Aplica filtro deleted_at solo si la columna existe

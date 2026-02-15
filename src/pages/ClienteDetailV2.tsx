@@ -184,7 +184,7 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
         .from('documentos_cliente')
         .select('*')
         .eq('cliente_id', clienteId)
-        .order('categoria', { ascending: true });
+        .order('nombre', { ascending: true });
       setDocumentosCliente(dc || []);
 
       const { data: g } = await supabase
