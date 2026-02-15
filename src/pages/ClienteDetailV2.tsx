@@ -218,8 +218,6 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
         cuit: editForm.cuit || null,
         email: editForm.email || null,
         telefono: editForm.telefono || null,
-        origen: editForm.origen || 'directo',
-        notas: editForm.notas || null,
       })
       .eq('id', clienteId);
 
@@ -329,20 +327,6 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1">Telefono</label>
               <input value={editForm.telefono || ''} onChange={e => setEditForm({ ...editForm, telefono: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Origen</label>
-              <select value={editForm.origen || 'directo'} onChange={e => setEditForm({ ...editForm, origen: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors">
-                <option value="directo">Directo</option>
-                <option value="referido_cliente">Referido por cliente</option>
-                <option value="referido_despachante">Referido por despachante</option>
-              </select>
-            </div>
-            <div className="col-span-2">
-              <label className="block text-xs font-medium text-slate-500 mb-1">Notas</label>
-              <textarea value={editForm.notas || ''} onChange={e => setEditForm({ ...editForm, notas: e.target.value })} rows={3}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
             {saveError && (

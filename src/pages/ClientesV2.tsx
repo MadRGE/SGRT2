@@ -155,8 +155,7 @@ export default function ClientesV2({ onNavigate, autoOpen }: Props) {
 
 function NuevoClienteModal({ onClose, onCreated }: { onClose: () => void; onCreated: (id: string) => void }) {
   const [form, setForm] = useState({
-    razon_social: '', cuit: '', email: '', telefono: '',
-    origen: 'directo'
+    razon_social: '', cuit: '', email: '', telefono: ''
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -173,7 +172,6 @@ function NuevoClienteModal({ onClose, onCreated }: { onClose: () => void; onCrea
         cuit: form.cuit || null,
         email: form.email || null,
         telefono: form.telefono || null,
-        origen: form.origen,
       })
       .select()
       .single();
@@ -216,21 +214,10 @@ function NuevoClienteModal({ onClose, onCreated }: { onClose: () => void; onCrea
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Teléfono</label>
-              <input value={form.telefono} onChange={e => setForm({...form, telefono: e.target.value})}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Origen</label>
-              <select value={form.origen} onChange={e => setForm({...form, origen: e.target.value})}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors">
-                <option value="directo">Directo</option>
-                <option value="referido_cliente">Referido por cliente</option>
-                <option value="referido_despachante">Referido por despachante</option>
-              </select>
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Teléfono</label>
+            <input value={form.telefono} onChange={e => setForm({...form, telefono: e.target.value})}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
           </div>
           <p className="text-xs text-slate-400">Los registros (RNE, RNEE, habilitaciones) se cargan desde el detalle del cliente.</p>
           {error && (
