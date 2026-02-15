@@ -57,7 +57,6 @@ export default function TramitesV2({ onNavigate }: Props) {
     const { data, error: fetchError } = await supabase
       .from('tramite_tipos')
       .select('*')
-      .order('organismo')
       .order('nombre');
 
     if (fetchError) {
@@ -76,8 +75,8 @@ export default function TramitesV2({ onNavigate }: Props) {
     setLoading(false);
   };
 
-  // Get unique organismos from data
-  const organismos = [...new Set(catalogo.map(t => t.organismo))];
+  // Get unique organismos from data (sorted)
+  const organismos = [...new Set(catalogo.map(t => t.organismo))].sort();
 
   // Filter by selected organismo and search
   const filtered = catalogo.filter(t => {
