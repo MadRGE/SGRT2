@@ -22,6 +22,7 @@ interface Tramite {
   fecha_vencimiento: string | null;
   numero_expediente: string | null;
   monto_presupuesto: number | null;
+  cantidad_registros_envase: number | null;
   notas: string | null;
   cliente_id: string;
   gestion_id: string | null;
@@ -253,14 +254,39 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
         fecha_vencimiento: editForm.fecha_vencimiento || null,
         numero_expediente: editForm.numero_expediente || null,
         monto_presupuesto: editForm.monto_presupuesto || null,
+        cantidad_registros_envase: (editForm as any).cantidad_registros_envase || null,
         notas: editForm.notas || null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', tramiteId);
 
     if (error) {
-      console.error('Error guardando trámite:', error);
-      setSaveError(error.message || 'Error al guardar. Ejecutá la migración 69 en el SQL Editor.');
+      // If error is about missing column (cantidad_registros_envase), retry without it
+      if (error.message?.includes('schema cache') || error.message?.includes('cantidad_registros_envase')) {
+        const { error: e2 } = await supabase.from('tramites').update({
+          titulo: editForm.titulo,
+          tipo: editForm.tipo,
+          organismo: editForm.organismo || null,
+          plataforma: editForm.plataforma || null,
+          descripcion: editForm.descripcion || null,
+          prioridad: editForm.prioridad,
+          fecha_vencimiento: editForm.fecha_vencimiento || null,
+          numero_expediente: editForm.numero_expediente || null,
+          monto_presupuesto: editForm.monto_presupuesto || null,
+          notas: editForm.notas || null,
+          updated_at: new Date().toISOString(),
+        }).eq('id', tramiteId);
+        if (e2) {
+          console.error('Error guardando trámite (fallback):', e2);
+          setSaveError(e2.message || 'Error al guardar.');
+        } else {
+          setEditing(false);
+          loadData();
+        }
+      } else {
+        console.error('Error guardando trámite:', error);
+        setSaveError(error.message || 'Error al guardar.');
+      }
     } else {
       setEditing(false);
       loadData();
@@ -530,6 +556,11 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
                 <input type="number" value={editForm.monto_presupuesto ?? ''} onChange={e => setEditForm({...editForm, monto_presupuesto: parseFloat(e.target.value) || null})}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
               </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Cant. Reg. Envase</label>
+                <input type="number" min="0" value={(editForm as any).cantidad_registros_envase ?? ''} onChange={e => setEditForm({...editForm, cantidad_registros_envase: parseInt(e.target.value) || null} as any)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
+              </div>
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1">Descripción</label>
@@ -565,6 +596,7 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
             <InfoField label="Fecha Inicio" value={tramite.fecha_inicio ? new Date(tramite.fecha_inicio).toLocaleDateString('es-AR') : null} />
             <InfoField label="Vencimiento" value={tramite.fecha_vencimiento ? new Date(tramite.fecha_vencimiento).toLocaleDateString('es-AR') : null} />
             {tramite.monto_presupuesto != null && <InfoField label="Presupuesto" value={`$${tramite.monto_presupuesto.toLocaleString('es-AR')}`} />}
+            {tramite.cantidad_registros_envase != null && tramite.cantidad_registros_envase > 0 && <InfoField label="Reg. Envase" value={`${tramite.cantidad_registros_envase}`} />}
             {tramite.descripcion && <div className="col-span-2"><InfoField label="Descripción" value={tramite.descripcion} /></div>}
             {tramite.notas && <div className="col-span-2"><InfoField label="Notas" value={tramite.notas} /></div>}
           </div>
