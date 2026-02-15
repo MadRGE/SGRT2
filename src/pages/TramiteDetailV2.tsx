@@ -380,9 +380,21 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
           </div>
           <div className="flex items-center gap-2">
             {!editing && (
-              <button onClick={() => setEditing(true)} className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700">
-                <Pencil className="w-4 h-4" /> Editar
-              </button>
+              <>
+                <button onClick={() => setEditing(true)} className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700">
+                  <Pencil className="w-4 h-4" /> Editar
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!confirm('¿Eliminar este trámite? Esta acción no se puede deshacer.')) return;
+                    await supabase.from('tramites').delete().eq('id', tramite.id);
+                    onNavigate(backTarget);
+                  }}
+                  className="flex items-center gap-1 text-sm text-red-500 hover:text-red-700"
+                >
+                  <Trash2 className="w-4 h-4" /> Eliminar
+                </button>
+              </>
             )}
           </div>
         </div>

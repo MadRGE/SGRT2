@@ -279,6 +279,16 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
               <button onClick={() => setEditing(true)} className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700">
                 <Pencil className="w-4 h-4" /> Editar
               </button>
+              <button
+                onClick={async () => {
+                  if (!confirm('¿Eliminar este cliente y toda su información? Esta acción no se puede deshacer.')) return;
+                  await supabase.from('clientes').delete().eq('id', clienteId);
+                  onNavigate({ type: 'clientes' });
+                }}
+                className="flex items-center gap-1 text-sm text-red-500 hover:text-red-700"
+              >
+                <Trash2 className="w-4 h-4" /> Eliminar
+              </button>
             </div>
           ) : (
             <div className="flex gap-2">
