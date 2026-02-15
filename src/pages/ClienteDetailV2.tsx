@@ -207,7 +207,10 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
     setLoading(false);
   };
 
+  const [saveError, setSaveError] = useState('');
+
   const handleSave = async () => {
+    setSaveError('');
     const { error } = await supabase
       .from('clientes')
       .update({
@@ -217,11 +220,15 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
         telefono: editForm.telefono || null,
         contacto_nombre: editForm.contacto_nombre || null,
         origen: editForm.origen || 'directo',
+        referido_por: editForm.referido_por || null,
         notas: editForm.notas || null,
       })
       .eq('id', clienteId);
 
-    if (!error) {
+    if (error) {
+      console.error('Error guardando cliente:', error);
+      setSaveError(error.message || 'Error al guardar. Ejecutá la migración 69 en el SQL Editor.');
+    } else {
       setEditing(false);
       loadData();
     }
@@ -336,14 +343,27 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
               <select value={editForm.origen || 'directo'} onChange={e => setEditForm({ ...editForm, origen: e.target.value })}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors">
                 <option value="directo">Directo</option>
-                <option value="referido">Referido</option>
+                <option value="referido_cliente">Referido por cliente</option>
+                <option value="referido_despachante">Referido por despachante</option>
               </select>
             </div>
+            {editForm.origen && editForm.origen !== 'directo' && (
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Referido por</label>
+                <input value={editForm.referido_por || ''} onChange={e => setEditForm({ ...editForm, referido_por: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
+              </div>
+            )}
             <div className="col-span-2">
               <label className="block text-xs font-medium text-slate-500 mb-1">Notas</label>
               <textarea value={editForm.notas || ''} onChange={e => setEditForm({ ...editForm, notas: e.target.value })} rows={3}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
+            {saveError && (
+              <div className="col-span-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+                {saveError}
+              </div>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-x-8 gap-y-3">
