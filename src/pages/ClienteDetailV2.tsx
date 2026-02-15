@@ -234,7 +234,6 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
     if (editForm.direccion !== undefined) payload.direccion = editForm.direccion || null;
     if (editForm.localidad !== undefined) payload.localidad = editForm.localidad || null;
     if (editForm.provincia !== undefined) payload.provincia = editForm.provincia || null;
-    if (editForm.rne !== undefined) payload.rne = editForm.rne || null;
     if (editForm.origen !== undefined) payload.origen = editForm.origen || 'directo';
     if (editForm.referido_por !== undefined) payload.referido_por = editForm.referido_por || null;
     if (editForm.notas !== undefined) payload.notas = editForm.notas || null;
@@ -351,11 +350,6 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">RNE</label>
-              <input value={editForm.rne || ''} onChange={e => setEditForm({ ...editForm, rne: e.target.value })} placeholder="Nro. de establecimiento"
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
-            </div>
-            <div>
               <label className="block text-xs font-medium text-slate-500 mb-1">Contacto</label>
               <input value={editForm.contacto_nombre || ''} onChange={e => setEditForm({ ...editForm, contacto_nombre: e.target.value })}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
@@ -411,7 +405,6 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
         ) : (
           <div className="grid grid-cols-2 gap-x-8 gap-y-3">
             <InfoField label="CUIT" value={cliente.cuit} />
-            <InfoField label="RNE" value={cliente.rne} />
             <InfoField label="Contacto" value={cliente.contacto_nombre} />
             <InfoField label="Teléfono" value={cliente.telefono} />
             <InfoField label="Email" value={cliente.email} />

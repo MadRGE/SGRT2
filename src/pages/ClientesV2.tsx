@@ -164,7 +164,7 @@ function NuevoClienteModal({ onClose, onCreated }: { onClose: () => void; onCrea
   const [form, setForm] = useState({
     razon_social: '', cuit: '', email: '', telefono: '',
     contacto_nombre: '', direccion: '', localidad: '', provincia: '',
-    rne: '', origen: 'directo', referido_por: '', notas: ''
+    origen: 'directo', referido_por: '', notas: ''
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -186,7 +186,6 @@ function NuevoClienteModal({ onClose, onCreated }: { onClose: () => void; onCrea
     if (form.direccion) payload.direccion = form.direccion;
     if (form.localidad) payload.localidad = form.localidad;
     if (form.provincia) payload.provincia = form.provincia;
-    if (form.rne) payload.rne = form.rne;
     if (form.origen !== 'directo') payload.origen = form.origen;
     if (form.referido_por) payload.referido_por = form.referido_por;
     if (form.notas) payload.notas = form.notas;
@@ -243,17 +242,10 @@ function NuevoClienteModal({ onClose, onCreated }: { onClose: () => void; onCrea
             <input required value={form.razon_social} onChange={e => setForm({...form, razon_social: e.target.value})}
               className={inputClass} />
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">CUIT</label>
-              <input value={form.cuit} onChange={e => setForm({...form, cuit: e.target.value})} placeholder="30-12345678-9"
-                className={inputClass} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">RNE</label>
-              <input value={form.rne} onChange={e => setForm({...form, rne: e.target.value})} placeholder="Nro. de establecimiento"
-                className={inputClass} />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">CUIT</label>
+            <input value={form.cuit} onChange={e => setForm({...form, cuit: e.target.value})} placeholder="30-12345678-9"
+              className={inputClass} />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
