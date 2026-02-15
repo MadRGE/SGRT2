@@ -6,6 +6,7 @@ interface Props {
   onNavigate: (page: any) => void;
 }
 
+// Normalized interface used by the UI
 interface TramiteTipo {
   id: string;
   codigo: string;
@@ -18,7 +19,24 @@ interface TramiteTipo {
   costo_organismo: number | null;
   honorarios: number | null;
   documentacion_obligatoria: string[] | null;
-  observaciones: string | null;
+}
+
+// Map raw DB row to our normalized interface
+// Handles both v4 schema (organismo_id, rubro, etc.) and v5+ schema (organismo, categoria, etc.)
+function mapRow(row: any): TramiteTipo {
+  return {
+    id: row.id,
+    codigo: row.codigo,
+    nombre: row.nombre,
+    organismo: row.organismo || row.organismo_id || '',
+    categoria: row.categoria || row.rubro || null,
+    subcategoria: row.subcategoria || null,
+    plataforma: row.plataforma || row.plataforma_gestion || null,
+    plazo_dias: row.plazo_dias ?? row.sla_total_dias ?? null,
+    costo_organismo: row.costo_organismo ?? row.costo_tasas_base ?? null,
+    honorarios: row.honorarios ?? row.costo_honorarios_base ?? null,
+    documentacion_obligatoria: row.documentacion_obligatoria || null,
+  };
 }
 
 export default function TramitesV2({ onNavigate }: Props) {
@@ -39,7 +57,6 @@ export default function TramitesV2({ onNavigate }: Props) {
     const { data, error: fetchError } = await supabase
       .from('tramite_tipos')
       .select('*')
-      .order('organismo')
       .order('nombre');
 
     if (fetchError) {
@@ -47,12 +64,14 @@ export default function TramitesV2({ onNavigate }: Props) {
       setError(fetchError.message);
       setCatalogo([]);
     } else {
-      console.log('CATALOGO:', { count: data?.length, error: fetchError });
-      setCatalogo((data as TramiteTipo[]) || []);
+      const mapped = (data || []).map(mapRow);
+      // Sort by organismo then nombre
+      mapped.sort((a, b) => a.organismo.localeCompare(b.organismo) || a.nombre.localeCompare(b.nombre));
+      setCatalogo(mapped);
       // Auto-select first organismo
-      if (data && data.length > 0 && !selectedOrganismo) {
-        const organismos = [...new Set(data.map((t: any) => t.organismo))];
-        setSelectedOrganismo(organismos[0]);
+      if (mapped.length > 0 && !selectedOrganismo) {
+        const orgs = [...new Set(mapped.map(t => t.organismo))];
+        setSelectedOrganismo(orgs[0]);
       }
     }
     setLoading(false);
@@ -97,8 +116,8 @@ export default function TramitesV2({ onNavigate }: Props) {
                 {error ? 'No se pudo cargar el catálogo' : 'El catálogo está vacío'}
               </p>
               <p className="text-sm text-amber-600 mt-1">
-                Ejecutá la migración <strong>66_fix_schema_and_reseed.sql</strong> en el <strong>SQL Editor</strong> de Supabase.
-                Esa migración agrega las columnas faltantes, carga los datos del catálogo (104 trámites INAL + ANMAT) y desactiva RLS.
+                Ejecutá la migración <strong>67_seed_catalogo_v4_schema.sql</strong> en el <strong>SQL Editor</strong> de Supabase
+                para cargar los 104 trámites del catálogo (INAL + ANMAT PM).
               </p>
               {error && <p className="text-xs text-amber-500 mt-2">Error: {error}</p>}
               <button onClick={loadCatalogo} className="mt-3 px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 transition-colors">
@@ -222,9 +241,6 @@ export default function TramitesV2({ onNavigate }: Props) {
                                 </div>
                               ) : (
                                 <p className="text-xs text-slate-400 italic">Sin documentación obligatoria definida</p>
-                              )}
-                              {tipo.observaciones && (
-                                <p className="text-xs text-slate-500 bg-slate-50 p-2 rounded-lg">{tipo.observaciones}</p>
                               )}
                             </div>
                           )}
