@@ -213,32 +213,35 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
         <ArrowLeft className="w-4 h-4" /> Volver
       </button>
 
-      {/* Step 1: Select gestion */}
+      {/* Header */}
       <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50 p-6">
         <h1 className="text-[26px] tracking-tight font-bold text-slate-800 mb-1">Nuevo Trámite</h1>
-        <p className="text-sm text-slate-400 mt-0.5 mb-4">Agrega un proceso regulatorio a una gestión</p>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Gestión (proyecto) *</label>
-          <select
-            required
-            value={form.gestion_id}
-            onChange={e => handleGestionChange(e.target.value)}
-            className={inputClass}
-          >
-            <option value="">Seleccionar gestión...</option>
-            {gestiones.map(g => (
-              <option key={g.id} value={g.id}>
-                {g.nombre} — {g.cliente_nombre}
-              </option>
-            ))}
-          </select>
-          {selectedGestion && (
-            <p className="text-xs text-slate-400 mt-1">
-              Cliente: <span className="text-slate-600 font-medium">{selectedGestion.cliente_nombre}</span>
-            </p>
-          )}
-        </div>
+        {selectedGestion ? (
+          <p className="text-sm text-slate-500 mt-0.5">
+            Gestión: <span className="font-medium text-slate-700">{selectedGestion.nombre}</span>
+            {selectedGestion.cliente_nombre && <> — <span className="text-slate-600">{selectedGestion.cliente_nombre}</span></>}
+          </p>
+        ) : (
+          <>
+            <p className="text-sm text-slate-400 mt-0.5 mb-4">Seleccioná una gestión para agregar el trámite</p>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Gestión (proyecto) *</label>
+              <select
+                required
+                value={form.gestion_id}
+                onChange={e => handleGestionChange(e.target.value)}
+                className={inputClass}
+              >
+                <option value="">Seleccionar gestión...</option>
+                {gestiones.map(g => (
+                  <option key={g.id} value={g.id}>
+                    {g.nombre} — {g.cliente_nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Step 2: Select from catalog (only if gestion selected) */}

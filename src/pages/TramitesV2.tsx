@@ -86,11 +86,11 @@ export default function TramitesV2({ onNavigate }: Props) {
           <p className="text-sm text-slate-400 mt-0.5">Procesos regulatorios dentro de tus gestiones</p>
         </div>
         <button
-          onClick={() => onNavigate({ type: 'nuevo-tramite' })}
+          onClick={() => onNavigate({ type: 'gestiones' })}
           className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-lg hover:shadow-lg hover:shadow-blue-500/25 transition-colors text-sm font-medium"
         >
           <Plus className="w-4 h-4" />
-          Nuevo Trámite
+          Agregar desde Gestión
         </button>
       </div>
 

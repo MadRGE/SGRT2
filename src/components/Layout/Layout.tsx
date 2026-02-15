@@ -40,7 +40,6 @@ const NAV_ITEMS: { nav: NavPage; label: string; icon: typeof LayoutDashboard }[]
 const QUICK_ACTIONS = [
   { label: 'Nuevo Cliente', icon: Users, color: 'from-emerald-500 to-green-600', page: { type: 'nuevo-cliente' } as Page },
   { label: 'Nueva Gestión', icon: Briefcase, color: 'from-blue-500 to-indigo-600', page: { type: 'nueva-gestion' } as Page },
-  { label: 'Nuevo Trámite', icon: FileText, color: 'from-violet-500 to-purple-600', page: { type: 'nuevo-tramite' } as Page },
 ];
 
 export default function Layout({ children, currentNav, onNavigate }: LayoutProps) {

@@ -14,7 +14,8 @@ export const supabase: SupabaseClient<Database> = supabaseConfigured
 let _softDeleteReady: boolean | null = null;
 
 export async function checkSoftDelete(): Promise<boolean> {
-  if (_softDeleteReady !== null) return _softDeleteReady;
+  // Solo cachear resultado positivo; si fue false, re-intentar
+  if (_softDeleteReady === true) return true;
   try {
     const { error } = await supabase
       .from('clientes')
@@ -33,4 +34,16 @@ export function filterActive<T>(query: any): any {
     return query.is('deleted_at', null);
   }
   return query;
+}
+
+// Intenta soft-delete, si falla hace hard-delete
+export async function softDelete(table: string, column: string, value: string): Promise<'soft' | 'hard'> {
+  const now = new Date().toISOString();
+  const { error } = await supabase.from(table).update({ deleted_at: now }).eq(column, value);
+  if (error) {
+    // Columna no existe, hacer hard-delete
+    await supabase.from(table).delete().eq(column, value);
+    return 'hard';
+  }
+  return 'soft';
 }

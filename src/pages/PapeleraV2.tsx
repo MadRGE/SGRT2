@@ -14,14 +14,17 @@ interface DeletedItem {
 export default function PapeleraV2() {
   const [items, setItems] = useState<DeletedItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [notReady, setNotReady] = useState(false);
 
   useEffect(() => { loadPapelera(); }, []);
 
   const loadPapelera = async () => {
     setLoading(true);
+    setNotReady(false);
     const supported = await checkSoftDelete();
     if (!supported) {
       setItems([]);
+      setNotReady(true);
       setLoading(false);
       return;
     }
@@ -110,12 +113,33 @@ export default function PapeleraV2() {
         <p className="text-sm text-slate-400 mt-0.5">Los elementos se eliminan permanentemente después de 30 días</p>
       </div>
 
-      {items.length === 0 ? (
+      {notReady && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-amber-800">Papelera no disponible</p>
+              <p className="text-sm text-amber-600 mt-1">
+                Necesitás ejecutar la migración 64 en el SQL Editor de Supabase para habilitar la papelera.
+                Copiá el contenido de <code className="bg-amber-100 px-1 rounded">supabase/migrations/64_soft_delete.sql</code> y ejecutalo.
+              </p>
+              <p className="text-sm text-amber-600 mt-1">
+                Después ejecutá: <code className="bg-amber-100 px-1 rounded">NOTIFY pgrst, 'reload schema';</code>
+              </p>
+              <button onClick={loadPapelera} className="mt-3 text-sm font-medium text-amber-700 hover:text-amber-900 underline">
+                Reintentar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!notReady && items.length === 0 ? (
         <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-12 text-center">
           <Trash2 className="w-12 h-12 mx-auto text-slate-200 mb-3" />
           <p className="text-slate-400">La papelera está vacía</p>
         </div>
-      ) : (
+      ) : items.length > 0 ? (
         <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm divide-y divide-slate-100/80">
           {items.map((item) => (
             <div key={`${item.type}-${item.id}`} className="flex items-center gap-4 p-4">
@@ -162,7 +186,7 @@ export default function PapeleraV2() {
             </div>
           ))}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

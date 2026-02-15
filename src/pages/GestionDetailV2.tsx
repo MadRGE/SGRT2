@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase, checkSoftDelete } from '../lib/supabase';
+import { supabase, softDelete } from '../lib/supabase';
 import {
   ArrowLeft, Plus, FileText, ChevronRight, Loader2, Pencil, Save, X,
   FolderOpen, BarChart3, Receipt, AlertTriangle, Clock, CheckCircle2,
@@ -301,17 +301,9 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
                 </button>
                 <button
                   onClick={async () => {
-                    const soft = await checkSoftDelete();
-                    if (soft) {
-                      if (!confirm('¿Enviar esta gestión a la papelera? Se puede recuperar en los próximos 30 días.')) return;
-                      const now = new Date().toISOString();
-                      await supabase.from('gestiones').update({ deleted_at: now }).eq('id', gestionId);
-                      await supabase.from('tramites').update({ deleted_at: now }).eq('gestion_id', gestionId);
-                    } else {
-                      if (!confirm('¿Eliminar esta gestión de forma permanente?')) return;
-                      await supabase.from('tramites').delete().eq('gestion_id', gestionId);
-                      await supabase.from('gestiones').delete().eq('id', gestionId);
-                    }
+                    if (!confirm('¿Eliminar esta gestión? Se enviará a la papelera.')) return;
+                    await softDelete('tramites', 'gestion_id', gestionId);
+                    await softDelete('gestiones', 'id', gestionId);
                     onNavigate({ type: 'gestiones' });
                   }}
                   className="flex items-center gap-1 text-sm text-red-500 hover:text-red-700"
