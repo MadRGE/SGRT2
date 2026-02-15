@@ -386,8 +386,8 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
                 </button>
                 <button
                   onClick={async () => {
-                    if (!confirm('¿Eliminar este trámite? Esta acción no se puede deshacer.')) return;
-                    await supabase.from('tramites').delete().eq('id', tramite.id);
+                    if (!confirm('¿Enviar este trámite a la papelera? Se puede recuperar en los próximos 30 días.')) return;
+                    await supabase.from('tramites').update({ deleted_at: new Date().toISOString() }).eq('id', tramite.id);
                     onNavigate(backTarget);
                   }}
                   className="flex items-center gap-1 text-sm text-red-500 hover:text-red-700"

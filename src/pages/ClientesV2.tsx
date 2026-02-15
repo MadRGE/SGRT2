@@ -33,6 +33,7 @@ export default function ClientesV2({ onNavigate, autoOpen }: Props) {
       const { data } = await supabase
         .from('clientes')
         .select('*')
+        .is('deleted_at', null)
         .order('razon_social');
 
       if (data) {

@@ -99,12 +99,12 @@ export default function PortalClienteV2({ clienteId, onNavigate }: Props) {
     if (c) setCliente(c);
 
     const { data: g } = await supabase.from('gestiones').select('id, nombre, estado')
-      .eq('cliente_id', clienteId).order('created_at', { ascending: false });
+      .eq('cliente_id', clienteId).is('deleted_at', null).order('created_at', { ascending: false });
     setGestiones(g || []);
 
     const { data: t } = await supabase.from('tramites')
       .select('id, titulo, estado, organismo, progreso, semaforo, fecha_vencimiento, gestion_id')
-      .eq('cliente_id', clienteId).order('created_at', { ascending: false });
+      .eq('cliente_id', clienteId).is('deleted_at', null).order('created_at', { ascending: false });
     setTramites(t || []);
 
     if (t && t.length > 0) {

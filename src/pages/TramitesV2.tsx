@@ -57,6 +57,7 @@ export default function TramitesV2({ onNavigate }: Props) {
       const { data } = await supabase
         .from('tramites')
         .select('id, titulo, estado, tipo, organismo, prioridad, fecha_vencimiento, created_at, gestiones(nombre, clientes(razon_social))')
+        .is('deleted_at', null)
         .order('created_at', { ascending: false });
 
       setTramites((data as any) || []);

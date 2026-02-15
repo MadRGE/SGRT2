@@ -301,8 +301,10 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
                 </button>
                 <button
                   onClick={async () => {
-                    if (!confirm('¿Eliminar esta gestión y todos sus trámites? Esta acción no se puede deshacer.')) return;
-                    await supabase.from('gestiones').delete().eq('id', gestionId);
+                    if (!confirm('¿Enviar esta gestión a la papelera? Se puede recuperar en los próximos 30 días.')) return;
+                    const now = new Date().toISOString();
+                    await supabase.from('gestiones').update({ deleted_at: now }).eq('id', gestionId);
+                    await supabase.from('tramites').update({ deleted_at: now }).eq('gestion_id', gestionId);
                     onNavigate({ type: 'gestiones' });
                   }}
                   className="flex items-center gap-1 text-sm text-red-500 hover:text-red-700"

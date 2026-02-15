@@ -18,6 +18,7 @@ import VencimientosV2 from './pages/VencimientosV2';
 import PresupuestoV2 from './pages/PresupuestoV2';
 import PreciosV2 from './pages/PreciosV2';
 import PortalClienteV2 from './pages/PortalClienteV2';
+import PapeleraV2 from './pages/PapeleraV2';
 
 function AppContent() {
   const [page, setPage] = useState<Page>({ type: 'dashboard' });
@@ -32,6 +33,7 @@ function AppContent() {
       case 'tramites': case 'tramite': case 'nuevo-tramite': return 'tramites' as const;
       case 'precios': return 'precios' as const;
       case 'vencimientos': return 'vencimientos' as const;
+      case 'papelera': return 'papelera' as const;
       default: return 'dashboard' as const;
     }
   };
@@ -52,6 +54,7 @@ function AppContent() {
       {page.type === 'portal-cliente' && <PortalClienteV2 clienteId={page.clienteId} onNavigate={navigate} />}
       {page.type === 'precios' && <PreciosV2 />}
       {page.type === 'vencimientos' && <VencimientosV2 onNavigate={navigate} />}
+      {page.type === 'papelera' && <PapeleraV2 />}
     </Layout>
   );
 }

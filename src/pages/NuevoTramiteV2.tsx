@@ -58,6 +58,7 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
   useEffect(() => {
     // Load gestiones with client name
     supabase.from('gestiones').select('id, nombre, cliente_id, clientes(razon_social)')
+      .is('deleted_at', null)
       .not('estado', 'in', '("finalizado","archivado")')
       .order('created_at', { ascending: false })
       .then(({ data }) => {

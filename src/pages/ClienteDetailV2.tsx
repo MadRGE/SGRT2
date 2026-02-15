@@ -281,8 +281,11 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
               </button>
               <button
                 onClick={async () => {
-                  if (!confirm('¿Eliminar este cliente y toda su información? Esta acción no se puede deshacer.')) return;
-                  await supabase.from('clientes').delete().eq('id', clienteId);
+                  if (!confirm('¿Enviar este cliente a la papelera? Se puede recuperar en los próximos 30 días.')) return;
+                  const now = new Date().toISOString();
+                  await supabase.from('clientes').update({ deleted_at: now }).eq('id', clienteId);
+                  await supabase.from('gestiones').update({ deleted_at: now }).eq('cliente_id', clienteId);
+                  await supabase.from('tramites').update({ deleted_at: now }).eq('cliente_id', clienteId);
                   onNavigate({ type: 'clientes' });
                 }}
                 className="flex items-center gap-1 text-sm text-red-500 hover:text-red-700"

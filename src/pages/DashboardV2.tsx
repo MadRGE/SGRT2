@@ -111,18 +111,21 @@ export default function DashboardV2({ onNavigate }: Props) {
       const { count: gestionesActivasCount } = await supabase
         .from('gestiones')
         .select('*', { count: 'exact', head: true })
+        .is('deleted_at', null)
         .in('estado', ['relevamiento', 'en_curso', 'en_espera']);
 
       // KPI: Tramites en curso count
       const { count: tramitesEnCursoCount } = await supabase
         .from('tramites')
         .select('*', { count: 'exact', head: true })
+        .is('deleted_at', null)
         .eq('estado', 'en_curso');
 
       // KPI: Semaforo rojo count
       const { count: semaforoRojoCount } = await supabase
         .from('tramites')
         .select('*', { count: 'exact', head: true })
+        .is('deleted_at', null)
         .eq('semaforo', 'rojo');
 
       // KPI: Vencimientos proximos count (next 30 days including past due)
@@ -142,6 +145,7 @@ export default function DashboardV2({ onNavigate }: Props) {
       const { data: gestionesData } = await supabase
         .from('gestiones')
         .select('id, nombre, estado, prioridad, created_at, clientes(razon_social)')
+        .is('deleted_at', null)
         .not('estado', 'in', '("finalizado","archivado")')
         .order('created_at', { ascending: false })
         .limit(8);
@@ -152,6 +156,7 @@ export default function DashboardV2({ onNavigate }: Props) {
       const { data: tramitesData } = await supabase
         .from('tramites')
         .select('id, titulo, organismo, estado, semaforo, gestiones(nombre, clientes(razon_social))')
+        .is('deleted_at', null)
         .or('semaforo.eq.rojo,semaforo.eq.amarillo,estado.eq.esperando_cliente,estado.eq.observado')
         .order('created_at', { ascending: false })
         .limit(8);

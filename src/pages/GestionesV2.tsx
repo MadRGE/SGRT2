@@ -93,6 +93,7 @@ export default function GestionesV2({ onNavigate }: Props) {
       const { data } = await supabase
         .from('gestiones')
         .select('id, nombre, estado, prioridad, fecha_inicio, created_at, clientes(razon_social), tramites(estado, semaforo)')
+        .is('deleted_at', null)
         .order('created_at', { ascending: false });
 
       setGestiones((data as any) || []);

@@ -25,7 +25,7 @@ export default function NuevaGestionV2({ clienteId, onNavigate }: Props) {
   });
 
   useEffect(() => {
-    supabase.from('clientes').select('id, razon_social').order('razon_social')
+    supabase.from('clientes').select('id, razon_social').is('deleted_at', null).order('razon_social')
       .then(({ data }) => { if (data) setClientes(data); });
   }, []);
 
