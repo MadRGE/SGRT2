@@ -4,7 +4,16 @@
 -- Run in Supabase SQL Editor
 -- =====================================================
 
--- 1. Ensure organismos exist
+-- 1. Create organismos table if it doesn't exist
+CREATE TABLE IF NOT EXISTS organismos (
+  id VARCHAR(50) PRIMARY KEY,
+  sigla VARCHAR(20) NOT NULL,
+  nombre VARCHAR(200) NOT NULL,
+  plataforma_presentacion VARCHAR(50)
+);
+ALTER TABLE organismos DISABLE ROW LEVEL SECURITY;
+
+-- 2. Seed organismos
 INSERT INTO organismos (id, sigla, nombre, plataforma_presentacion)
 VALUES
   ('INAL', 'INAL', 'Instituto Nacional de Alimentos', 'TADO'),
