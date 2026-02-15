@@ -67,6 +67,7 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
     prioridad: 'normal',
     fecha_vencimiento: '',
     monto_presupuesto: '',
+    cantidad_registros_envase: '',
     descripcion: '',
   });
 
@@ -169,6 +170,7 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
     if (form.plataforma) payload.plataforma = form.plataforma;
     if (form.fecha_vencimiento) payload.fecha_vencimiento = form.fecha_vencimiento;
     if (form.monto_presupuesto) payload.monto_presupuesto = parseFloat(form.monto_presupuesto);
+    if (form.cantidad_registros_envase) payload.cantidad_registros_envase = parseInt(form.cantidad_registros_envase);
     if (form.descripcion) payload.descripcion = form.descripcion;
 
     const { data, error: insertError } = await supabase
@@ -483,7 +485,7 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Fecha Vencimiento</label>
                 <input type="date" value={form.fecha_vencimiento} onChange={e => setForm({ ...form, fecha_vencimiento: e.target.value })}
@@ -493,6 +495,12 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
                 <label className="block text-sm font-medium text-slate-700 mb-1">Honorarios ($)</label>
                 <input type="number" value={form.monto_presupuesto} onChange={e => setForm({ ...form, monto_presupuesto: e.target.value })}
                   placeholder="0.00"
+                  className={inputClass} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Cant. Reg. Envase</label>
+                <input type="number" min="0" value={form.cantidad_registros_envase} onChange={e => setForm({ ...form, cantidad_registros_envase: e.target.value })}
+                  placeholder="0"
                   className={inputClass} />
               </div>
             </div>
