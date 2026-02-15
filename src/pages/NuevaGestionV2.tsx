@@ -173,8 +173,12 @@ export default function NuevaGestionV2({ clienteId, onNavigate }: Props) {
       }
     }
 
-    // Navigate to gestión detail
-    onNavigate({ type: 'gestion', id: gestionData.id });
+    // Navigate: if tramite was selected, go to presupuesto; otherwise gestion detail
+    if (selectedTipo) {
+      onNavigate({ type: 'presupuesto', gestionId: gestionData.id });
+    } else {
+      onNavigate({ type: 'gestion', id: gestionData.id });
+    }
     setLoading(false);
   };
 
