@@ -20,6 +20,13 @@ import PresupuestoV2 from './pages/PresupuestoV2';
 import PreciosV2 from './pages/PreciosV2';
 import PortalClienteV2 from './pages/PortalClienteV2';
 import PapeleraV2 from './pages/PapeleraV2';
+import Catalogo from './pages/Catalogo';
+import Reportes from './pages/Reportes';
+import Configuracion from './pages/Configuracion';
+import Cotizaciones from './pages/Cotizaciones';
+import Notificaciones from './pages/Notificaciones/Notificaciones';
+import ModuloFinancieroContable from './pages/ModuloFinancieroContable';
+import GestionUsuarios from './pages/Admin/GestionUsuarios';
 
 function AppContent() {
   const [page, setPage] = useState<Page>({ type: 'dashboard' });
@@ -37,6 +44,13 @@ function AppContent() {
       case 'precios': return 'precios' as const;
       case 'vencimientos': return 'vencimientos' as const;
       case 'papelera': return 'papelera' as const;
+      case 'catalogo': return 'catalogo' as const;
+      case 'reportes': return 'reportes' as const;
+      case 'configuracion': return 'configuracion' as const;
+      case 'cotizaciones': return 'cotizaciones' as const;
+      case 'notificaciones': return 'notificaciones' as const;
+      case 'finanzas': return 'finanzas' as const;
+      case 'usuarios': return 'usuarios' as const;
       default: return 'dashboard' as const;
     }
   };
@@ -58,6 +72,18 @@ function AppContent() {
       {page.type === 'precios' && <PreciosV2 />}
       {page.type === 'vencimientos' && <VencimientosV2 onNavigate={navigate} />}
       {page.type === 'papelera' && <PapeleraV2 />}
+      {page.type === 'catalogo' && <Catalogo onBack={() => navigate({ type: 'dashboard' })} />}
+      {page.type === 'reportes' && <Reportes onBack={() => navigate({ type: 'dashboard' })} />}
+      {page.type === 'configuracion' && <Configuracion onBack={() => navigate({ type: 'dashboard' })} />}
+      {page.type === 'cotizaciones' && <Cotizaciones onBack={() => navigate({ type: 'dashboard' })} />}
+      {page.type === 'notificaciones' && <Notificaciones onBack={() => navigate({ type: 'dashboard' })} />}
+      {page.type === 'finanzas' && (
+        <ModuloFinancieroContable
+          onBack={() => navigate({ type: 'dashboard' })}
+          onViewProyecto={(id) => navigate({ type: 'gestion', id })}
+        />
+      )}
+      {page.type === 'usuarios' && <GestionUsuarios onBack={() => navigate({ type: 'dashboard' })} />}
     </Layout>
   );
 }

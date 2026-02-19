@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase, softDelete } from '../lib/supabase';
-import { ArrowLeft, Clock, Loader2, Save, Pencil, X, Plus, FileCheck, Trash2, CheckCircle2, AlertCircle, Link2 } from 'lucide-react';
+import { ArrowLeft, Clock, Loader2, Save, Pencil, X, Plus, FileCheck, Trash2, CheckCircle2, AlertCircle, AlertTriangle, Link2 } from 'lucide-react';
 
 interface Props {
   tramiteId: string;
@@ -114,6 +114,7 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
   const [documentos, setDocumentos] = useState<Documento[]>([]);
   const [seguimientos, setSeguimientos] = useState<Seguimiento[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [nuevoSeguimiento, setNuevoSeguimiento] = useState('');
   const [savingSeg, setSavingSeg] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -128,6 +129,7 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
 
   const loadData = async () => {
     setLoading(true);
+    setError(null);
     try {
       const { data: t } = await supabase
         .from('tramites')
@@ -164,6 +166,7 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
       }
     } catch (e) {
       console.warn('Error:', e);
+      setError('Error al cargar datos. Verifique su conexión.');
     }
     setLoading(false);
   };
@@ -361,6 +364,18 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
 
   if (loading) {
     return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>;
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-32 text-center">
+        <AlertTriangle className="w-10 h-10 text-red-400 mb-3" />
+        <p className="text-slate-600 mb-4">{error}</p>
+        <button onClick={loadData} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+          Reintentar
+        </button>
+      </div>
+    );
   }
 
   if (!tramite) {
@@ -588,7 +603,7 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-x-8 gap-y-3 pt-4 border-t border-slate-100">
-            <InfoField label="Tipo" value={tramite.tipo === 'importacion' ? 'Importación' : 'Exportación'} />
+            <InfoField label="Tipo" value={tramite.tipo?.charAt(0).toUpperCase() + tramite.tipo?.slice(1).replace(/_/g, ' ')} />
             <InfoField label="Organismo" value={tramite.organismo} />
             <InfoField label="Prioridad" value={tramite.prioridad?.charAt(0).toUpperCase() + tramite.prioridad?.slice(1)} />
             <InfoField label="Plataforma" value={tramite.plataforma} />

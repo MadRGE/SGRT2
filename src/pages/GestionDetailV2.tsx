@@ -101,6 +101,7 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
   const [docsTramite, setDocsTramite] = useState<DocTramite[]>([]);
   const [seguimientos, setSeguimientos] = useState<Seguimiento[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState<Partial<Gestion>>({});
   const [tab, setTab] = useState<Tab>('tramites');
@@ -112,6 +113,7 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
 
   const loadData = async () => {
     setLoading(true);
+    setError(null);
     try {
       const { data: g } = await supabase
         .from('gestiones')
@@ -156,6 +158,7 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
       setSeguimientos(s || []);
     } catch (e) {
       console.warn('Error:', e);
+      setError('Error al cargar datos. Verifique su conexión.');
     }
     setLoading(false);
   };
@@ -216,6 +219,18 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
 
   if (loading) {
     return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>;
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-32 text-center">
+        <AlertTriangle className="w-10 h-10 text-red-400 mb-3" />
+        <p className="text-slate-600 mb-4">{error}</p>
+        <button onClick={loadData} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+          Reintentar
+        </button>
+      </div>
+    );
   }
 
   if (!gestion) {

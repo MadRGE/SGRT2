@@ -183,14 +183,15 @@ function ReporteExpedientes() {
       let csvContent = '';
       csvContent += 'Proyecto,Cliente,Codigo_Expediente,Tramite,Organismo,Estado,Fecha_Limite\n';
 
+      const esc = (v: string) => `"${(v || '').replace(/"/g, '""')}"`;
       filtered.forEach((exp: any) => {
         const row = [
-          `"${exp.proyectos?.nombre_proyecto || 'N/A'}"`,
-          `"${exp.proyectos?.clientes?.razon_social || 'N/A'}"`,
-          exp.codigo,
-          `"${exp.tramite_tipos?.nombre || 'N/A'}"`,
-          `"${exp.tramite_tipos?.organismos?.sigla || 'N/A'}"`,
-          exp.estado,
+          esc(exp.proyectos?.nombre_proyecto || 'N/A'),
+          esc(exp.proyectos?.clientes?.razon_social || 'N/A'),
+          esc(exp.codigo || ''),
+          esc(exp.tramite_tipos?.nombre || 'N/A'),
+          esc(exp.tramite_tipos?.organismos?.sigla || 'N/A'),
+          esc(exp.estado || ''),
           exp.fecha_limite ? new Date(exp.fecha_limite).toLocaleDateString('es-AR') : 'N/A'
         ].join(',');
         csvContent += row + '\n';
@@ -299,11 +300,12 @@ function ReporteFinanciero() {
       let csvContent = '';
       csvContent += 'Proyecto,Cliente,Estado_Presupuesto,Monto_Total,Fecha_Envio\n';
 
+      const esc = (v: string) => `"${(v || '').replace(/"/g, '""')}"`;
       presupuestos.forEach((p: any) => {
         const row = [
-          `"${p.proyectos?.nombre_proyecto || 'N/A'}"`,
-          `"${p.proyectos?.clientes?.razon_social || 'N/A'}"`,
-          p.estado,
+          esc(p.proyectos?.nombre_proyecto || 'N/A'),
+          esc(p.proyectos?.clientes?.razon_social || 'N/A'),
+          esc(p.estado || ''),
           p.total_final,
           p.fecha_envio ? new Date(p.fecha_envio).toLocaleDateString('es-AR') : 'N/A'
         ].join(',');

@@ -46,7 +46,7 @@ interface Paso {
   id: string;
   orden: number;
   nombre: string;
-  rol_responsable: string;
+  descripcion: string;
 }
 
 export default function Configuracion({ onBack }: Props) {
@@ -243,7 +243,7 @@ function EditarTramite({ tramiteId, onBack }: { tramiteId: string; onBack: () =>
         .update({
           orden: paso.orden,
           nombre: paso.nombre,
-          descripcion: paso.rol_responsable
+          descripcion: paso.descripcion
         })
         .eq('id', paso.id);
     }
@@ -254,7 +254,7 @@ function EditarTramite({ tramiteId, onBack }: { tramiteId: string; onBack: () =>
           tramite_tipo_id: tramiteId,
           orden: paso.orden,
           nombre: paso.nombre,
-          descripcion: paso.rol_responsable
+          descripcion: paso.descripcion
         }))
       );
     }
@@ -300,7 +300,7 @@ function EditarTramite({ tramiteId, onBack }: { tramiteId: string; onBack: () =>
         id: `new-${Date.now()}`,
         orden: maxOrden + 1,
         nombre: 'Nuevo Paso',
-        rol_responsable: 'gestor'
+        descripcion: 'gestor'
       }
     ]);
   };
@@ -634,9 +634,9 @@ function EditarTramite({ tramiteId, onBack }: { tramiteId: string; onBack: () =>
                         Rol Responsable
                       </label>
                       <select
-                        value={paso.rol_responsable}
+                        value={paso.descripcion}
                         onChange={(e) =>
-                          handlePasoUpdate(paso.id, 'rol_responsable', e.target.value)
+                          handlePasoUpdate(paso.id, 'descripcion', e.target.value)
                         }
                         className="w-full p-2 border border-slate-300 rounded-md text-sm bg-white"
                       >

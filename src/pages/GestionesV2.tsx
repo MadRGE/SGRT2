@@ -84,11 +84,13 @@ export default function GestionesV2({ onNavigate }: Props) {
   const [search, setSearch] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('todos');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => { loadGestiones(); }, []);
 
   const loadGestiones = async () => {
     setLoading(true);
+    setError(null);
     try {
       const { data } = await filterActive(supabase
         .from('gestiones')
@@ -98,6 +100,7 @@ export default function GestionesV2({ onNavigate }: Props) {
       setGestiones((data as any) || []);
     } catch (e) {
       console.warn('Error cargando gestiones:', e);
+      setError('Error al cargar datos. Verifique su conexión.');
     }
     setLoading(false);
   };
@@ -118,6 +121,18 @@ export default function GestionesV2({ onNavigate }: Props) {
     const p = buildProgressSummary(g.tramites || []);
     return sum + (p?.needsAttention || 0);
   }, 0);
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-32 text-center">
+        <AlertTriangle className="w-10 h-10 text-red-400 mb-3" />
+        <p className="text-slate-600 mb-4">{error}</p>
+        <button onClick={loadGestiones} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+          Reintentar
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
