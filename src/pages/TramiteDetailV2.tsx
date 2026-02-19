@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase, softDelete } from '../lib/supabase';
-import { ArrowLeft, Clock, Loader2, Save, Pencil, X, Plus, FileCheck, Trash2, CheckCircle2, AlertCircle, AlertTriangle, Link2 } from 'lucide-react';
+import { uploadDocumento, getDocumentoUrl, deleteDocumento, formatFileSize } from '../lib/storage';
+import { ArrowLeft, Clock, Loader2, Save, Pencil, X, Plus, FileCheck, Trash2, CheckCircle2, AlertCircle, AlertTriangle, Link2, Upload, Download, Paperclip } from 'lucide-react';
 
 interface Props {
   tramiteId: string;
@@ -37,6 +38,9 @@ interface Documento {
   obligatorio: boolean;
   responsable: string | null;
   documento_cliente_id: string | null;
+  archivo_path: string | null;
+  archivo_nombre: string | null;
+  archivo_size: number | null;
   created_at: string;
 }
 
@@ -125,6 +129,10 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
   const [docsCliente, setDocsCliente] = useState<DocCliente[]>([]);
   const [docForm, setDocForm] = useState({ nombre: '', obligatorio: false, responsable: '' });
   const [savingDoc, setSavingDoc] = useState(false);
+  const [uploadingDocId, setUploadingDocId] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const pendingUploadDocId = useRef<string | null>(null);
 
   useEffect(() => { loadData(); }, [tramiteId]);
 
@@ -375,6 +383,81 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
     }
   };
 
+  const triggerUpload = (docId: string) => {
+    pendingUploadDocId.current = docId;
+    setUploadError('');
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const docId = pendingUploadDocId.current;
+    if (!file || !docId) return;
+    // Reset input so same file can be selected again
+    e.target.value = '';
+
+    setUploadingDocId(docId);
+    setUploadError('');
+
+    const { path, error: uploadErr } = await uploadDocumento(
+      `tramites/${tramiteId}`,
+      file
+    );
+
+    if (uploadErr) {
+      setUploadError(uploadErr);
+      setUploadingDocId(null);
+      return;
+    }
+
+    // Save path to DB
+    const { error: dbErr } = await supabase
+      .from('documentos_tramite')
+      .update({
+        archivo_path: path,
+        archivo_nombre: file.name,
+        archivo_size: file.size,
+      })
+      .eq('id', docId);
+
+    if (dbErr) {
+      // Column might not exist yet
+      if (dbErr.message?.includes('archivo_path') || dbErr.message?.includes('schema cache')) {
+        setUploadError('Ejecute la migracion 73 para habilitar subida de archivos.');
+      } else {
+        setUploadError(dbErr.message || 'Error al guardar referencia del archivo.');
+      }
+      // Clean up uploaded file since we couldn't save reference
+      await deleteDocumento(path);
+    } else {
+      loadData();
+    }
+    setUploadingDocId(null);
+  };
+
+  const handleDownloadFile = async (path: string, nombre: string) => {
+    const url = await getDocumentoUrl(path);
+    if (url) {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = nombre;
+      a.target = '_blank';
+      a.click();
+    }
+  };
+
+  const handleRemoveFile = async (doc: Documento) => {
+    if (!doc.archivo_path) return;
+    if (!confirm('¿Quitar el archivo adjunto? El registro del documento se mantiene.')) return;
+
+    await deleteDocumento(doc.archivo_path);
+    await supabase
+      .from('documentos_tramite')
+      .update({ archivo_path: null, archivo_nombre: null, archivo_size: null })
+      .eq('id', doc.id);
+    loadData();
+  };
+
   if (loading) {
     return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>;
   }
@@ -416,6 +499,15 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
+      {/* Hidden file input for uploads */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        className="hidden"
+        accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.webp,.txt,.zip,.rar"
+        onChange={handleFileSelected}
+      />
+
       {/* Back button */}
       <button onClick={() => onNavigate(backTarget)} className="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-800">
         <ArrowLeft className="w-4 h-4" /> {backLabel}
@@ -787,6 +879,15 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
           </div>
         )}
 
+        {/* Upload error */}
+        {uploadError && (
+          <div className="mx-4 mt-3 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            {uploadError}
+            <button onClick={() => setUploadError('')} className="ml-auto text-red-400 hover:text-red-600"><X className="w-4 h-4" /></button>
+          </div>
+        )}
+
         {/* Progress summary */}
         {docsTotal > 0 && (
           <div className="px-4 pt-3 pb-1">
@@ -852,8 +953,49 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
                         </span>
                       )}
                     </div>
-                    {doc.responsable && (
-                      <span className="text-xs text-slate-400">Responsable: {doc.responsable}</span>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      {doc.responsable && (
+                        <span className="text-xs text-slate-400">Responsable: {doc.responsable}</span>
+                      )}
+                      {doc.archivo_nombre && (
+                        <span className="text-xs text-slate-400 flex items-center gap-1">
+                          <Paperclip className="w-3 h-3" />
+                          {doc.archivo_nombre}
+                          {doc.archivo_size != null && ` (${formatFileSize(doc.archivo_size)})`}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* File upload/download */}
+                  <div className="flex items-center gap-1">
+                    {doc.archivo_path ? (
+                      <>
+                        <button
+                          onClick={() => handleDownloadFile(doc.archivo_path!, doc.archivo_nombre || doc.nombre)}
+                          className="text-blue-500 hover:text-blue-700 transition-colors p-1"
+                          title="Descargar archivo"
+                        >
+                          <Download className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleRemoveFile(doc)}
+                          className="text-slate-300 hover:text-orange-500 transition-colors p-1"
+                          title="Quitar archivo"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </>
+                    ) : uploadingDocId === doc.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                    ) : (
+                      <button
+                        onClick={() => triggerUpload(doc.id)}
+                        className="text-slate-300 hover:text-blue-500 transition-colors p-1"
+                        title="Subir archivo"
+                      >
+                        <Upload className="w-4 h-4" />
+                      </button>
                     )}
                   </div>
 

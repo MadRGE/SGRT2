@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase, softDelete } from '../lib/supabase';
-import { ArrowLeft, Plus, FileText, ChevronRight, Loader2, Pencil, Save, X, Shield, Trash2, Briefcase, FolderOpen, CheckCircle2, AlertTriangle, Eye } from 'lucide-react';
+import { uploadDocumento, getDocumentoUrl, deleteDocumento, formatFileSize } from '../lib/storage';
+import { ArrowLeft, Plus, FileText, ChevronRight, Loader2, Pencil, Save, X, Shield, Trash2, Briefcase, FolderOpen, CheckCircle2, AlertTriangle, Eye, Upload, Download, Paperclip, AlertCircle } from 'lucide-react';
 
 interface Props {
   clienteId: string;
@@ -65,6 +66,9 @@ interface DocumentoCliente {
   fecha_emision: string | null;
   fecha_vencimiento: string | null;
   notas: string | null;
+  archivo_path: string | null;
+  archivo_nombre: string | null;
+  archivo_size: number | null;
   created_at: string;
 }
 
@@ -173,6 +177,10 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
   const [editForm, setEditForm] = useState<Partial<Cliente>>({});
   const [showRegistroForm, setShowRegistroForm] = useState(false);
   const [showDocClienteForm, setShowDocClienteForm] = useState(false);
+  const [uploadingDocId, setUploadingDocId] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const pendingUploadDocId = useRef<string | null>(null);
 
   useEffect(() => { loadData(); }, [clienteId]);
 
@@ -284,6 +292,77 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
     loadData();
   };
 
+  const triggerUpload = (docId: string) => {
+    pendingUploadDocId.current = docId;
+    setUploadError('');
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const docId = pendingUploadDocId.current;
+    if (!file || !docId) return;
+    e.target.value = '';
+
+    setUploadingDocId(docId);
+    setUploadError('');
+
+    const { path, error: uploadErr } = await uploadDocumento(
+      `clientes/${clienteId}`,
+      file
+    );
+
+    if (uploadErr) {
+      setUploadError(uploadErr);
+      setUploadingDocId(null);
+      return;
+    }
+
+    const { error: dbErr } = await supabase
+      .from('documentos_cliente')
+      .update({
+        archivo_path: path,
+        archivo_nombre: file.name,
+        archivo_size: file.size,
+      })
+      .eq('id', docId);
+
+    if (dbErr) {
+      if (dbErr.message?.includes('archivo_path') || dbErr.message?.includes('schema cache')) {
+        setUploadError('Ejecute la migracion 73 para habilitar subida de archivos.');
+      } else {
+        setUploadError(dbErr.message || 'Error al guardar referencia del archivo.');
+      }
+      await deleteDocumento(path);
+    } else {
+      loadData();
+    }
+    setUploadingDocId(null);
+  };
+
+  const handleDownloadFile = async (path: string, nombre: string) => {
+    const url = await getDocumentoUrl(path);
+    if (url) {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = nombre;
+      a.target = '_blank';
+      a.click();
+    }
+  };
+
+  const handleRemoveFile = async (doc: DocumentoCliente) => {
+    if (!doc.archivo_path) return;
+    if (!confirm('¿Quitar el archivo adjunto? El registro del documento se mantiene.')) return;
+
+    await deleteDocumento(doc.archivo_path);
+    await supabase
+      .from('documentos_cliente')
+      .update({ archivo_path: null, archivo_nombre: null, archivo_size: null })
+      .eq('id', doc.id);
+    loadData();
+  };
+
   if (loading) {
     return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>;
   }
@@ -310,6 +389,15 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
+      {/* Hidden file input for uploads */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        className="hidden"
+        accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.webp,.txt,.zip,.rar"
+        onChange={handleFileSelected}
+      />
+
       {/* Back button */}
       <button onClick={() => onNavigate({ type: 'clientes' })} className="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-800">
         <ArrowLeft className="w-4 h-4" /> Volver a Clientes
@@ -518,6 +606,15 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
           </button>
         </div>
 
+        {/* Upload error */}
+        {uploadError && (
+          <div className="mx-4 mt-3 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            {uploadError}
+            <button onClick={() => setUploadError('')} className="ml-auto text-red-400 hover:text-red-600"><X className="w-4 h-4" /></button>
+          </div>
+        )}
+
         {documentosCliente.length === 0 ? (
           <div className="p-8 text-center text-slate-400">
             <FolderOpen className="w-10 h-10 mx-auto mb-2 opacity-50" />
@@ -554,8 +651,48 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
                         </span>
                       )}
                       {doc.notas && <span className="text-xs text-slate-400 truncate">{doc.notas}</span>}
+                      {doc.archivo_nombre && (
+                        <span className="text-xs text-slate-400 flex items-center gap-1">
+                          <Paperclip className="w-3 h-3" />
+                          {doc.archivo_nombre}
+                          {doc.archivo_size != null && ` (${formatFileSize(doc.archivo_size)})`}
+                        </span>
+                      )}
                     </div>
                   </div>
+
+                  {/* File upload/download */}
+                  <div className="flex items-center gap-1">
+                    {doc.archivo_path ? (
+                      <>
+                        <button
+                          onClick={() => handleDownloadFile(doc.archivo_path!, doc.archivo_nombre || doc.nombre)}
+                          className="text-blue-500 hover:text-blue-700 transition-colors p-1"
+                          title="Descargar archivo"
+                        >
+                          <Download className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleRemoveFile(doc)}
+                          className="text-slate-300 hover:text-orange-500 transition-colors p-1"
+                          title="Quitar archivo"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </>
+                    ) : uploadingDocId === doc.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                    ) : (
+                      <button
+                        onClick={() => triggerUpload(doc.id)}
+                        className="text-slate-300 hover:text-blue-500 transition-colors p-1"
+                        title="Subir archivo"
+                      >
+                        <Upload className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+
                   <button
                     onClick={() => handleToggleDocEstado(doc)}
                     className={`text-xs font-medium px-2.5 py-1 rounded-full transition-all hover:opacity-80 ${
@@ -818,6 +955,8 @@ function NuevoDocClienteModal({ clienteId, existingDocs, onClose, onCreated }: {
     fecha_emision: '', fecha_vencimiento: '', notas: '',
   });
   const [saving, setSaving] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [formError, setFormError] = useState('');
 
   const existingNames = existingDocs.map(d => d.nombre.toLowerCase());
   const sugeridos = DOCS_COMUNES.filter(name => !existingNames.includes(name.toLowerCase()));
@@ -825,7 +964,10 @@ function NuevoDocClienteModal({ clienteId, existingDocs, onClose, onCreated }: {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    const { error } = await supabase.from('documentos_cliente').insert({
+    setFormError('');
+
+    // Build insert payload
+    const payload: Record<string, any> = {
       cliente_id: clienteId,
       nombre: form.nombre,
       categoria: form.categoria,
@@ -833,8 +975,49 @@ function NuevoDocClienteModal({ clienteId, existingDocs, onClose, onCreated }: {
       fecha_emision: form.fecha_emision || null,
       fecha_vencimiento: form.fecha_vencimiento || null,
       notas: form.notas || null,
-    });
-    if (!error) onCreated();
+    };
+
+    // Upload file first if selected
+    if (selectedFile) {
+      const { path, error: uploadErr } = await uploadDocumento(
+        `clientes/${clienteId}`,
+        selectedFile
+      );
+      if (uploadErr) {
+        setFormError(uploadErr);
+        setSaving(false);
+        return;
+      }
+      payload.archivo_path = path;
+      payload.archivo_nombre = selectedFile.name;
+      payload.archivo_size = selectedFile.size;
+    }
+
+    const { error } = await supabase.from('documentos_cliente').insert(payload);
+
+    if (error) {
+      // If error is about archivo columns, retry without them
+      if (selectedFile && (error.message?.includes('archivo_path') || error.message?.includes('schema cache'))) {
+        delete payload.archivo_path;
+        delete payload.archivo_nombre;
+        delete payload.archivo_size;
+        const { error: e2 } = await supabase.from('documentos_cliente').insert(payload);
+        if (e2) {
+          setFormError(e2.message || 'Error al crear documento.');
+          setSaving(false);
+          return;
+        }
+        setFormError('Documento creado pero sin archivo. Ejecute migracion 73 para habilitar archivos.');
+        // Still call onCreated after a brief delay so user sees the message
+        setTimeout(onCreated, 1500);
+        setSaving(false);
+        return;
+      }
+      setFormError(error.message || 'Error al crear documento.');
+      setSaving(false);
+      return;
+    }
+    onCreated();
     setSaving(false);
   };
 
@@ -906,6 +1089,33 @@ function NuevoDocClienteModal({ clienteId, existingDocs, onClose, onCreated }: {
             </div>
           </div>
 
+          {/* File attachment */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Archivo adjunto</label>
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm cursor-pointer hover:bg-slate-100 transition-colors">
+                <Upload className="w-4 h-4 text-slate-500" />
+                <span className="text-slate-600">{selectedFile ? 'Cambiar archivo' : 'Seleccionar archivo'}</span>
+                <input
+                  type="file"
+                  className="hidden"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.webp,.txt,.zip,.rar"
+                  onChange={e => setSelectedFile(e.target.files?.[0] || null)}
+                />
+              </label>
+              {selectedFile && (
+                <div className="flex items-center gap-2 text-sm text-slate-600">
+                  <Paperclip className="w-3.5 h-3.5" />
+                  <span className="truncate max-w-[200px]">{selectedFile.name}</span>
+                  <span className="text-xs text-slate-400">({formatFileSize(selectedFile.size)})</span>
+                  <button type="button" onClick={() => setSelectedFile(null)} className="text-slate-400 hover:text-red-500">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Notas</label>
             <textarea value={form.notas} onChange={e => setForm({ ...form, notas: e.target.value })} rows={2}
@@ -913,11 +1123,18 @@ function NuevoDocClienteModal({ clienteId, existingDocs, onClose, onCreated }: {
               className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
           </div>
 
+          {formError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              {formError}
+            </div>
+          )}
+
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50">Cancelar</button>
             <button type="submit" disabled={saving}
               className="px-4 py-2 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:shadow-lg hover:shadow-blue-500/25 disabled:opacity-50">
-              {saving ? 'Guardando...' : 'Crear'}
+              {saving ? <><Loader2 className="w-4 h-4 inline mr-1 animate-spin" /> Subiendo...</> : 'Crear'}
             </button>
           </div>
         </form>
