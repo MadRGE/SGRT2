@@ -6,6 +6,12 @@ interface Props {
   onBack: () => void;
 }
 
+const ESTADO_LABELS: Record<string, string> = {
+  consulta: 'Consulta', presupuestado: 'Presupuestado', en_curso: 'En Curso',
+  esperando_cliente: 'Esperando Cliente', esperando_organismo: 'Esperando Organismo',
+  observado: 'Observado', aprobado: 'Aprobado', rechazado: 'Rechazado', vencido: 'Vencido',
+};
+
 const downloadCSV = (csvContent: string, fileName: string) => {
   const BOM = '\uFEFF';
   const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -33,25 +39,24 @@ export default function Reportes({ onBack }: Props) {
   }, []);
 
   const loadStats = async () => {
-    const { data: expedientes } = await supabase
-      .from('expedientes')
-      .select('estado, fecha_inicio, fecha_finalizacion')
-      .not('fecha_finalizacion', 'is', null);
+    const { data: tramites } = await supabase
+      .from('tramites')
+      .select('estado, created_at');
 
-    if (expedientes && expedientes.length > 0) {
-      const tiempos = expedientes
-        .map((exp) => {
-          const inicio = new Date(exp.fecha_inicio);
-          const fin = new Date(exp.fecha_finalizacion!);
-          return Math.floor((fin.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24));
+    if (tramites && tramites.length > 0) {
+      const now = new Date();
+      const tiempos = tramites
+        .map((t) => {
+          const inicio = new Date(t.created_at);
+          return Math.floor((now.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24));
         })
         .filter((dias) => dias > 0);
 
       const promedio = tiempos.length > 0 ? tiempos.reduce((a, b) => a + b, 0) / tiempos.length : 0;
 
-      const aprobados = expedientes.filter((e) => e.estado === 'aprobado').length;
-      const observados = expedientes.filter((e) => e.estado === 'observado').length;
-      const total = expedientes.length;
+      const aprobados = tramites.filter((t) => t.estado === 'aprobado').length;
+      const observados = tramites.filter((t) => t.estado === 'observado').length;
+      const total = tramites.length;
 
       setStats({
         diasPromedioTramitacion: Math.round(promedio),
@@ -99,13 +104,13 @@ export default function Reportes({ onBack }: Props) {
               <p className="text-4xl font-bold text-yellow-600">
                 {stats.observacionesFrecuentes}%
               </p>
-              <p className="text-sm text-slate-600 mt-1">Observaciones Frecuentes</p>
+              <p className="text-sm text-slate-600 mt-1">Tasa de Observaciones</p>
             </div>
           </div>
         </div>
 
         <div className="space-y-6">
-          <ReporteExpedientes />
+          <ReporteTramites />
           <ReporteFinanciero />
         </div>
       </div>
@@ -113,91 +118,73 @@ export default function Reportes({ onBack }: Props) {
   );
 }
 
-function ReporteExpedientes() {
+function ReporteTramites() {
   const [loading, setLoading] = useState(false);
   const [filterCliente, setFilterCliente] = useState('todos');
   const [filterEstado, setFilterEstado] = useState('todos');
   const [filterOrganismo, setFilterOrganismo] = useState('todos');
-  const [clientes, setClientes] = useState<any[]>([]);
-  const [organismos, setOrganismos] = useState<any[]>([]);
+  const [clientes, setClientes] = useState<{ id: string; razon_social: string }[]>([]);
+  const [organismos, setOrganismos] = useState<string[]>([]);
 
   useEffect(() => {
     loadFilters();
   }, []);
 
   const loadFilters = async () => {
-    const [clientesRes, organismosRes] = await Promise.all([
+    const [clientesRes, orgRes] = await Promise.all([
       supabase.from('clientes').select('id, razon_social').order('razon_social'),
-      supabase.from('organismos').select('id, sigla').order('sigla')
+      supabase.from('tramites').select('organismo').not('organismo', 'is', null),
     ]);
 
     if (clientesRes.data) setClientes(clientesRes.data);
-    if (organismosRes.data) setOrganismos(organismosRes.data);
+    if (orgRes.data) {
+      const unique = [...new Set(orgRes.data.map((t: { organismo: string | null }) => t.organismo).filter(Boolean))] as string[];
+      setOrganismos(unique.sort());
+    }
   };
 
   const generarReporte = async () => {
     setLoading(true);
 
     let query = supabase
-      .from('expedientes')
-      .select(
-        `
-        id,
-        codigo,
-        nombre,
-        estado,
-        fecha_limite,
-        proyectos (
-          nombre_proyecto,
-          clientes (razon_social)
-        ),
-        tramite_tipos (
-          nombre,
-          organismos (sigla)
-        )
-      `
-      )
+      .from('tramites')
+      .select(`
+        id, titulo, organismo, estado, fecha_vencimiento, monto_presupuesto, created_at,
+        clientes(razon_social),
+        gestiones(nombre)
+      `)
       .order('created_at', { ascending: false });
 
     if (filterEstado !== 'todos') {
       query = query.eq('estado', filterEstado);
     }
+    if (filterCliente !== 'todos') {
+      query = query.eq('cliente_id', filterCliente);
+    }
+    if (filterOrganismo !== 'todos') {
+      query = query.eq('organismo', filterOrganismo);
+    }
 
-    const { data: expedientes } = await query;
+    const { data: tramites } = await query;
 
-    if (expedientes) {
-      let filtered = expedientes;
-
-      if (filterCliente !== 'todos') {
-        filtered = filtered.filter(
-          (exp: any) => exp.proyectos?.clientes?.id === filterCliente
-        );
-      }
-
-      if (filterOrganismo !== 'todos') {
-        filtered = filtered.filter(
-          (exp: any) => exp.tramite_tipos?.organismos?.id === filterOrganismo
-        );
-      }
-
-      let csvContent = '';
-      csvContent += 'Proyecto,Cliente,Codigo_Expediente,Tramite,Organismo,Estado,Fecha_Limite\n';
+    if (tramites) {
+      let csvContent = 'Gestion,Cliente,Titulo_Tramite,Organismo,Estado,Fecha_Vencimiento,Presupuesto\n';
 
       const esc = (v: string) => `"${(v || '').replace(/"/g, '""')}"`;
-      filtered.forEach((exp: any) => {
+      tramites.forEach((t: any) => {
         const row = [
-          esc(exp.proyectos?.nombre_proyecto || 'N/A'),
-          esc(exp.proyectos?.clientes?.razon_social || 'N/A'),
-          esc(exp.codigo || ''),
-          esc(exp.tramite_tipos?.nombre || 'N/A'),
-          esc(exp.tramite_tipos?.organismos?.sigla || 'N/A'),
-          esc(exp.estado || ''),
-          exp.fecha_limite ? new Date(exp.fecha_limite).toLocaleDateString('es-AR') : 'N/A'
+          esc(t.gestiones?.nombre || 'Sin gestión'),
+          esc(t.clientes?.razon_social || 'N/A'),
+          esc(t.titulo || ''),
+          esc(t.organismo || 'N/A'),
+          esc(ESTADO_LABELS[t.estado] || t.estado),
+          t.fecha_vencimiento ? new Date(t.fecha_vencimiento).toLocaleDateString('es-AR') : 'N/A',
+          t.monto_presupuesto != null ? t.monto_presupuesto : 'N/A',
         ].join(',');
         csvContent += row + '\n';
       });
 
-      downloadCSV(csvContent, `Reporte_Expedientes_SGT_${new Date().toISOString().split('T')[0]}.csv`);
+      downloadCSV(csvContent, `Reporte_Tramites_SGRT_${new Date().toISOString().split('T')[0]}.csv`);
     }
 
     setLoading(false);
@@ -206,7 +193,7 @@ function ReporteExpedientes() {
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
       <h3 className="text-lg font-semibold text-slate-800 mb-4">
-        Reporte General de Proyectos y Expedientes
+        Reporte General de Trámites
       </h3>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         <div>
@@ -232,11 +219,9 @@ function ReporteExpedientes() {
             onChange={(e) => setFilterEstado(e.target.value)}
           >
             <option value="todos">Todos</option>
-            <option value="iniciado">Iniciado</option>
-            <option value="en_evaluacion">En Evaluación</option>
-            <option value="observado">Observado</option>
-            <option value="aprobado">Aprobado</option>
-            <option value="rechazado">Rechazado</option>
+            {Object.entries(ESTADO_LABELS).map(([val, label]) => (
+              <option key={val} value={val}>{label}</option>
+            ))}
           </select>
         </div>
         <div>
@@ -248,9 +233,7 @@ function ReporteExpedientes() {
           >
             <option value="todos">Todos</option>
             {organismos.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.sigla}
-              </option>
+              <option key={o} value={o}>{o}</option>
             ))}
           </select>
         </div>
@@ -261,7 +244,7 @@ function ReporteExpedientes() {
         className="w-full bg-blue-600 text-white p-3 rounded-md disabled:opacity-50 hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
       >
         <Download className="w-5 h-5" />
-        {loading ? 'Generando...' : 'Descargar Reporte de Expedientes (CSV)'}
+        {loading ? 'Generando...' : 'Descargar Reporte de Trámites (CSV)'}
       </button>
     </div>
   );
@@ -275,44 +258,38 @@ function ReporteFinanciero() {
     setLoading(true);
 
     let query = supabase
-      .from('presupuestos')
-      .select(
-        `
-        id,
-        total_final,
-        estado,
-        fecha_envio,
-        proyectos (
-          nombre_proyecto,
-          clientes (razon_social)
-        )
-      `
-      )
+      .from('tramites')
+      .select(`
+        id, titulo, estado, monto_presupuesto, created_at,
+        clientes(razon_social),
+        gestiones(nombre)
+      `)
+      .not('monto_presupuesto', 'is', null)
       .order('created_at', { ascending: false });
 
     if (filterEstado !== 'todos') {
       query = query.eq('estado', filterEstado);
     }
 
-    const { data: presupuestos } = await query;
+    const { data: tramites } = await query;
 
-    if (presupuestos) {
-      let csvContent = '';
-      csvContent += 'Proyecto,Cliente,Estado_Presupuesto,Monto_Total,Fecha_Envio\n';
+    if (tramites) {
+      let csvContent = 'Gestion,Cliente,Tramite,Estado,Monto_Presupuesto,Fecha_Creacion\n';
 
       const esc = (v: string) => `"${(v || '').replace(/"/g, '""')}"`;
-      presupuestos.forEach((p: any) => {
+      tramites.forEach((t: any) => {
         const row = [
-          esc(p.proyectos?.nombre_proyecto || 'N/A'),
-          esc(p.proyectos?.clientes?.razon_social || 'N/A'),
-          esc(p.estado || ''),
-          p.total_final,
-          p.fecha_envio ? new Date(p.fecha_envio).toLocaleDateString('es-AR') : 'N/A'
+          esc(t.gestiones?.nombre || 'Sin gestión'),
+          esc(t.clientes?.razon_social || 'N/A'),
+          esc(t.titulo || ''),
+          esc(ESTADO_LABELS[t.estado] || t.estado),
+          t.monto_presupuesto != null ? t.monto_presupuesto : 0,
+          new Date(t.created_at).toLocaleDateString('es-AR'),
         ].join(',');
         csvContent += row + '\n';
       });
 
-      downloadCSV(csvContent, `Reporte_Financiero_SGT_${new Date().toISOString().split('T')[0]}.csv`);
+      downloadCSV(csvContent, `Reporte_Financiero_SGRT_${new Date().toISOString().split('T')[0]}.csv`);
     }
 
     setLoading(false);
@@ -321,11 +298,11 @@ function ReporteFinanciero() {
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
       <h3 className="text-lg font-semibold text-slate-800 mb-4">
-        Reporte Financiero (Presupuestos)
+        Reporte Financiero (Presupuestos de Trámites)
       </h3>
       <div className="mb-4">
         <label className="text-sm font-medium text-slate-700 block mb-2">
-          Filtrar por Estado de Presupuesto
+          Filtrar por Estado
         </label>
         <select
           className="w-full p-2 border border-slate-300 rounded-md bg-white"
@@ -333,10 +310,9 @@ function ReporteFinanciero() {
           onChange={(e) => setFilterEstado(e.target.value)}
         >
           <option value="todos">Todos</option>
-          <option value="borrador">Borrador</option>
-          <option value="enviado">Enviado</option>
-          <option value="aprobado">Aprobado</option>
-          <option value="rechazado">Rechazado</option>
+          {Object.entries(ESTADO_LABELS).map(([val, label]) => (
+            <option key={val} value={val}>{label}</option>
+          ))}
         </select>
       </div>
       <button

@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { supabase, softDelete } from '../lib/supabase';
+import { supabase, softDelete, buildSeguimientoData } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 import { uploadDocumento, getDocumentoUrl, deleteDocumento, formatFileSize } from '../lib/storage';
+import { TRAMITE_TRANSITIONS, isTransitionAllowed } from '../lib/estadoTransitions';
 import { ArrowLeft, Clock, Loader2, Save, Pencil, X, Plus, FileCheck, Trash2, CheckCircle2, AlertCircle, AlertTriangle, Link2, Upload, Download, Paperclip } from 'lucide-react';
 
 interface Props {
@@ -56,6 +58,7 @@ interface Seguimiento {
   id: string;
   descripcion: string;
   created_at: string;
+  usuario_nombre?: string | null;
 }
 
 const ESTADOS = [
@@ -114,6 +117,7 @@ const PRIORIDADES = ['baja', 'normal', 'alta', 'urgente'];
 const RESPONSABLES = ['Estudio', 'Cliente', 'Organismo'];
 
 export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
+  const { user } = useAuth();
   const [tramite, setTramite] = useState<Tramite | null>(null);
   const [documentos, setDocumentos] = useState<Documento[]>([]);
   const [seguimientos, setSeguimientos] = useState<Seguimiento[]>([]);
@@ -184,10 +188,9 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
     if (!nuevoSeguimiento.trim()) return;
     setSavingSeg(true);
 
-    const { error } = await supabase.from('seguimientos').insert({
-      tramite_id: tramiteId,
-      descripcion: nuevoSeguimiento.trim(),
-    });
+    const { error } = await supabase.from('seguimientos').insert(
+      buildSeguimientoData({ tramite_id: tramiteId, descripcion: nuevoSeguimiento.trim() }, user)
+    );
 
     if (!error) {
       setNuevoSeguimiento('');
@@ -202,6 +205,11 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
     if (tramite?.estado === nuevoEstado) return;
     setSaveError('');
 
+    if (!isTransitionAllowed(TRAMITE_TRANSITIONS, tramite!.estado, nuevoEstado)) {
+      setSaveError(`No se puede cambiar de "${ESTADO_LABELS[tramite!.estado]}" a "${ESTADO_LABELS[nuevoEstado]}"`);
+      return;
+    }
+
     const { error } = await supabase
       .from('tramites')
       .update({ estado: nuevoEstado, updated_at: new Date().toISOString() })
@@ -211,10 +219,9 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
       console.error('Error cambiando estado:', error);
       setSaveError(error.message || 'Error al cambiar estado. Ejecutá la migración 69.');
     } else {
-      await supabase.from('seguimientos').insert({
-        tramite_id: tramiteId,
-        descripcion: `Estado cambiado a: ${ESTADO_LABELS[nuevoEstado] || nuevoEstado}`,
-      });
+      await supabase.from('seguimientos').insert(
+        buildSeguimientoData({ tramite_id: tramiteId, descripcion: `Estado cambiado a: ${ESTADO_LABELS[nuevoEstado] || nuevoEstado}` }, user)
+      );
       loadData();
     }
   };
@@ -234,10 +241,9 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
       console.error('Error cambiando semáforo:', error);
       setSaveError(error.message || 'Error al cambiar semáforo');
     } else {
-      await supabase.from('seguimientos').insert({
-        tramite_id: tramiteId,
-        descripcion: `Semaforo cambiado a: ${semaforoLabel}`,
-      });
+      await supabase.from('seguimientos').insert(
+        buildSeguimientoData({ tramite_id: tramiteId, descripcion: `Semaforo cambiado a: ${semaforoLabel}` }, user)
+      );
       loadData();
     }
   };
@@ -557,19 +563,27 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
 
         {/* Estado selector pills */}
         <div className="flex flex-wrap gap-2 mb-4">
-          {ESTADOS.map((e) => (
-            <button
-              key={e}
-              onClick={() => handleChangeEstado(e)}
-              className={`text-xs px-3 py-1.5 rounded-full font-medium border transition-all ${
-                tramite.estado === e
-                  ? ESTADO_COLORS[e]
-                  : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300'
-              }`}
-            >
-              {ESTADO_LABELS[e]}
-            </button>
-          ))}
+          {ESTADOS.map((e) => {
+            const isCurrent = tramite.estado === e;
+            const isAllowed = isCurrent || isTransitionAllowed(TRAMITE_TRANSITIONS, tramite.estado, e);
+            return (
+              <button
+                key={e}
+                onClick={() => isAllowed && handleChangeEstado(e)}
+                disabled={!isAllowed}
+                className={`text-xs px-3 py-1.5 rounded-full font-medium border transition-all ${
+                  isCurrent
+                    ? ESTADO_COLORS[e]
+                    : isAllowed
+                    ? 'bg-white text-slate-400 border-slate-200 hover:border-slate-300 cursor-pointer'
+                    : 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed opacity-50'
+                }`}
+                title={!isAllowed && !isCurrent ? `No se puede cambiar desde "${ESTADO_LABELS[tramite.estado]}"` : undefined}
+              >
+                {ESTADO_LABELS[e]}
+              </button>
+            );
+          })}
         </div>
 
         {/* Semaforo selector */}
@@ -1069,11 +1083,16 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
                 <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0" />
                 <div className="flex-1">
                   <p className="text-sm text-slate-700">{s.descripcion}</p>
-                  <p className="text-xs text-slate-400 mt-1">
-                    {new Date(s.created_at).toLocaleString('es-AR', {
-                      day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                    })}
-                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <p className="text-xs text-slate-400">
+                      {new Date(s.created_at).toLocaleString('es-AR', {
+                        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                      })}
+                    </p>
+                    {s.usuario_nombre && (
+                      <span className="text-xs text-slate-400">&middot; {s.usuario_nombre}</span>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}

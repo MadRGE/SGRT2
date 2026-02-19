@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Shield } from 'lucide-react';
+import { Plus, Edit, Shield, Loader2 } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 import UsuarioFormModal from '../../components/Admin/UsuarioFormModal';
 
 interface Props {
@@ -10,8 +11,8 @@ type Usuario = {
   id: string;
   nombre: string;
   email: string;
-  rol: 'administrador' | 'gerente' | 'despachante' | 'cliente' | 'consultor';
-  is_active: boolean;
+  rol: string;
+  created_at?: string;
 };
 
 export default function GestionUsuarios({ onBack }: Props) {
@@ -24,45 +25,17 @@ export default function GestionUsuarios({ onBack }: Props) {
     loadUsuarios();
   }, []);
 
-  const loadUsuarios = () => {
-    const mockUsuarios: Usuario[] = [
-      {
-        id: 'usr-1',
-        nombre: 'Admin Gestor',
-        email: 'admin@gestor.com',
-        rol: 'administrador',
-        is_active: true
-      },
-      {
-        id: 'usr-2',
-        nombre: 'Gerente Area',
-        email: 'gerente@gestor.com',
-        rol: 'gerente',
-        is_active: true
-      },
-      {
-        id: 'usr-3',
-        nombre: 'Despachante Gomez',
-        email: 'gomez@despa.com',
-        rol: 'despachante',
-        is_active: true
-      },
-      {
-        id: 'usr-4',
-        nombre: 'Cliente A S.A.',
-        email: 'contacto@clientea.com',
-        rol: 'cliente',
-        is_active: true
-      },
-      {
-        id: 'usr-5',
-        nombre: 'Consultor Externo',
-        email: 'consultor@externo.com',
-        rol: 'consultor',
-        is_active: false
-      }
-    ];
-    setUsuarios(mockUsuarios);
+  const loadUsuarios = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('usuarios')
+      .select('id, email, nombre, rol, created_at')
+      .order('nombre', { ascending: true });
+
+    if (error) {
+      console.error('Error cargando usuarios:', error);
+    }
+    setUsuarios(data || []);
     setLoading(false);
   };
 
@@ -83,11 +56,9 @@ export default function GestionUsuarios({ onBack }: Props) {
 
   const getRolColor = (rol: string) => {
     switch (rol) {
-      case 'administrador':
+      case 'admin':
         return 'bg-red-100 text-red-800';
-      case 'gerente':
-        return 'bg-amber-100 text-amber-800';
-      case 'despachante':
+      case 'gestor':
         return 'bg-blue-100 text-blue-800';
       case 'cliente':
         return 'bg-green-100 text-green-800';
@@ -96,25 +67,16 @@ export default function GestionUsuarios({ onBack }: Props) {
     }
   };
 
-  const getRolIcon = (rol: string) => {
-    switch (rol) {
-      case 'administrador':
-        return '👑';
-      case 'gerente':
-        return '📊';
-      case 'despachante':
-        return '🚚';
-      case 'cliente':
-        return '🏢';
-      default:
-        return '👤';
-    }
+  const ROL_LABELS: Record<string, string> = {
+    admin: 'Administrador',
+    gestor: 'Gestor',
+    cliente: 'Cliente',
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
       </div>
     );
   }
@@ -125,10 +87,10 @@ export default function GestionUsuarios({ onBack }: Props) {
         <div>
           <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
             <Shield className="w-5 h-5" />
-            Gestión de Usuarios y Roles
+            Gestión de Usuarios
           </h3>
           <p className="text-sm text-slate-600 mt-1">
-            Administre los usuarios del sistema y sus permisos de acceso
+            Administre los usuarios del sistema y sus roles
           </p>
         </div>
         <button
@@ -148,54 +110,46 @@ export default function GestionUsuarios({ onBack }: Props) {
                 <th className="p-3 text-left text-sm font-medium text-slate-700">Usuario</th>
                 <th className="p-3 text-left text-sm font-medium text-slate-700">Email</th>
                 <th className="p-3 text-left text-sm font-medium text-slate-700">Rol</th>
-                <th className="p-3 text-left text-sm font-medium text-slate-700">Estado</th>
+                <th className="p-3 text-left text-sm font-medium text-slate-700">Creado</th>
                 <th className="p-3 text-center text-sm font-medium text-slate-700">Acción</th>
               </tr>
             </thead>
             <tbody>
-              {usuarios.map((u) => (
-                <tr key={u.id} className="border-t border-slate-200 hover:bg-slate-50 transition-colors">
-                  <td className="p-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl">{getRolIcon(u.rol)}</span>
-                      <span className="font-medium text-slate-800">{u.nombre}</span>
-                    </div>
-                  </td>
-                  <td className="p-3 text-sm text-blue-600">{u.email}</td>
-                  <td className="p-3">
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${getRolColor(
-                        u.rol
-                      )}`}
-                    >
-                      {u.rol}
-                    </span>
-                  </td>
-                  <td className="p-3">
-                    <span
-                      className={`inline-flex items-center gap-1 text-xs font-medium ${
-                        u.is_active ? 'text-green-600' : 'text-slate-500'
-                      }`}
-                    >
-                      <span
-                        className={`w-2 h-2 rounded-full ${
-                          u.is_active ? 'bg-green-600' : 'bg-slate-400'
-                        }`}
-                      ></span>
-                      {u.is_active ? 'Activo' : 'Inactivo'}
-                    </span>
-                  </td>
-                  <td className="p-3 text-center">
-                    <button
-                      onClick={() => openEditModal(u)}
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      title="Editar usuario"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </button>
+              {usuarios.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="p-8 text-center text-slate-400">
+                    No hay usuarios registrados
                   </td>
                 </tr>
-              ))}
+              ) : (
+                usuarios.map((u) => (
+                  <tr key={u.id} className="border-t border-slate-200 hover:bg-slate-50 transition-colors">
+                    <td className="p-3">
+                      <span className="font-medium text-slate-800">{u.nombre}</span>
+                    </td>
+                    <td className="p-3 text-sm text-blue-600">{u.email}</td>
+                    <td className="p-3">
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${getRolColor(u.rol)}`}
+                      >
+                        {ROL_LABELS[u.rol] || u.rol}
+                      </span>
+                    </td>
+                    <td className="p-3 text-sm text-slate-500">
+                      {u.created_at ? new Date(u.created_at).toLocaleDateString('es-AR') : '-'}
+                    </td>
+                    <td className="p-3 text-center">
+                      <button
+                        onClick={() => openEditModal(u)}
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        title="Editar usuario"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -204,28 +158,20 @@ export default function GestionUsuarios({ onBack }: Props) {
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
         <h4 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
           <Shield className="w-5 h-5" />
-          Roles y Permisos
+          Roles
         </h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
           <div>
-            <p className="text-sm font-medium text-blue-800 mb-1">👑 Administrador</p>
+            <p className="text-sm font-medium text-blue-800 mb-1">Administrador</p>
             <p className="text-xs text-blue-700">Acceso completo al sistema</p>
           </div>
           <div>
-            <p className="text-sm font-medium text-blue-800 mb-1">📊 Gerente</p>
-            <p className="text-xs text-blue-700">Gestión de proyectos y reportes</p>
+            <p className="text-sm font-medium text-blue-800 mb-1">Gestor</p>
+            <p className="text-xs text-blue-700">Gestión de trámites y clientes</p>
           </div>
           <div>
-            <p className="text-sm font-medium text-blue-800 mb-1">🚚 Despachante</p>
-            <p className="text-xs text-blue-700">Gestión de expedientes asignados</p>
-          </div>
-          <div>
-            <p className="text-sm font-medium text-blue-800 mb-1">🏢 Cliente</p>
+            <p className="text-sm font-medium text-blue-800 mb-1">Cliente</p>
             <p className="text-xs text-blue-700">Vista de sus propios proyectos</p>
-          </div>
-          <div>
-            <p className="text-sm font-medium text-blue-800 mb-1">👤 Consultor</p>
-            <p className="text-xs text-blue-700">Acceso limitado a consultoría</p>
           </div>
         </div>
       </div>

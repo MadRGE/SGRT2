@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { checkSoftDelete } from './lib/supabase';
+import { checkSoftDelete, checkSeguimientoUserCol } from './lib/supabase';
 import Login from './pages/Auth/Login';
 import SignUp from './pages/Auth/SignUp';
 import ResetPassword from './pages/Auth/ResetPassword';
@@ -31,7 +31,7 @@ import GestionUsuarios from './pages/Admin/GestionUsuarios';
 function AppContent() {
   const [page, setPage] = useState<Page>({ type: 'dashboard' });
 
-  useEffect(() => { checkSoftDelete(); }, []);
+  useEffect(() => { checkSoftDelete(); checkSeguimientoUserCol(); }, []);
 
   const navigate = (p: Page) => setPage(p);
 

@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { supabase, softDelete } from '../lib/supabase';
+import { supabase, softDelete, buildSeguimientoData } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
+import { GESTION_TRANSITIONS, isTransitionAllowed } from '../lib/estadoTransitions';
 import {
   ArrowLeft, Plus, FileText, ChevronRight, Loader2, Pencil, Save, X,
   FolderOpen, BarChart3, Receipt, AlertTriangle, Clock, CheckCircle2,
@@ -50,6 +52,7 @@ interface Seguimiento {
   tramite_id: string | null;
   gestion_id: string | null;
   created_at: string;
+  usuario_nombre?: string | null;
 }
 
 const ESTADOS = ['relevamiento', 'en_curso', 'en_espera', 'finalizado', 'archivado'];
@@ -96,6 +99,7 @@ const TIPO_SEGUIMIENTO = [
 type Tab = 'tramites' | 'actividad' | 'resumen';
 
 export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
+  const { user } = useAuth();
   const [gestion, setGestion] = useState<Gestion | null>(null);
   const [tramites, setTramites] = useState<TramiteRow[]>([]);
   const [docsTramite, setDocsTramite] = useState<DocTramite[]>([]);
@@ -169,6 +173,11 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
     if (gestion?.estado === nuevoEstado) return;
     setSaveError('');
 
+    if (!isTransitionAllowed(GESTION_TRANSITIONS, gestion!.estado, nuevoEstado)) {
+      setSaveError(`No se puede cambiar de "${ESTADO_LABELS[gestion!.estado]}" a "${ESTADO_LABELS[nuevoEstado]}"`);
+      return;
+    }
+
     const { error } = await supabase
       .from('gestiones')
       .update({ estado: nuevoEstado, updated_at: new Date().toISOString() })
@@ -178,11 +187,9 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
       console.error('Error cambiando estado:', error);
       setSaveError(error.message || 'Error al cambiar estado');
     } else {
-      await supabase.from('seguimientos').insert({
-        gestion_id: gestionId,
-        descripcion: `Estado cambiado a: ${ESTADO_LABELS[nuevoEstado] || nuevoEstado}`,
-        tipo: 'nota',
-      });
+      await supabase.from('seguimientos').insert(
+        buildSeguimientoData({ gestion_id: gestionId, descripcion: `Estado cambiado a: ${ESTADO_LABELS[nuevoEstado] || nuevoEstado}`, tipo: 'nota' }, user)
+      );
       loadData();
     }
   };
@@ -218,11 +225,9 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
     if (!nuevoSeg.trim()) return;
     setSavingSeg(true);
 
-    const { error } = await supabase.from('seguimientos').insert({
-      gestion_id: gestionId,
-      descripcion: nuevoSeg.trim(),
-      tipo: tipoSeg,
-    });
+    const { error } = await supabase.from('seguimientos').insert(
+      buildSeguimientoData({ gestion_id: gestionId, descripcion: nuevoSeg.trim(), tipo: tipoSeg }, user)
+    );
 
     if (!error) {
       setNuevoSeg('');
@@ -346,19 +351,27 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
 
         {/* Estado selector pills */}
         <div className="flex flex-wrap gap-2 mb-4">
-          {ESTADOS.map(e => (
-            <button
-              key={e}
-              onClick={() => handleChangeEstado(e)}
-              className={`text-xs px-3 py-1.5 rounded-full font-medium border transition-all ${
-                gestion.estado === e
-                  ? ESTADO_COLORS[e]
-                  : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300'
-              }`}
-            >
-              {ESTADO_LABELS[e]}
-            </button>
-          ))}
+          {ESTADOS.map(e => {
+            const isCurrent = gestion.estado === e;
+            const isAllowed = isCurrent || isTransitionAllowed(GESTION_TRANSITIONS, gestion.estado, e);
+            return (
+              <button
+                key={e}
+                onClick={() => isAllowed && handleChangeEstado(e)}
+                disabled={!isAllowed}
+                className={`text-xs px-3 py-1.5 rounded-full font-medium border transition-all ${
+                  isCurrent
+                    ? ESTADO_COLORS[e]
+                    : isAllowed
+                    ? 'bg-white text-slate-400 border-slate-200 hover:border-slate-300 cursor-pointer'
+                    : 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed opacity-50'
+                }`}
+                title={!isAllowed && !isCurrent ? `No se puede cambiar desde "${ESTADO_LABELS[gestion.estado]}"` : undefined}
+              >
+                {ESTADO_LABELS[e]}
+              </button>
+            );
+          })}
         </div>
 
         {saveError && !editing && (
@@ -657,6 +670,9 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
                       <p className="text-sm text-slate-700">{s.descripcion}</p>
                       <div className="flex items-center gap-2 mt-1">
                         <p className="text-xs text-slate-400">{formatDate(s.created_at)}</p>
+                        {s.usuario_nombre && (
+                          <span className="text-xs text-slate-400">&middot; {s.usuario_nombre}</span>
+                        )}
                         {tramite && (
                           <button
                             onClick={() => onNavigate({ type: 'tramite', id: tramite.id })}
