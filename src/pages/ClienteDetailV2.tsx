@@ -169,6 +169,7 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
   const [editForm, setEditForm] = useState<Partial<Cliente>>({});
   const [showRegistroForm, setShowRegistroForm] = useState(false);
   const [showDocClienteForm, setShowDocClienteForm] = useState(false);
@@ -225,6 +226,7 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
 
   const handleSave = async () => {
     setSaveError('');
+    setSavingEdit(true);
     // Build payload dynamically — only include extra fields if they have values
     const payload: Record<string, any> = {
       razon_social: editForm.razon_social,
@@ -261,6 +263,7 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
       setEditing(false);
       loadData();
     }
+    setSavingEdit(false);
   };
 
   const handleDeleteRegistro = async (id: string) => {
@@ -345,8 +348,8 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
               <button onClick={() => { setEditing(false); setEditForm(cliente); }} className="flex items-center gap-1 text-sm text-slate-600">
                 <X className="w-4 h-4" /> Cancelar
               </button>
-              <button onClick={handleSave} className="flex items-center gap-1 text-sm text-white bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-1 rounded-lg hover:shadow-lg hover:shadow-blue-500/25">
-                <Save className="w-4 h-4" /> Guardar
+              <button onClick={handleSave} disabled={savingEdit} className="flex items-center gap-1 text-sm text-white bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-1 rounded-lg hover:shadow-lg hover:shadow-blue-500/25 disabled:opacity-50">
+                {savingEdit ? <><Loader2 className="w-4 h-4 animate-spin" /> Guardando...</> : <><Save className="w-4 h-4" /> Guardar</>}
               </button>
             </div>
           )}

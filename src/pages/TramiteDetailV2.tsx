@@ -118,6 +118,7 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
   const [nuevoSeguimiento, setNuevoSeguimiento] = useState('');
   const [savingSeg, setSavingSeg] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
   const [editForm, setEditForm] = useState<Partial<Tramite>>({});
   const [showDocForm, setShowDocForm] = useState(false);
   const [showLinkDocForm, setShowLinkDocForm] = useState(false);
@@ -212,6 +213,7 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
 
   const handleChangeSemaforo = async (nuevoSemaforo: string) => {
     if (tramite?.semaforo === nuevoSemaforo) return;
+    setSaveError('');
 
     const semaforoLabel = nuevoSemaforo === 'verde' ? 'Verde' : nuevoSemaforo === 'amarillo' ? 'Amarillo' : 'Rojo';
 
@@ -220,7 +222,10 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
       .update({ semaforo: nuevoSemaforo, updated_at: new Date().toISOString() })
       .eq('id', tramiteId);
 
-    if (!error) {
+    if (error) {
+      console.error('Error cambiando semáforo:', error);
+      setSaveError(error.message || 'Error al cambiar semáforo');
+    } else {
       await supabase.from('seguimientos').insert({
         tramite_id: tramiteId,
         descripcion: `Semaforo cambiado a: ${semaforoLabel}`,
@@ -234,17 +239,24 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
     const x = e.clientX - rect.left;
     const pct = Math.round((x / rect.width) * 100);
     const clamped = Math.max(0, Math.min(100, Math.round(pct / 5) * 5));
+    setSaveError('');
 
     const { error } = await supabase
       .from('tramites')
       .update({ progreso: clamped, updated_at: new Date().toISOString() })
       .eq('id', tramiteId);
 
-    if (!error) loadData();
+    if (error) {
+      console.error('Error actualizando progreso:', error);
+      setSaveError(error.message || 'Error al actualizar progreso');
+    } else {
+      loadData();
+    }
   };
 
   const handleSaveEdit = async () => {
     setSaveError('');
+    setSavingEdit(true);
     const { error } = await supabase
       .from('tramites')
       .update({
@@ -294,6 +306,7 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
       setEditing(false);
       loadData();
     }
+    setSavingEdit(false);
   };
 
   const handleAddDocumento = async () => {
@@ -508,6 +521,12 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
           </div>
         </div>
 
+        {saveError && !editing && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 mb-4">
+            {saveError}
+          </div>
+        )}
+
         {/* Editable details */}
         {editing ? (
           <div className="space-y-4 pt-4 border-t border-slate-100">
@@ -596,8 +615,8 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
               <button onClick={() => { setEditing(false); setEditForm(tramite); setSaveError(''); }} className="px-4 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50">
                 <X className="w-4 h-4 inline mr-1" /> Cancelar
               </button>
-              <button onClick={handleSaveEdit} className="px-4 py-2 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:shadow-lg hover:shadow-blue-500/25">
-                <Save className="w-4 h-4 inline mr-1" /> Guardar
+              <button onClick={handleSaveEdit} disabled={savingEdit} className="px-4 py-2 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:shadow-lg hover:shadow-blue-500/25 disabled:opacity-50">
+                {savingEdit ? <><Loader2 className="w-4 h-4 inline mr-1 animate-spin" /> Guardando...</> : <><Save className="w-4 h-4 inline mr-1" /> Guardar</>}
               </button>
             </div>
           </div>

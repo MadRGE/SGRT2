@@ -108,6 +108,8 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
   const [nuevoSeg, setNuevoSeg] = useState('');
   const [tipoSeg, setTipoSeg] = useState('nota');
   const [savingSeg, setSavingSeg] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => { loadData(); }, [gestionId]);
 
@@ -164,13 +166,18 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
   };
 
   const handleChangeEstado = async (nuevoEstado: string) => {
+    if (gestion?.estado === nuevoEstado) return;
+    setSaveError('');
+
     const { error } = await supabase
       .from('gestiones')
       .update({ estado: nuevoEstado, updated_at: new Date().toISOString() })
       .eq('id', gestionId);
 
-    if (!error) {
-      // Log the change
+    if (error) {
+      console.error('Error cambiando estado:', error);
+      setSaveError(error.message || 'Error al cambiar estado');
+    } else {
       await supabase.from('seguimientos').insert({
         gestion_id: gestionId,
         descripcion: `Estado cambiado a: ${ESTADO_LABELS[nuevoEstado] || nuevoEstado}`,
@@ -181,6 +188,9 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
   };
 
   const handleSaveEdit = async () => {
+    setSaveError('');
+    setSavingEdit(true);
+
     const { error } = await supabase
       .from('gestiones')
       .update({
@@ -194,10 +204,14 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
       })
       .eq('id', gestionId);
 
-    if (!error) {
+    if (error) {
+      console.error('Error guardando gestión:', error);
+      setSaveError(error.message || 'Error al guardar');
+    } else {
       setEditing(false);
       loadData();
     }
+    setSavingEdit(false);
   };
 
   const handleAddSeguimiento = async () => {
@@ -347,6 +361,12 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
           ))}
         </div>
 
+        {saveError && !editing && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 mb-4">
+            {saveError}
+          </div>
+        )}
+
         {/* Quick stats row */}
         <div className="grid grid-cols-5 gap-3 pt-4 border-t border-slate-100">
           <MiniStat label="Trámites" value={totalTramites} />
@@ -394,12 +414,17 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
               <textarea value={editForm.observaciones || ''} onChange={e => setEditForm({ ...editForm, observaciones: e.target.value })} rows={2}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
+            {saveError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+                {saveError}
+              </div>
+            )}
             <div className="flex justify-end gap-2">
-              <button onClick={() => { setEditing(false); setEditForm(gestion); }} className="px-4 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50">
+              <button onClick={() => { setEditing(false); setEditForm(gestion); setSaveError(''); }} className="px-4 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50">
                 <X className="w-4 h-4 inline mr-1" /> Cancelar
               </button>
-              <button onClick={handleSaveEdit} className="px-4 py-2 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:shadow-lg hover:shadow-blue-500/25">
-                <Save className="w-4 h-4 inline mr-1" /> Guardar
+              <button onClick={handleSaveEdit} disabled={savingEdit} className="px-4 py-2 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:shadow-lg hover:shadow-blue-500/25 disabled:opacity-50">
+                {savingEdit ? <><Loader2 className="w-4 h-4 inline mr-1 animate-spin" /> Guardando...</> : <><Save className="w-4 h-4 inline mr-1" /> Guardar</>}
               </button>
             </div>
           </div>
