@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { X, Save, User } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 
 type Usuario = {
   id: string;
   nombre: string;
   email: string;
-  rol: 'administrador' | 'gerente' | 'despachante' | 'cliente' | 'consultor';
-  is_active: boolean;
+  rol: string;
+  created_at?: string;
 };
 
 interface Props {
@@ -16,24 +17,23 @@ interface Props {
   onSuccess: () => void;
 }
 
+const ROLES = ['admin', 'gestor', 'cliente'];
+const ROL_LABELS: Record<string, string> = {
+  admin: 'Administrador',
+  gestor: 'Gestor',
+  cliente: 'Cliente',
+};
+
 export default function UsuarioFormModal({ isOpen, onClose, usuario, onSuccess }: Props) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     nombre: '',
     email: '',
     password: '',
-    rol: 'cliente' as Usuario['rol'],
-    is_active: true
+    rol: 'gestor',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const rolesDisponibles: Usuario['rol'][] = [
-    'administrador',
-    'gerente',
-    'despachante',
-    'cliente',
-    'consultor'
-  ];
+  const [submitError, setSubmitError] = useState('');
 
   useEffect(() => {
     if (usuario) {
@@ -41,19 +41,13 @@ export default function UsuarioFormModal({ isOpen, onClose, usuario, onSuccess }
         nombre: usuario.nombre || '',
         email: usuario.email || '',
         password: '',
-        rol: usuario.rol || 'cliente',
-        is_active: usuario.is_active
+        rol: usuario.rol || 'gestor',
       });
     } else {
-      setFormData({
-        nombre: '',
-        email: '',
-        password: '',
-        rol: 'cliente',
-        is_active: true
-      });
+      setFormData({ nombre: '', email: '', password: '', rol: 'gestor' });
     }
     setErrors({});
+    setSubmitError('');
   }, [usuario, isOpen]);
 
   const validateForm = (): boolean => {
@@ -67,6 +61,9 @@ export default function UsuarioFormModal({ isOpen, onClose, usuario, onSuccess }
     if (!usuario && !formData.password.trim()) {
       newErrors.password = 'La contraseña es obligatoria';
     }
+    if (!usuario && formData.password.length > 0 && formData.password.length < 6) {
+      newErrors.password = 'Mínimo 6 caracteres';
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -76,17 +73,43 @@ export default function UsuarioFormModal({ isOpen, onClose, usuario, onSuccess }
     if (!validateForm()) return;
 
     setLoading(true);
+    setSubmitError('');
+
     try {
       if (usuario) {
-        alert(`Usuario ${formData.nombre} actualizado (Rol: ${formData.rol})`);
+        // Edit: update nombre and rol in usuarios table
+        const { error } = await supabase
+          .from('usuarios')
+          .update({ nombre: formData.nombre, rol: formData.rol })
+          .eq('id', usuario.id);
+
+        if (error) throw error;
       } else {
-        alert(`Usuario ${formData.nombre} creado (Rol: ${formData.rol})`);
+        // Create: sign up new user, then update their rol
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email: formData.email,
+          password: formData.password,
+          options: { data: { nombre: formData.nombre, rol: formData.rol } },
+        });
+
+        if (authError) throw authError;
+
+        // The trigger handle_new_user creates the usuarios record with default 'gestor' rol.
+        // Update to the selected rol if different:
+        if (authData.user) {
+          await supabase
+            .from('usuarios')
+            .update({ rol: formData.rol, nombre: formData.nombre })
+            .eq('id', authData.user.id);
+        }
       }
+
       onSuccess();
       onClose();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : 'Error desconocido';
       console.error('Error guardando usuario:', error);
-      alert(`Error: ${error.message}`);
+      setSubmitError(msg);
     } finally {
       setLoading(false);
     }
@@ -134,57 +157,56 @@ export default function UsuarioFormModal({ isOpen, onClose, usuario, onSuccess }
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              disabled={!!usuario}
               className={`w-full p-2 border rounded-md ${
                 errors.email ? 'border-red-500' : 'border-slate-300'
-              }`}
+              } ${usuario ? 'bg-slate-100 cursor-not-allowed' : ''}`}
               placeholder="usuario@ejemplo.com"
             />
             {errors.email && <p className="text-sm text-red-600 mt-1">{errors.email}</p>}
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Contraseña {usuario ? '(Dejar en blanco para no cambiar)' : '*'}
-            </label>
-            <input
-              type="password"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              className={`w-full p-2 border rounded-md ${
-                errors.password ? 'border-red-500' : 'border-slate-300'
-              }`}
-              placeholder={usuario ? 'Nueva contraseña (opcional)' : 'Contraseña'}
-            />
-            {errors.password && <p className="text-sm text-red-600 mt-1">{errors.password}</p>}
-          </div>
+          {!usuario && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Contraseña *
+              </label>
+              <input
+                type="password"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                className={`w-full p-2 border rounded-md ${
+                  errors.password ? 'border-red-500' : 'border-slate-300'
+                }`}
+                placeholder="Mínimo 6 caracteres"
+              />
+              {errors.password && <p className="text-sm text-red-600 mt-1">{errors.password}</p>}
+              <p className="text-xs text-slate-500 mt-1">
+                El usuario recibirá un email de confirmación
+              </p>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">Rol *</label>
             <select
               value={formData.rol}
-              onChange={(e) => setFormData({ ...formData, rol: e.target.value as Usuario['rol'] })}
+              onChange={(e) => setFormData({ ...formData, rol: e.target.value })}
               className="w-full p-2 border rounded-md bg-white border-slate-300"
             >
-              {rolesDisponibles.map((rol) => (
-                <option key={rol} value={rol} className="capitalize">
-                  {rol}
+              {ROLES.map((rol) => (
+                <option key={rol} value={rol}>
+                  {ROL_LABELS[rol] || rol}
                 </option>
               ))}
             </select>
-            <p className="text-xs text-slate-500 mt-1">
-              Define los permisos y acceso del usuario al sistema
-            </p>
           </div>
 
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={formData.is_active}
-              onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-              className="h-4 w-4 text-blue-600 border-slate-300 rounded"
-            />
-            <span className="text-sm font-medium text-slate-700">Usuario Activo</span>
-          </label>
+          {submitError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+              {submitError}
+            </div>
+          )}
 
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
             <button

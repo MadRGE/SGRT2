@@ -98,12 +98,14 @@ export default function DashboardV2({ onNavigate }: Props) {
   const [tramitesAtencion, setTramitesAtencion] = useState<TramiteRow[]>([]);
   const [vencimientos, setVencimientos] = useState<VencimientoRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
   }, []);
 
   const loadData = async () => {
+    setError(null);
     try {
       const en30dias = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
@@ -169,6 +171,7 @@ export default function DashboardV2({ onNavigate }: Props) {
       setVencimientos((vencimientosData as any) || []);
     } catch (e) {
       console.warn('Error cargando dashboard:', e);
+      setError('Error al cargar los datos del dashboard. Verifique su conexión.');
     }
     setLoading(false);
   };
@@ -186,6 +189,18 @@ export default function DashboardV2({ onNavigate }: Props) {
     return (
       <div className="flex items-center justify-center py-32">
         <Loader2 className="w-7 h-7 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-32 text-center">
+        <AlertTriangle className="w-10 h-10 text-red-400 mb-3" />
+        <p className="text-slate-600 mb-4">{error}</p>
+        <button onClick={loadData} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+          Reintentar
+        </button>
       </div>
     );
   }

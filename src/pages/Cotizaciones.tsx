@@ -34,13 +34,13 @@ interface Cotizacion {
 }
 
 const ESTADOS = [
-  { value: 'borrador', label: 'Borrador', color: 'slate', icon: FileText },
-  { value: 'enviada', label: 'Enviada', color: 'blue', icon: Send },
-  { value: 'negociacion', label: 'En Negociación', color: 'yellow', icon: Clock },
-  { value: 'aceptada', label: 'Aceptada', color: 'green', icon: CheckCircle },
-  { value: 'rechazada', label: 'Rechazada', color: 'red', icon: XCircle },
-  { value: 'vencida', label: 'Vencida', color: 'orange', icon: Calendar },
-  { value: 'convertida', label: 'Convertida', color: 'purple', icon: Package }
+  { value: 'borrador', label: 'Borrador', icon: FileText, iconClass: 'text-slate-600', badgeClass: 'bg-slate-100 text-slate-700' },
+  { value: 'enviada', label: 'Enviada', icon: Send, iconClass: 'text-blue-600', badgeClass: 'bg-blue-100 text-blue-700' },
+  { value: 'negociacion', label: 'En Negociación', icon: Clock, iconClass: 'text-yellow-600', badgeClass: 'bg-yellow-100 text-yellow-700' },
+  { value: 'aceptada', label: 'Aceptada', icon: CheckCircle, iconClass: 'text-green-600', badgeClass: 'bg-green-100 text-green-700' },
+  { value: 'rechazada', label: 'Rechazada', icon: XCircle, iconClass: 'text-red-600', badgeClass: 'bg-red-100 text-red-700' },
+  { value: 'vencida', label: 'Vencida', icon: Calendar, iconClass: 'text-orange-600', badgeClass: 'bg-orange-100 text-orange-700' },
+  { value: 'convertida', label: 'Convertida', icon: Package, iconClass: 'text-purple-600', badgeClass: 'bg-purple-100 text-purple-700' }
 ];
 
 export default function Cotizaciones({ onBack, onConvertirProyecto }: Props) {
@@ -101,18 +101,16 @@ export default function Cotizaciones({ onBack, onConvertirProyecto }: Props) {
   };
 
   const handleGenerarUrlPublica = async (cotizacionId: string) => {
-    const { data } = await supabase.rpc('generate_url_publica');
+    const urlPublica = crypto.randomUUID();
 
-    if (data) {
-      const { error } = await supabase
-        .from('cotizaciones')
-        .update({ url_publica: data })
-        .eq('id', cotizacionId);
+    const { error } = await supabase
+      .from('cotizaciones')
+      .update({ url_publica: urlPublica })
+      .eq('id', cotizacionId);
 
-      if (!error) {
-        await loadCotizaciones();
-        alert('URL pública generada exitosamente');
-      }
+    if (!error) {
+      await loadCotizaciones();
+      alert('URL pública generada exitosamente');
     }
   };
 
@@ -303,11 +301,11 @@ export default function Cotizaciones({ onBack, onConvertirProyecto }: Props) {
                   <div className="flex flex-col md:flex-row md:items-center gap-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
-                        <IconEstado className={`w-5 h-5 text-${estadoInfo.color}-600`} />
+                        <IconEstado className={`w-5 h-5 ${estadoInfo.iconClass}`} />
                         <h3 className="font-semibold text-lg text-slate-800">
                           {cotizacion.nombre_cliente}
                         </h3>
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium bg-${estadoInfo.color}-100 text-${estadoInfo.color}-700`}>
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${estadoInfo.badgeClass}`}>
                           {estadoInfo.label}
                         </span>
                       </div>

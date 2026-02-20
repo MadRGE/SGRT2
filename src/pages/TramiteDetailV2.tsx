@@ -1,6 +1,9 @@
-import { useState, useEffect } from 'react';
-import { supabase, softDelete } from '../lib/supabase';
-import { ArrowLeft, Clock, Loader2, Save, Pencil, X, Plus, FileCheck, Trash2, CheckCircle2, AlertCircle, Link2 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { supabase, softDelete, buildSeguimientoData } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
+import { uploadDocumento, getDocumentoUrl, deleteDocumento, formatFileSize } from '../lib/storage';
+import { TRAMITE_TRANSITIONS, isTransitionAllowed } from '../lib/estadoTransitions';
+import { ArrowLeft, Clock, Loader2, Save, Pencil, X, Plus, FileCheck, Trash2, CheckCircle2, AlertCircle, AlertTriangle, Link2, Upload, Download, Paperclip } from 'lucide-react';
 
 interface Props {
   tramiteId: string;
@@ -37,6 +40,9 @@ interface Documento {
   obligatorio: boolean;
   responsable: string | null;
   documento_cliente_id: string | null;
+  archivo_path: string | null;
+  archivo_nombre: string | null;
+  archivo_size: number | null;
   created_at: string;
 }
 
@@ -52,6 +58,7 @@ interface Seguimiento {
   id: string;
   descripcion: string;
   created_at: string;
+  usuario_nombre?: string | null;
 }
 
 const ESTADOS = [
@@ -110,24 +117,32 @@ const PRIORIDADES = ['baja', 'normal', 'alta', 'urgente'];
 const RESPONSABLES = ['Estudio', 'Cliente', 'Organismo'];
 
 export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
+  const { user } = useAuth();
   const [tramite, setTramite] = useState<Tramite | null>(null);
   const [documentos, setDocumentos] = useState<Documento[]>([]);
   const [seguimientos, setSeguimientos] = useState<Seguimiento[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [nuevoSeguimiento, setNuevoSeguimiento] = useState('');
   const [savingSeg, setSavingSeg] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
   const [editForm, setEditForm] = useState<Partial<Tramite>>({});
   const [showDocForm, setShowDocForm] = useState(false);
   const [showLinkDocForm, setShowLinkDocForm] = useState(false);
   const [docsCliente, setDocsCliente] = useState<DocCliente[]>([]);
   const [docForm, setDocForm] = useState({ nombre: '', obligatorio: false, responsable: '' });
   const [savingDoc, setSavingDoc] = useState(false);
+  const [uploadingDocId, setUploadingDocId] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const pendingUploadDocId = useRef<string | null>(null);
 
   useEffect(() => { loadData(); }, [tramiteId]);
 
   const loadData = async () => {
     setLoading(true);
+    setError(null);
     try {
       const { data: t } = await supabase
         .from('tramites')
@@ -164,6 +179,7 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
       }
     } catch (e) {
       console.warn('Error:', e);
+      setError('Error al cargar datos. Verifique su conexión.');
     }
     setLoading(false);
   };
@@ -172,10 +188,9 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
     if (!nuevoSeguimiento.trim()) return;
     setSavingSeg(true);
 
-    const { error } = await supabase.from('seguimientos').insert({
-      tramite_id: tramiteId,
-      descripcion: nuevoSeguimiento.trim(),
-    });
+    const { error } = await supabase.from('seguimientos').insert(
+      buildSeguimientoData({ tramite_id: tramiteId, descripcion: nuevoSeguimiento.trim() }, user)
+    );
 
     if (!error) {
       setNuevoSeguimiento('');
@@ -190,6 +205,11 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
     if (tramite?.estado === nuevoEstado) return;
     setSaveError('');
 
+    if (!isTransitionAllowed(TRAMITE_TRANSITIONS, tramite!.estado, nuevoEstado)) {
+      setSaveError(`No se puede cambiar de "${ESTADO_LABELS[tramite!.estado]}" a "${ESTADO_LABELS[nuevoEstado]}"`);
+      return;
+    }
+
     const { error } = await supabase
       .from('tramites')
       .update({ estado: nuevoEstado, updated_at: new Date().toISOString() })
@@ -199,16 +219,16 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
       console.error('Error cambiando estado:', error);
       setSaveError(error.message || 'Error al cambiar estado. Ejecutá la migración 69.');
     } else {
-      await supabase.from('seguimientos').insert({
-        tramite_id: tramiteId,
-        descripcion: `Estado cambiado a: ${ESTADO_LABELS[nuevoEstado] || nuevoEstado}`,
-      });
+      await supabase.from('seguimientos').insert(
+        buildSeguimientoData({ tramite_id: tramiteId, descripcion: `Estado cambiado a: ${ESTADO_LABELS[nuevoEstado] || nuevoEstado}` }, user)
+      );
       loadData();
     }
   };
 
   const handleChangeSemaforo = async (nuevoSemaforo: string) => {
     if (tramite?.semaforo === nuevoSemaforo) return;
+    setSaveError('');
 
     const semaforoLabel = nuevoSemaforo === 'verde' ? 'Verde' : nuevoSemaforo === 'amarillo' ? 'Amarillo' : 'Rojo';
 
@@ -217,11 +237,13 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
       .update({ semaforo: nuevoSemaforo, updated_at: new Date().toISOString() })
       .eq('id', tramiteId);
 
-    if (!error) {
-      await supabase.from('seguimientos').insert({
-        tramite_id: tramiteId,
-        descripcion: `Semaforo cambiado a: ${semaforoLabel}`,
-      });
+    if (error) {
+      console.error('Error cambiando semáforo:', error);
+      setSaveError(error.message || 'Error al cambiar semáforo');
+    } else {
+      await supabase.from('seguimientos').insert(
+        buildSeguimientoData({ tramite_id: tramiteId, descripcion: `Semaforo cambiado a: ${semaforoLabel}` }, user)
+      );
       loadData();
     }
   };
@@ -231,17 +253,24 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
     const x = e.clientX - rect.left;
     const pct = Math.round((x / rect.width) * 100);
     const clamped = Math.max(0, Math.min(100, Math.round(pct / 5) * 5));
+    setSaveError('');
 
     const { error } = await supabase
       .from('tramites')
       .update({ progreso: clamped, updated_at: new Date().toISOString() })
       .eq('id', tramiteId);
 
-    if (!error) loadData();
+    if (error) {
+      console.error('Error actualizando progreso:', error);
+      setSaveError(error.message || 'Error al actualizar progreso');
+    } else {
+      loadData();
+    }
   };
 
   const handleSaveEdit = async () => {
     setSaveError('');
+    setSavingEdit(true);
     const { error } = await supabase
       .from('tramites')
       .update({
@@ -291,6 +320,7 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
       setEditing(false);
       loadData();
     }
+    setSavingEdit(false);
   };
 
   const handleAddDocumento = async () => {
@@ -359,8 +389,95 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
     }
   };
 
+  const triggerUpload = (docId: string) => {
+    pendingUploadDocId.current = docId;
+    setUploadError('');
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const docId = pendingUploadDocId.current;
+    if (!file || !docId) return;
+    // Reset input so same file can be selected again
+    e.target.value = '';
+
+    setUploadingDocId(docId);
+    setUploadError('');
+
+    const { path, error: uploadErr } = await uploadDocumento(
+      `tramites/${tramiteId}`,
+      file
+    );
+
+    if (uploadErr) {
+      setUploadError(uploadErr);
+      setUploadingDocId(null);
+      return;
+    }
+
+    // Save path to DB
+    const { error: dbErr } = await supabase
+      .from('documentos_tramite')
+      .update({
+        archivo_path: path,
+        archivo_nombre: file.name,
+        archivo_size: file.size,
+      })
+      .eq('id', docId);
+
+    if (dbErr) {
+      // Column might not exist yet
+      if (dbErr.message?.includes('archivo_path') || dbErr.message?.includes('schema cache')) {
+        setUploadError('Ejecute la migracion 73 para habilitar subida de archivos.');
+      } else {
+        setUploadError(dbErr.message || 'Error al guardar referencia del archivo.');
+      }
+      // Clean up uploaded file since we couldn't save reference
+      await deleteDocumento(path);
+    } else {
+      loadData();
+    }
+    setUploadingDocId(null);
+  };
+
+  const handleDownloadFile = async (path: string, nombre: string) => {
+    const url = await getDocumentoUrl(path);
+    if (url) {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = nombre;
+      a.target = '_blank';
+      a.click();
+    }
+  };
+
+  const handleRemoveFile = async (doc: Documento) => {
+    if (!doc.archivo_path) return;
+    if (!confirm('¿Quitar el archivo adjunto? El registro del documento se mantiene.')) return;
+
+    await deleteDocumento(doc.archivo_path);
+    await supabase
+      .from('documentos_tramite')
+      .update({ archivo_path: null, archivo_nombre: null, archivo_size: null })
+      .eq('id', doc.id);
+    loadData();
+  };
+
   if (loading) {
     return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>;
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-32 text-center">
+        <AlertTriangle className="w-10 h-10 text-red-400 mb-3" />
+        <p className="text-slate-600 mb-4">{error}</p>
+        <button onClick={loadData} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+          Reintentar
+        </button>
+      </div>
+    );
   }
 
   if (!tramite) {
@@ -388,6 +505,15 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
+      {/* Hidden file input for uploads */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        className="hidden"
+        accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.webp,.txt,.zip,.rar"
+        onChange={handleFileSelected}
+      />
+
       {/* Back button */}
       <button onClick={() => onNavigate(backTarget)} className="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-800">
         <ArrowLeft className="w-4 h-4" /> {backLabel}
@@ -437,19 +563,27 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
 
         {/* Estado selector pills */}
         <div className="flex flex-wrap gap-2 mb-4">
-          {ESTADOS.map((e) => (
-            <button
-              key={e}
-              onClick={() => handleChangeEstado(e)}
-              className={`text-xs px-3 py-1.5 rounded-full font-medium border transition-all ${
-                tramite.estado === e
-                  ? ESTADO_COLORS[e]
-                  : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300'
-              }`}
-            >
-              {ESTADO_LABELS[e]}
-            </button>
-          ))}
+          {ESTADOS.map((e) => {
+            const isCurrent = tramite.estado === e;
+            const isAllowed = isCurrent || isTransitionAllowed(TRAMITE_TRANSITIONS, tramite.estado, e);
+            return (
+              <button
+                key={e}
+                onClick={() => isAllowed && handleChangeEstado(e)}
+                disabled={!isAllowed}
+                className={`text-xs px-3 py-1.5 rounded-full font-medium border transition-all ${
+                  isCurrent
+                    ? ESTADO_COLORS[e]
+                    : isAllowed
+                    ? 'bg-white text-slate-400 border-slate-200 hover:border-slate-300 cursor-pointer'
+                    : 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed opacity-50'
+                }`}
+                title={!isAllowed && !isCurrent ? `No se puede cambiar desde "${ESTADO_LABELS[tramite.estado]}"` : undefined}
+              >
+                {ESTADO_LABELS[e]}
+              </button>
+            );
+          })}
         </div>
 
         {/* Semaforo selector */}
@@ -492,6 +626,12 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
             />
           </div>
         </div>
+
+        {saveError && !editing && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 mb-4">
+            {saveError}
+          </div>
+        )}
 
         {/* Editable details */}
         {editing ? (
@@ -581,14 +721,14 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
               <button onClick={() => { setEditing(false); setEditForm(tramite); setSaveError(''); }} className="px-4 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50">
                 <X className="w-4 h-4 inline mr-1" /> Cancelar
               </button>
-              <button onClick={handleSaveEdit} className="px-4 py-2 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:shadow-lg hover:shadow-blue-500/25">
-                <Save className="w-4 h-4 inline mr-1" /> Guardar
+              <button onClick={handleSaveEdit} disabled={savingEdit} className="px-4 py-2 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:shadow-lg hover:shadow-blue-500/25 disabled:opacity-50">
+                {savingEdit ? <><Loader2 className="w-4 h-4 inline mr-1 animate-spin" /> Guardando...</> : <><Save className="w-4 h-4 inline mr-1" /> Guardar</>}
               </button>
             </div>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-x-8 gap-y-3 pt-4 border-t border-slate-100">
-            <InfoField label="Tipo" value={tramite.tipo === 'importacion' ? 'Importación' : 'Exportación'} />
+            <InfoField label="Tipo" value={tramite.tipo?.charAt(0).toUpperCase() + tramite.tipo?.slice(1).replace(/_/g, ' ')} />
             <InfoField label="Organismo" value={tramite.organismo} />
             <InfoField label="Prioridad" value={tramite.prioridad?.charAt(0).toUpperCase() + tramite.prioridad?.slice(1)} />
             <InfoField label="Plataforma" value={tramite.plataforma} />
@@ -753,6 +893,15 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
           </div>
         )}
 
+        {/* Upload error */}
+        {uploadError && (
+          <div className="mx-4 mt-3 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            {uploadError}
+            <button onClick={() => setUploadError('')} className="ml-auto text-red-400 hover:text-red-600"><X className="w-4 h-4" /></button>
+          </div>
+        )}
+
         {/* Progress summary */}
         {docsTotal > 0 && (
           <div className="px-4 pt-3 pb-1">
@@ -818,8 +967,49 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
                         </span>
                       )}
                     </div>
-                    {doc.responsable && (
-                      <span className="text-xs text-slate-400">Responsable: {doc.responsable}</span>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      {doc.responsable && (
+                        <span className="text-xs text-slate-400">Responsable: {doc.responsable}</span>
+                      )}
+                      {doc.archivo_nombre && (
+                        <span className="text-xs text-slate-400 flex items-center gap-1">
+                          <Paperclip className="w-3 h-3" />
+                          {doc.archivo_nombre}
+                          {doc.archivo_size != null && ` (${formatFileSize(doc.archivo_size)})`}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* File upload/download */}
+                  <div className="flex items-center gap-1">
+                    {doc.archivo_path ? (
+                      <>
+                        <button
+                          onClick={() => handleDownloadFile(doc.archivo_path!, doc.archivo_nombre || doc.nombre)}
+                          className="text-blue-500 hover:text-blue-700 transition-colors p-1"
+                          title="Descargar archivo"
+                        >
+                          <Download className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleRemoveFile(doc)}
+                          className="text-slate-300 hover:text-orange-500 transition-colors p-1"
+                          title="Quitar archivo"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </>
+                    ) : uploadingDocId === doc.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                    ) : (
+                      <button
+                        onClick={() => triggerUpload(doc.id)}
+                        className="text-slate-300 hover:text-blue-500 transition-colors p-1"
+                        title="Subir archivo"
+                      >
+                        <Upload className="w-4 h-4" />
+                      </button>
                     )}
                   </div>
 
@@ -893,11 +1083,16 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
                 <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0" />
                 <div className="flex-1">
                   <p className="text-sm text-slate-700">{s.descripcion}</p>
-                  <p className="text-xs text-slate-400 mt-1">
-                    {new Date(s.created_at).toLocaleString('es-AR', {
-                      day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                    })}
-                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <p className="text-xs text-slate-400">
+                      {new Date(s.created_at).toLocaleString('es-AR', {
+                        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                      })}
+                    </p>
+                    {s.usuario_nombre && (
+                      <span className="text-xs text-slate-400">&middot; {s.usuario_nombre}</span>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}

@@ -254,7 +254,7 @@ export default function PortalClienteV2({ clienteId, onNavigate }: Props) {
                   <p className="text-sm text-orange-700">Necesitamos estos documentos para continuar</p>
                 </div>
               </div>
-              <div className="space-y-2 ml-15">
+              <div className="space-y-2 ml-14">
                 {docsPendientes.filter(d => !esperandoCliente.find(t => t.id === d.tramite_id)).map(d => {
                   const tramite = tramites.find(t => t.id === d.tramite_id);
                   return (
@@ -519,7 +519,7 @@ export default function PortalClienteV2({ clienteId, onNavigate }: Props) {
       <div className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-3">
         <MessageCircle className="w-5 h-5 text-slate-400 flex-shrink-0" />
         <p className="text-sm text-slate-500 flex-1">Alguna duda o consulta?</p>
-        <a href="tel:+54" className="flex items-center gap-2 py-2.5 px-5 bg-green-600 hover:bg-green-700 active:bg-green-800 text-white rounded-xl font-semibold text-sm transition-colors">
+        <a href="mailto:info@sgt.com.ar" className="flex items-center gap-2 py-2.5 px-5 bg-green-600 hover:bg-green-700 active:bg-green-800 text-white rounded-xl font-semibold text-sm transition-colors">
           <Phone className="w-4 h-4" /> Contactar
         </a>
       </div>

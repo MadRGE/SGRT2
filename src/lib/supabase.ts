@@ -48,3 +48,34 @@ export async function softDelete(table: string, column: string, value: string): 
   }
   return 'soft';
 }
+
+// Seguimiento user tracking: detecta si la columna usuario_id existe
+let _segUserColReady: boolean | null = null;
+let _segUserColChecked = false;
+
+export async function checkSeguimientoUserCol(): Promise<boolean> {
+  if (_segUserColChecked) return _segUserColReady === true;
+  _segUserColChecked = true;
+  try {
+    const { error } = await supabase
+      .from('seguimientos')
+      .select('usuario_id')
+      .limit(1);
+    _segUserColReady = !error;
+  } catch {
+    _segUserColReady = false;
+  }
+  return _segUserColReady === true;
+}
+
+export function buildSeguimientoData(
+  base: Record<string, unknown>,
+  user: { id: string; user_metadata?: Record<string, unknown>; email?: string } | null
+): Record<string, unknown> {
+  const data = { ...base };
+  if (_segUserColReady && user) {
+    data.usuario_id = user.id;
+    data.usuario_nombre = (user.user_metadata?.nombre as string) || user.email || null;
+  }
+  return data;
+}

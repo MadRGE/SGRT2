@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase, filterActive } from '../lib/supabase';
-import { Plus, Search, Users, ChevronRight, Loader2, X, Shield } from 'lucide-react';
+import { Plus, Search, Users, ChevronRight, Loader2, X, Shield, AlertTriangle } from 'lucide-react';
 
 interface Props {
   onNavigate: (page: any) => void;
@@ -23,12 +23,14 @@ export default function ClientesV2({ onNavigate, autoOpen }: Props) {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(!!autoOpen);
 
   useEffect(() => { loadClientes(); }, []);
 
   const loadClientes = async () => {
     setLoading(true);
+    setError(null);
     try {
       const { data } = await filterActive(supabase
         .from('clientes')
@@ -53,6 +55,7 @@ export default function ClientesV2({ onNavigate, autoOpen }: Props) {
       }
     } catch (e) {
       console.warn('Error cargando clientes:', e);
+      setError('Error al cargar datos. Verifique su conexión.');
     }
     setLoading(false);
   };
@@ -64,6 +67,18 @@ export default function ClientesV2({ onNavigate, autoOpen }: Props) {
         c.rne?.toLowerCase().includes(search.toLowerCase())
       )
     : clientes;
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-32 text-center">
+        <AlertTriangle className="w-10 h-10 text-red-400 mb-3" />
+        <p className="text-slate-600 mb-4">{error}</p>
+        <button onClick={loadClientes} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+          Reintentar
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">

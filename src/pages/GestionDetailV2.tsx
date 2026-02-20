@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { supabase, softDelete } from '../lib/supabase';
+import { supabase, softDelete, buildSeguimientoData } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
+import { GESTION_TRANSITIONS, isTransitionAllowed } from '../lib/estadoTransitions';
 import {
   ArrowLeft, Plus, FileText, ChevronRight, Loader2, Pencil, Save, X,
   FolderOpen, BarChart3, Receipt, AlertTriangle, Clock, CheckCircle2,
@@ -50,6 +52,7 @@ interface Seguimiento {
   tramite_id: string | null;
   gestion_id: string | null;
   created_at: string;
+  usuario_nombre?: string | null;
 }
 
 const ESTADOS = ['relevamiento', 'en_curso', 'en_espera', 'finalizado', 'archivado'];
@@ -96,22 +99,27 @@ const TIPO_SEGUIMIENTO = [
 type Tab = 'tramites' | 'actividad' | 'resumen';
 
 export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
+  const { user } = useAuth();
   const [gestion, setGestion] = useState<Gestion | null>(null);
   const [tramites, setTramites] = useState<TramiteRow[]>([]);
   const [docsTramite, setDocsTramite] = useState<DocTramite[]>([]);
   const [seguimientos, setSeguimientos] = useState<Seguimiento[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState<Partial<Gestion>>({});
   const [tab, setTab] = useState<Tab>('tramites');
   const [nuevoSeg, setNuevoSeg] = useState('');
   const [tipoSeg, setTipoSeg] = useState('nota');
   const [savingSeg, setSavingSeg] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => { loadData(); }, [gestionId]);
 
   const loadData = async () => {
     setLoading(true);
+    setError(null);
     try {
       const { data: g } = await supabase
         .from('gestiones')
@@ -156,28 +164,40 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
       setSeguimientos(s || []);
     } catch (e) {
       console.warn('Error:', e);
+      setError('Error al cargar datos. Verifique su conexión.');
     }
     setLoading(false);
   };
 
   const handleChangeEstado = async (nuevoEstado: string) => {
+    if (gestion?.estado === nuevoEstado) return;
+    setSaveError('');
+
+    if (!isTransitionAllowed(GESTION_TRANSITIONS, gestion!.estado, nuevoEstado)) {
+      setSaveError(`No se puede cambiar de "${ESTADO_LABELS[gestion!.estado]}" a "${ESTADO_LABELS[nuevoEstado]}"`);
+      return;
+    }
+
     const { error } = await supabase
       .from('gestiones')
       .update({ estado: nuevoEstado, updated_at: new Date().toISOString() })
       .eq('id', gestionId);
 
-    if (!error) {
-      // Log the change
-      await supabase.from('seguimientos').insert({
-        gestion_id: gestionId,
-        descripcion: `Estado cambiado a: ${ESTADO_LABELS[nuevoEstado] || nuevoEstado}`,
-        tipo: 'nota',
-      });
+    if (error) {
+      console.error('Error cambiando estado:', error);
+      setSaveError(error.message || 'Error al cambiar estado');
+    } else {
+      await supabase.from('seguimientos').insert(
+        buildSeguimientoData({ gestion_id: gestionId, descripcion: `Estado cambiado a: ${ESTADO_LABELS[nuevoEstado] || nuevoEstado}`, tipo: 'nota' }, user)
+      );
       loadData();
     }
   };
 
   const handleSaveEdit = async () => {
+    setSaveError('');
+    setSavingEdit(true);
+
     const { error } = await supabase
       .from('gestiones')
       .update({
@@ -191,21 +211,23 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
       })
       .eq('id', gestionId);
 
-    if (!error) {
+    if (error) {
+      console.error('Error guardando gestión:', error);
+      setSaveError(error.message || 'Error al guardar');
+    } else {
       setEditing(false);
       loadData();
     }
+    setSavingEdit(false);
   };
 
   const handleAddSeguimiento = async () => {
     if (!nuevoSeg.trim()) return;
     setSavingSeg(true);
 
-    const { error } = await supabase.from('seguimientos').insert({
-      gestion_id: gestionId,
-      descripcion: nuevoSeg.trim(),
-      tipo: tipoSeg,
-    });
+    const { error } = await supabase.from('seguimientos').insert(
+      buildSeguimientoData({ gestion_id: gestionId, descripcion: nuevoSeg.trim(), tipo: tipoSeg }, user)
+    );
 
     if (!error) {
       setNuevoSeg('');
@@ -216,6 +238,18 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
 
   if (loading) {
     return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>;
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-32 text-center">
+        <AlertTriangle className="w-10 h-10 text-red-400 mb-3" />
+        <p className="text-slate-600 mb-4">{error}</p>
+        <button onClick={loadData} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+          Reintentar
+        </button>
+      </div>
+    );
   }
 
   if (!gestion) {
@@ -317,20 +351,34 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
 
         {/* Estado selector pills */}
         <div className="flex flex-wrap gap-2 mb-4">
-          {ESTADOS.map(e => (
-            <button
-              key={e}
-              onClick={() => handleChangeEstado(e)}
-              className={`text-xs px-3 py-1.5 rounded-full font-medium border transition-all ${
-                gestion.estado === e
-                  ? ESTADO_COLORS[e]
-                  : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300'
-              }`}
-            >
-              {ESTADO_LABELS[e]}
-            </button>
-          ))}
+          {ESTADOS.map(e => {
+            const isCurrent = gestion.estado === e;
+            const isAllowed = isCurrent || isTransitionAllowed(GESTION_TRANSITIONS, gestion.estado, e);
+            return (
+              <button
+                key={e}
+                onClick={() => isAllowed && handleChangeEstado(e)}
+                disabled={!isAllowed}
+                className={`text-xs px-3 py-1.5 rounded-full font-medium border transition-all ${
+                  isCurrent
+                    ? ESTADO_COLORS[e]
+                    : isAllowed
+                    ? 'bg-white text-slate-400 border-slate-200 hover:border-slate-300 cursor-pointer'
+                    : 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed opacity-50'
+                }`}
+                title={!isAllowed && !isCurrent ? `No se puede cambiar desde "${ESTADO_LABELS[gestion.estado]}"` : undefined}
+              >
+                {ESTADO_LABELS[e]}
+              </button>
+            );
+          })}
         </div>
+
+        {saveError && !editing && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 mb-4">
+            {saveError}
+          </div>
+        )}
 
         {/* Quick stats row */}
         <div className="grid grid-cols-5 gap-3 pt-4 border-t border-slate-100">
@@ -379,12 +427,17 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
               <textarea value={editForm.observaciones || ''} onChange={e => setEditForm({ ...editForm, observaciones: e.target.value })} rows={2}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
             </div>
+            {saveError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+                {saveError}
+              </div>
+            )}
             <div className="flex justify-end gap-2">
-              <button onClick={() => { setEditing(false); setEditForm(gestion); }} className="px-4 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50">
+              <button onClick={() => { setEditing(false); setEditForm(gestion); setSaveError(''); }} className="px-4 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50">
                 <X className="w-4 h-4 inline mr-1" /> Cancelar
               </button>
-              <button onClick={handleSaveEdit} className="px-4 py-2 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:shadow-lg hover:shadow-blue-500/25">
-                <Save className="w-4 h-4 inline mr-1" /> Guardar
+              <button onClick={handleSaveEdit} disabled={savingEdit} className="px-4 py-2 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:shadow-lg hover:shadow-blue-500/25 disabled:opacity-50">
+                {savingEdit ? <><Loader2 className="w-4 h-4 inline mr-1 animate-spin" /> Guardando...</> : <><Save className="w-4 h-4 inline mr-1" /> Guardar</>}
               </button>
             </div>
           </div>
@@ -617,6 +670,9 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
                       <p className="text-sm text-slate-700">{s.descripcion}</p>
                       <div className="flex items-center gap-2 mt-1">
                         <p className="text-xs text-slate-400">{formatDate(s.created_at)}</p>
+                        {s.usuario_nombre && (
+                          <span className="text-xs text-slate-400">&middot; {s.usuario_nombre}</span>
+                        )}
                         {tramite && (
                           <button
                             onClick={() => onNavigate({ type: 'tramite', id: tramite.id })}

@@ -1,5 +1,5 @@
 import { ReactNode, useState, useEffect, useRef } from 'react';
-import { LayoutDashboard, Users, FileText, LogOut, Calendar, Briefcase, DollarSign, Plus, X, Trash2 } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, LogOut, Calendar, Briefcase, DollarSign, Plus, X, Trash2, BookOpen, BarChart3, Settings, Bell, Shield } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 export type Page =
@@ -17,9 +17,16 @@ export type Page =
   | { type: 'presupuesto'; gestionId: string }
   | { type: 'precios' }
   | { type: 'papelera' }
-  | { type: 'portal-cliente'; clienteId: string };
+  | { type: 'portal-cliente'; clienteId: string }
+  | { type: 'catalogo' }
+  | { type: 'reportes' }
+  | { type: 'configuracion' }
+  | { type: 'cotizaciones' }
+  | { type: 'notificaciones' }
+  | { type: 'finanzas' }
+  | { type: 'usuarios' };
 
-type NavPage = 'dashboard' | 'clientes' | 'gestiones' | 'tramites' | 'vencimientos' | 'precios' | 'papelera';
+type NavPage = 'dashboard' | 'clientes' | 'gestiones' | 'tramites' | 'vencimientos' | 'precios' | 'papelera' | 'catalogo' | 'reportes' | 'configuracion' | 'cotizaciones' | 'notificaciones' | 'finanzas' | 'usuarios';
 
 interface LayoutProps {
   children: ReactNode;
@@ -27,14 +34,38 @@ interface LayoutProps {
   onNavigate: (page: Page) => void;
 }
 
-const NAV_ITEMS: { nav: NavPage; label: string; icon: typeof LayoutDashboard }[] = [
-  { nav: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { nav: 'gestiones', label: 'Gestiones', icon: Briefcase },
-  { nav: 'tramites', label: 'Trámites', icon: FileText },
-  { nav: 'clientes', label: 'Clientes', icon: Users },
-  { nav: 'precios', label: 'Precios', icon: DollarSign },
-  { nav: 'vencimientos', label: 'Vencimientos', icon: Calendar },
-  { nav: 'papelera', label: 'Papelera', icon: Trash2 },
+type NavSection = { section: string; items: { nav: NavPage; label: string; icon: typeof LayoutDashboard }[] };
+
+const NAV_SECTIONS: NavSection[] = [
+  {
+    section: 'Operaciones',
+    items: [
+      { nav: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { nav: 'gestiones', label: 'Gestiones', icon: Briefcase },
+      { nav: 'tramites', label: 'Trámites', icon: FileText },
+      { nav: 'clientes', label: 'Clientes', icon: Users },
+      { nav: 'cotizaciones', label: 'Cotizaciones', icon: DollarSign },
+      { nav: 'vencimientos', label: 'Vencimientos', icon: Calendar },
+      { nav: 'notificaciones', label: 'Notificaciones', icon: Bell },
+    ],
+  },
+  {
+    section: 'Administración',
+    items: [
+      { nav: 'catalogo', label: 'Catálogo', icon: BookOpen },
+      { nav: 'precios', label: 'Precios', icon: DollarSign },
+      { nav: 'finanzas', label: 'Finanzas', icon: BarChart3 },
+      { nav: 'reportes', label: 'Reportes', icon: BarChart3 },
+    ],
+  },
+  {
+    section: 'Sistema',
+    items: [
+      { nav: 'usuarios', label: 'Usuarios', icon: Shield },
+      { nav: 'configuracion', label: 'Configuración', icon: Settings },
+      { nav: 'papelera', label: 'Papelera', icon: Trash2 },
+    ],
+  },
 ];
 
 const QUICK_ACTIONS = [
@@ -87,25 +118,34 @@ export default function Layout({ children, currentNav, onNavigate }: LayoutProps
           </button>
         </div>
 
-        {/* Nav */}
-        <nav className="flex-1 px-3 mt-2 space-y-0.5">
-          {NAV_ITEMS.map(({ nav, label, icon: Icon }) => {
-            const active = currentNav === nav;
-            return (
-              <button
-                key={nav}
-                onClick={() => onNavigate({ type: nav })}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 ${
-                  active
-                    ? 'bg-white/10 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-                }`}
-              >
-                <Icon className={`w-[18px] h-[18px] ${active ? 'text-blue-400' : ''}`} />
-                {label}
-              </button>
-            );
-          })}
+        {/* Nav with sections */}
+        <nav className="flex-1 px-3 mt-1 overflow-y-auto">
+          {NAV_SECTIONS.map(({ section, items }) => (
+            <div key={section} className="mb-3">
+              <p className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                {section}
+              </p>
+              <div className="space-y-0.5">
+                {items.map(({ nav, label, icon: Icon }) => {
+                  const active = currentNav === nav;
+                  return (
+                    <button
+                      key={nav}
+                      onClick={() => onNavigate({ type: nav })}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] font-medium transition-all duration-200 ${
+                        active
+                          ? 'bg-white/10 text-white shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                      }`}
+                    >
+                      <Icon className={`w-[18px] h-[18px] ${active ? 'text-blue-400' : ''}`} />
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
         {/* User */}

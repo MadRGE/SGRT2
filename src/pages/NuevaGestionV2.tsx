@@ -151,6 +151,9 @@ export default function NuevaGestionV2({ clienteId, onNavigate }: Props) {
     }
 
     // Step 2: Create all selected tramites
+    let tramitesCreados = 0;
+    const tramitesFallidos: string[] = [];
+
     for (const tipo of selectedTipos) {
       const tramitePayload: Record<string, any> = {
         gestion_id: gestionData.id,
@@ -175,8 +178,11 @@ export default function NuevaGestionV2({ clienteId, onNavigate }: Props) {
 
       if (tramiteError) {
         console.error('Error creando trámite:', tramiteError);
+        tramitesFallidos.push(tipo.nombre);
         continue;
       }
+
+      tramitesCreados++;
 
       // Auto-create required documents for each tramite
       if (tramiteData && tipo.documentacion_obligatoria?.length) {
@@ -191,8 +197,20 @@ export default function NuevaGestionV2({ clienteId, onNavigate }: Props) {
       }
     }
 
-    // Navigate: if tramites were selected, go to presupuesto; otherwise gestion detail
-    if (selectedTipos.length > 0) {
+    // Show error if some tramites failed
+    if (tramitesFallidos.length > 0 && tramitesCreados === 0) {
+      setError(`Error al crear todos los trámites: ${tramitesFallidos.join(', ')}. La gestión fue creada sin trámites.`);
+      setLoading(false);
+      return;
+    }
+
+    if (tramitesFallidos.length > 0) {
+      // Some succeeded, some failed - still navigate but warn
+      alert(`Gestión creada. ${tramitesCreados} trámite(s) creado(s). No se pudieron crear: ${tramitesFallidos.join(', ')}`);
+    }
+
+    // Navigate: if tramites were created, go to presupuesto; otherwise gestion detail
+    if (tramitesCreados > 0) {
       onNavigate({ type: 'presupuesto', gestionId: gestionData.id });
     } else {
       onNavigate({ type: 'gestion', id: gestionData.id });
