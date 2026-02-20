@@ -4,7 +4,7 @@ import CotizacionCalculadora from '../components/CotizacionCalculadora';
 import {
   Plus, Search, ArrowLeft, FileText, Calendar, DollarSign,
   TrendingUp, Send, CheckCircle, XCircle, Clock, Share2,
-  ExternalLink, Package, Eye
+  ExternalLink, Package, Eye, Trash2
 } from 'lucide-react';
 
 interface Props {
@@ -129,6 +129,22 @@ export default function Cotizaciones({ onBack, onConvertirProyecto }: Props) {
     const url = `${window.location.origin}/cotizacion/${urlPublica}`;
     navigator.clipboard.writeText(url);
     alert('URL copiada al portapapeles');
+  };
+
+  const handleEliminarCotizacion = async (cotizacionId: string) => {
+    if (!confirm('¿Eliminar esta cotización? Esta acción no se puede deshacer.')) return;
+
+    const { error } = await supabase
+      .from('cotizaciones')
+      .delete()
+      .eq('id', cotizacionId);
+
+    if (error) {
+      alert(`Error al eliminar: ${error.message}`);
+      return;
+    }
+
+    await loadCotizaciones();
   };
 
   const getEstadoInfo = (estado: string) => {
@@ -372,6 +388,16 @@ export default function Cotizaciones({ onBack, onConvertirProyecto }: Props) {
                           >
                             <Send className="w-3 h-3" />
                             Enviar
+                          </button>
+                        )}
+
+                        {cotizacion.estado === 'borrador' && (
+                          <button
+                            onClick={() => handleEliminarCotizacion(cotizacion.id)}
+                            className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-sm transition-colors flex items-center gap-1"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            Eliminar
                           </button>
                         )}
 
