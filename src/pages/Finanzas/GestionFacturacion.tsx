@@ -1,27 +1,25 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { FilePlus, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { FilePlus, CheckCircle, Clock, AlertCircle, Loader2 } from 'lucide-react';
 
 interface Props {
-  onViewProyecto: (proyectoId: string) => void;
+  onViewProyecto: (gestionId: string) => void;
 }
 
-interface PresupuestoParaFacturar {
+interface TramiteFacturable {
   id: string;
-  proyecto_id: string;
-  total_final: number;
-  fecha_envio: string | null;
+  titulo: string;
+  estado: string;
+  monto_presupuesto: number;
+  gestion_id: string | null;
   created_at: string;
-  proyectos: {
-    nombre_proyecto: string;
-    clientes: {
-      razon_social: string;
-    };
-  };
+  updated_at: string | null;
+  clientes: { razon_social: string } | null;
+  gestiones: { nombre: string } | null;
 }
 
 export default function GestionFacturacion({ onViewProyecto }: Props) {
-  const [listado, setListado] = useState<PresupuestoParaFacturar[]>([]);
+  const [listado, setListado] = useState<TramiteFacturable[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -32,56 +30,45 @@ export default function GestionFacturacion({ onViewProyecto }: Props) {
     setLoading(true);
 
     const { data } = await supabase
-      .from('presupuestos')
+      .from('tramites')
       .select(`
-        *,
-        proyectos (
-          nombre_proyecto,
-          clientes (razon_social)
-        )
+        id, titulo, estado, monto_presupuesto, gestion_id, created_at, updated_at,
+        clientes(razon_social),
+        gestiones(nombre)
       `)
       .eq('estado', 'aprobado')
-      .order('created_at', { ascending: false });
+      .not('monto_presupuesto', 'is', null)
+      .order('updated_at', { ascending: false });
 
-    if (data) setListado(data as any);
+    if (data) setListado(data as TramiteFacturable[]);
     setLoading(false);
   };
 
-  const getEstadoFactura = (presupuesto: PresupuestoParaFacturar) => {
-    const diasDesdeAprobacion = presupuesto.fecha_envio
-      ? Math.floor(
-          (new Date().getTime() - new Date(presupuesto.fecha_envio).getTime()) /
-            (1000 * 60 * 60 * 24)
-        )
-      : 0;
+  const getEstadoFactura = (tramite: TramiteFacturable) => {
+    const fechaRef = tramite.updated_at || tramite.created_at;
+    const diasDesdeAprobacion = Math.floor(
+      (new Date().getTime() - new Date(fechaRef).getTime()) / (1000 * 60 * 60 * 24)
+    );
 
     if (diasDesdeAprobacion > 30) {
       return { estado: 'Pagado', color: 'bg-green-100 text-green-800', icon: CheckCircle };
     } else if (diasDesdeAprobacion > 15) {
-      return {
-        estado: 'Facturado Parcial',
-        color: 'bg-yellow-100 text-yellow-800',
-        icon: Clock
-      };
+      return { estado: 'Facturado Parcial', color: 'bg-yellow-100 text-yellow-800', icon: Clock };
     } else {
-      return {
-        estado: 'Pendiente de Facturar',
-        color: 'bg-slate-100 text-slate-800',
-        icon: AlertCircle
-      };
+      return { estado: 'Pendiente de Facturar', color: 'bg-slate-100 text-slate-800', icon: AlertCircle };
     }
   };
 
-  const handleRegistrarFactura = (presupuestoId: string) => {
+  const handleRegistrarFactura = (tramiteId: string) => {
     alert(
-      `Funcionalidad en desarrollo:\n\nAquí se abrirá un formulario para:\n- Registrar número de factura\n- Fecha de emisión\n- Condiciones de pago\n- Vincular comprobante PDF\n\nPresupuesto: ${presupuestoId}`
+      `Funcionalidad en desarrollo:\n\nAquí se abrirá un formulario para:\n- Registrar número de factura\n- Fecha de emisión\n- Condiciones de pago\n- Vincular comprobante PDF\n\nTrámite: ${tramiteId}`
     );
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
       </div>
     );
   }
@@ -94,10 +81,10 @@ export default function GestionFacturacion({ onViewProyecto }: Props) {
             <FilePlus className="w-8 h-8 text-slate-500" />
           </div>
           <h3 className="text-xl font-semibold text-slate-800 mb-2">
-            No hay presupuestos aprobados pendientes de facturar
+            No hay trámites aprobados pendientes de facturar
           </h3>
           <p className="text-slate-600">
-            Los presupuestos aprobados aparecerán aquí para su facturación.
+            Los trámites aprobados con presupuesto aparecerán aquí para su facturación.
           </p>
         </div>
       </div>
@@ -112,7 +99,7 @@ export default function GestionFacturacion({ onViewProyecto }: Props) {
             Gestión de Facturación (Cuentas por Cobrar)
           </h3>
           <p className="text-sm text-slate-600 mt-1">
-            Presupuestos aprobados listos para facturación y seguimiento de cobros
+            Trámites aprobados con presupuesto listos para facturación
           </p>
         </div>
 
@@ -120,46 +107,39 @@ export default function GestionFacturacion({ onViewProyecto }: Props) {
           <table className="w-full">
             <thead className="bg-slate-50">
               <tr>
-                <th className="p-3 text-left text-sm font-medium text-slate-700">Proyecto</th>
+                <th className="p-3 text-left text-sm font-medium text-slate-700">Trámite</th>
                 <th className="p-3 text-left text-sm font-medium text-slate-700">Cliente</th>
-                <th className="p-3 text-right text-sm font-medium text-slate-700">
-                  Monto Aprobado
-                </th>
-                <th className="p-3 text-left text-sm font-medium text-slate-700">
-                  Estado Factura
-                </th>
+                <th className="p-3 text-right text-sm font-medium text-slate-700">Presupuesto</th>
+                <th className="p-3 text-left text-sm font-medium text-slate-700">Estado Factura</th>
                 <th className="p-3 text-center text-sm font-medium text-slate-700">Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {listado.map((p) => {
-                const estadoInfo = getEstadoFactura(p);
+              {listado.map((t) => {
+                const estadoInfo = getEstadoFactura(t);
                 const IconComponent = estadoInfo.icon;
 
                 return (
                   <tr
-                    key={p.id}
+                    key={t.id}
                     className="border-t border-slate-200 hover:bg-slate-50 transition-colors"
                   >
                     <td className="p-3">
                       <p
                         className="font-medium text-blue-700 hover:underline cursor-pointer"
-                        onClick={() => onViewProyecto(p.proyecto_id)}
+                        onClick={() => t.gestion_id && onViewProyecto(t.gestion_id)}
                       >
-                        {p.proyectos.nombre_proyecto}
+                        {t.titulo}
                       </p>
                       <p className="text-xs text-slate-500">
-                        Aprobado:{' '}
-                        {p.fecha_envio
-                          ? new Date(p.fecha_envio).toLocaleDateString('es-AR')
-                          : 'N/A'}
+                        {t.gestiones?.nombre || 'Sin gestión'}
                       </p>
                     </td>
                     <td className="p-3 text-sm text-slate-700">
-                      {p.proyectos.clientes.razon_social}
+                      {t.clientes?.razon_social || 'N/A'}
                     </td>
                     <td className="p-3 text-right font-semibold text-slate-800">
-                      ${p.total_final.toLocaleString('es-AR')}
+                      ${t.monto_presupuesto.toLocaleString('es-AR')}
                     </td>
                     <td className="p-3">
                       <span
@@ -172,7 +152,7 @@ export default function GestionFacturacion({ onViewProyecto }: Props) {
                     <td className="p-3 text-center">
                       {estadoInfo.estado === 'Pendiente de Facturar' && (
                         <button
-                          onClick={() => handleRegistrarFactura(p.id)}
+                          onClick={() => handleRegistrarFactura(t.id)}
                           className="inline-flex items-center gap-1 text-sm bg-blue-600 text-white px-3 py-1.5 rounded-md hover:bg-blue-700 transition-colors"
                         >
                           <FilePlus className="w-4 h-4" />
@@ -187,7 +167,7 @@ export default function GestionFacturacion({ onViewProyecto }: Props) {
                       )}
                       {estadoInfo.estado === 'Facturado Parcial' && (
                         <button
-                          onClick={() => handleRegistrarFactura(p.id)}
+                          onClick={() => handleRegistrarFactura(t.id)}
                           className="inline-flex items-center gap-1 text-sm bg-yellow-600 text-white px-3 py-1.5 rounded-md hover:bg-yellow-700 transition-colors"
                         >
                           <Clock className="w-4 h-4" />
@@ -201,19 +181,6 @@ export default function GestionFacturacion({ onViewProyecto }: Props) {
             </tbody>
           </table>
         </div>
-      </div>
-
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h4 className="font-semibold text-blue-900 mb-2">
-          📋 Próximas funcionalidades
-        </h4>
-        <ul className="text-sm text-blue-800 space-y-1">
-          <li>• Registro completo de facturas con número y fecha</li>
-          <li>• Upload de comprobantes PDF</li>
-          <li>• Seguimiento de pagos parciales y totales</li>
-          <li>• Reportes de antigüedad de saldos</li>
-          <li>• Integración con sistemas contables</li>
-        </ul>
       </div>
     </div>
   );

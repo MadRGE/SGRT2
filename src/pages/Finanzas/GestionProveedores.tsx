@@ -27,7 +27,7 @@ interface Tercero {
 
 interface FacturaProveedor {
   id: string;
-  proyecto_id: string;
+  gestion_id: string;
   proveedor_id: string;
   numero_factura: string;
   fecha_emision: string;
@@ -36,9 +36,9 @@ interface FacturaProveedor {
   estado_pago: string;
   fecha_pago: string | null;
   notas: string | null;
-  proyectos: {
-    nombre_proyecto: string;
-  };
+  gestiones: {
+    nombre: string;
+  } | null;
   terceros: {
     nombre: string;
   };
@@ -62,7 +62,7 @@ export default function GestionProveedores() {
   });
 
   const [facturaForm, setFacturaForm] = useState({
-    proyecto_id: '',
+    gestion_id: '',
     proveedor_id: '',
     numero_factura: '',
     fecha_emision: new Date().toISOString().split('T')[0],
@@ -71,7 +71,7 @@ export default function GestionProveedores() {
     notas: ''
   });
 
-  const [proyectos, setProyectos] = useState<Array<{ id: string; nombre_proyecto: string }>>([]);
+  const [gestiones, setGestiones] = useState<Array<{ id: string; nombre: string }>>([]);
 
   useEffect(() => {
     loadData();
@@ -80,25 +80,19 @@ export default function GestionProveedores() {
   const loadData = async () => {
     setLoading(true);
 
-    const [{ data: proveedoresData }, { data: facturasData }, { data: proyectosData }] =
+    const [{ data: proveedoresData }, { data: facturasData }, { data: gestionesData }] =
       await Promise.all([
         supabase.from('terceros').select('*').order('nombre'),
         supabase
           .from('facturas_proveedores')
-          .select(
-            `
-          *,
-          proyectos (nombre_proyecto),
-          terceros (nombre)
-        `
-          )
+          .select(`*, gestiones(nombre), terceros(nombre)`)
           .order('fecha_emision', { ascending: false }),
-        supabase.from('proyectos').select('id, nombre_proyecto').order('nombre_proyecto')
+        supabase.from('gestiones').select('id, nombre').order('nombre')
       ]);
 
     if (proveedoresData) setProveedores(proveedoresData);
     if (facturasData) setFacturas(facturasData as any);
-    if (proyectosData) setProyectos(proyectosData);
+    if (gestionesData) setGestiones(gestionesData);
 
     setLoading(false);
   };
@@ -139,7 +133,7 @@ export default function GestionProveedores() {
 
     const { error } = await supabase.from('facturas_proveedores').insert([
       {
-        proyecto_id: facturaForm.proyecto_id,
+        gestion_id: facturaForm.gestion_id,
         proveedor_id: facturaForm.proveedor_id,
         numero_factura: facturaForm.numero_factura,
         fecha_emision: facturaForm.fecha_emision,
@@ -157,7 +151,7 @@ export default function GestionProveedores() {
 
     setShowFacturaModal(false);
     setFacturaForm({
-      proyecto_id: '',
+      gestion_id: '',
       proveedor_id: '',
       numero_factura: '',
       fecha_emision: new Date().toISOString().split('T')[0],
@@ -326,7 +320,7 @@ export default function GestionProveedores() {
                         Factura / Proveedor
                       </th>
                       <th className="p-3 text-left text-sm font-medium text-slate-700">
-                        Proyecto Vinculado
+                        Gestión
                       </th>
                       <th className="p-3 text-left text-sm font-medium text-slate-700">
                         Vencimiento
@@ -351,7 +345,7 @@ export default function GestionProveedores() {
                             <p className="text-xs text-slate-500">{f.terceros.nombre}</p>
                           </td>
                           <td className="p-3 text-sm text-blue-700 font-medium">
-                            {f.proyectos.nombre_proyecto}
+                            {f.gestiones?.nombre || 'Sin gestión'}
                           </td>
                           <td className="p-3 text-sm text-slate-600">
                             {f.fecha_vencimiento
@@ -617,20 +611,20 @@ export default function GestionProveedores() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Proyecto *
+                    Gestión *
                   </label>
                   <select
                     required
-                    value={facturaForm.proyecto_id}
+                    value={facturaForm.gestion_id}
                     onChange={(e) =>
-                      setFacturaForm({ ...facturaForm, proyecto_id: e.target.value })
+                      setFacturaForm({ ...facturaForm, gestion_id: e.target.value })
                     }
                     className="w-full p-2 border border-slate-300 rounded-md bg-white"
                   >
-                    <option value="">Seleccionar proyecto...</option>
-                    {proyectos.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.nombre_proyecto}
+                    <option value="">Seleccionar gestión...</option>
+                    {gestiones.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        {g.nombre}
                       </option>
                     ))}
                   </select>
