@@ -1,18 +1,45 @@
--- Migration: Fix facturas_proveedores to reference gestiones instead of proyectos
--- The app code now uses gestion_id, but the DB table still has proyecto_id
+-- Migration: Create facturas_proveedores table with V2 schema
+-- The original migration (20251104174535) referenced proyectos(id) and
+-- presupuesto_items(id) which don't exist in the V2 DB, so the table
+-- was never created. This migration creates it fresh with gestion_id.
 
--- 1. Add gestion_id column referencing gestiones
-ALTER TABLE facturas_proveedores
-  ADD COLUMN IF NOT EXISTS gestion_id uuid REFERENCES gestiones(id) ON DELETE SET NULL;
+CREATE TABLE IF NOT EXISTS facturas_proveedores (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  gestion_id uuid REFERENCES gestiones(id) ON DELETE SET NULL,
+  proveedor_id uuid REFERENCES terceros(id) ON DELETE SET NULL,
 
--- 2. Create index on gestion_id
+  numero_factura text NOT NULL,
+  fecha_emision timestamptz NOT NULL,
+  fecha_vencimiento timestamptz,
+  monto_total numeric(12, 2) NOT NULL,
+
+  estado_pago text DEFAULT 'pendiente' NOT NULL,
+  fecha_pago timestamptz,
+
+  url_archivo_factura text,
+  notas text,
+
+  created_at timestamptz DEFAULT now()
+);
+
 CREATE INDEX IF NOT EXISTS idx_facturas_proveedores_gestion
   ON facturas_proveedores(gestion_id);
 
--- 3. Make proyecto_id nullable (it was NOT NULL, but we no longer use it)
-ALTER TABLE facturas_proveedores
-  ALTER COLUMN proyecto_id DROP NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_facturas_proveedores_proveedor
+  ON facturas_proveedores(proveedor_id);
 
--- 4. Drop presupuesto_item_id FK if it exists (references old presupuesto_items table)
-ALTER TABLE facturas_proveedores
-  DROP COLUMN IF EXISTS presupuesto_item_id;
+CREATE INDEX IF NOT EXISTS idx_facturas_proveedores_estado
+  ON facturas_proveedores(estado_pago);
+
+ALTER TABLE facturas_proveedores ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow read access to facturas_proveedores"
+  ON facturas_proveedores FOR SELECT
+  TO authenticated
+  USING (true);
+
+CREATE POLICY "Allow authenticated users to manage facturas_proveedores"
+  ON facturas_proveedores FOR ALL
+  TO authenticated
+  USING (true)
+  WITH CHECK (true);
