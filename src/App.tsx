@@ -24,6 +24,7 @@ import Catalogo from './pages/Catalogo';
 import Reportes from './pages/Reportes';
 import Configuracion from './pages/Configuracion';
 import Cotizaciones from './pages/Cotizaciones';
+import CotizacionViewPublica from './components/CotizacionViewPublica';
 import Notificaciones from './pages/Notificaciones/Notificaciones';
 import ModuloFinancieroContable from './pages/ModuloFinancieroContable';
 import GestionUsuarios from './pages/Admin/GestionUsuarios';
@@ -124,7 +125,18 @@ function AuthenticatedApp() {
   return <AppContent />;
 }
 
+function getPublicCotizacionUrl(): string | null {
+  const match = window.location.pathname.match(/^\/cotizacion\/(.+)$/);
+  return match ? match[1] : null;
+}
+
 export default function App() {
+  const urlPublica = getPublicCotizacionUrl();
+
+  if (urlPublica) {
+    return <CotizacionViewPublica urlPublica={urlPublica} />;
+  }
+
   return (
     <AuthProvider>
       <AuthenticatedApp />
