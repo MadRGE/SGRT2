@@ -39,7 +39,7 @@ export default function ClientesV2({ onNavigate, autoOpen }: Props) {
 
       if (data) {
         const withCounts = await Promise.all(
-          data.map(async (c) => {
+          data.map(async (c: any) => {
             const { count: tramites_count } = await supabase
               .from('tramites')
               .select('*', { count: 'exact', head: true })

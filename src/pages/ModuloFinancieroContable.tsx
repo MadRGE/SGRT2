@@ -251,7 +251,7 @@ function GestionPresupuestos({ onNavigate }: { onNavigate: (id: string) => void 
       .not('monto_presupuesto', 'is', null)
       .order('created_at', { ascending: false });
 
-    if (data) setTramites(data as TramitePresupuesto[]);
+    if (data) setTramites(data as unknown as TramitePresupuesto[]);
     setLoading(false);
   };
 

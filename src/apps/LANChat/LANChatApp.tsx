@@ -1,10 +1,10 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useLANChat } from './hooks/useLANChat';
 import { LoginScreen } from './components/LoginScreen';
 import { UserList } from './components/UserList';
 import { ChatArea } from './components/ChatArea';
 import { VoiceCall } from './components/VoiceCall';
-import { LogOut, Settings, Wifi } from 'lucide-react';
+import { LogOut, Wifi } from 'lucide-react';
 
 export function LANChatApp() {
   const [serverAddress, setServerAddress] = useState('');

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, FileText, Calendar, Trash2, Download, Plus } from 'lucide-react';
+import { FileText, Calendar, Trash2, Download, Plus } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 interface ClienteDocumento {

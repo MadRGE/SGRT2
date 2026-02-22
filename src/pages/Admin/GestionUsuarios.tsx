@@ -15,7 +15,7 @@ type Usuario = {
   created_at?: string;
 };
 
-export default function GestionUsuarios({ onBack }: Props) {
+export default function GestionUsuarios(_props: Props) {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);

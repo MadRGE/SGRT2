@@ -108,7 +108,7 @@ export default function PortalClienteV2({ clienteId, onNavigate }: Props) {
     setTramites(t || []);
 
     if (t && t.length > 0) {
-      const ids = t.map(tr => tr.id);
+      const ids = t.map((tr: any) => tr.id);
       const { data: dt } = await supabase.from('documentos_tramite')
         .select('id, nombre, estado, obligatorio, tramite_id')
         .in('tramite_id', ids);
@@ -535,7 +535,6 @@ export default function PortalClienteV2({ clienteId, onNavigate }: Props) {
 // ======= Step Tracker Component =======
 function StepTracker({ currentEstado }: { currentEstado: string }) {
   const pasoIndex = PASOS_TRAMITE.findIndex(p => p.key === currentEstado);
-  const isTerminal = currentEstado === 'aprobado' || currentEstado === 'rechazado' || currentEstado === 'vencido';
 
   return (
     <div className="flex items-center gap-1">

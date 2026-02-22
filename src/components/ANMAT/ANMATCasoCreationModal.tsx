@@ -197,19 +197,6 @@ export function ANMATCasoCreationModal({ onClose, onSuccess }: Props) {
     setStep(2);
   };
 
-  const validateStep1 = () => {
-    if (!formData.cliente_id) {
-      setError('Seleccioná un cliente');
-      return false;
-    }
-    if (!formData.division_id) {
-      setError('Seleccioná una división ANMAT');
-      return false;
-    }
-    setError(null);
-    return true;
-  };
-
   const validateStep2 = () => {
     if (!formData.descripcion_cliente.trim()) {
       setError('Describí brevemente qué necesita el cliente');

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Bell, Plus, Edit2, Trash2, Save, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Bell, Plus, Edit2, Save, X } from 'lucide-react';
 import {
   NotificationService,
   NotificationTemplate,
@@ -170,7 +170,7 @@ export function NotificationTemplateManager() {
               placeholder="Contenido de la notificación. Use {{variable}} para placeholders."
             />
             <p className="text-xs text-gray-500 mt-1">
-              Ejemplo: El documento {{nombre_documento}} ha sido {{estado}}
+              {'Ejemplo: El documento {{nombre_documento}} ha sido {{estado}}'}
             </p>
           </div>
 

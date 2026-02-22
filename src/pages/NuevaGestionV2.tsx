@@ -63,10 +63,10 @@ export default function NuevaGestionV2({ clienteId, onNavigate }: Props) {
 
   useEffect(() => {
     filterActive(supabase.from('clientes').select('id, razon_social')).order('razon_social')
-      .then(({ data }) => { if (data) setClientes(data); });
+      .then(({ data }: any) => { if (data) setClientes(data); });
 
     supabase.from('tramite_tipos').select('*').order('nombre')
-      .then(({ data }) => { if (data) setCatalogo(data.map(mapRow)); });
+      .then(({ data }: any) => { if (data) setCatalogo(data.map(mapRow)); });
   }, []);
 
   // Dynamic organismos from catalog data

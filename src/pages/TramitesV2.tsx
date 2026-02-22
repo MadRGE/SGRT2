@@ -39,7 +39,7 @@ function mapRow(row: any): TramiteTipo {
   };
 }
 
-export default function TramitesV2({ onNavigate }: Props) {
+export default function TramitesV2(_props: Props) {
   const [catalogo, setCatalogo] = useState<TramiteTipo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

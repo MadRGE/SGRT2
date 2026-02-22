@@ -76,7 +76,7 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
     filterActive(supabase.from('gestiones').select('id, nombre, cliente_id, clientes(razon_social)'))
       .not('estado', 'in', '("finalizado","archivado")')
       .order('created_at', { ascending: false })
-      .then(({ data }) => {
+      .then(({ data }: any) => {
         if (data) {
           const mapped = data.map((g: any) => ({
             id: g.id,
@@ -87,7 +87,7 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
           setGestiones(mapped);
           // If gestionId was provided, auto-set cliente_id
           if (gestionId) {
-            const gestion = mapped.find(g => g.id === gestionId);
+            const gestion = mapped.find((g: any) => g.id === gestionId);
             if (gestion) {
               setForm(prev => ({ ...prev, cliente_id: gestion.cliente_id }));
             }
@@ -96,7 +96,7 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
       });
 
     supabase.from('tramite_tipos').select('*').order('nombre')
-      .then(({ data }) => {
+      .then(({ data }: any) => {
         if (data) setCatalogo(data.map(mapRow));
       });
   }, [gestionId]);

@@ -40,7 +40,7 @@ export default function GestionFacturacion({ onViewProyecto }: Props) {
       .not('monto_presupuesto', 'is', null)
       .order('updated_at', { ascending: false });
 
-    if (data) setListado(data as TramiteFacturable[]);
+    if (data) setListado(data as unknown as TramiteFacturable[]);
     setLoading(false);
   };
 

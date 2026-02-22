@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { GESTION_TRANSITIONS, isTransitionAllowed } from '../lib/estadoTransitions';
 import {
   ArrowLeft, Plus, FileText, ChevronRight, Loader2, Pencil, Save, X,
-  FolderOpen, BarChart3, Receipt, AlertTriangle, Clock, CheckCircle2,
+  FolderOpen, BarChart3, Receipt, AlertTriangle, Clock,
   MessageSquare, Phone, Mail, FileCheck, Send, Trash2
 } from 'lucide-react';
 

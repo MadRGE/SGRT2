@@ -480,7 +480,6 @@ function KpiCard({
   label,
   value,
   gradient,
-  bgLight,
   textColor,
   onClick,
 }: {
@@ -488,7 +487,7 @@ function KpiCard({
   label: string;
   value: number;
   gradient: string;
-  bgLight: string;
+  bgLight?: string;
   textColor: string;
   onClick: () => void;
 }) {
