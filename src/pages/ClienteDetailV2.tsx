@@ -623,15 +623,32 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
       </div>
 
       {/* 5. Tramites sueltos (without gestion) */}
-      {tramitesSueltos.length > 0 && (
-        <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50">
-          <div className="flex items-center justify-between p-4 border-b border-slate-100">
-            <h2 className="font-semibold text-slate-800 flex items-center gap-2">
-              <FileText className="w-4 h-4 text-slate-400" />
-              Tramites independientes ({tramitesSueltos.length})
-            </h2>
-          </div>
+      <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50">
+        <div className="flex items-center justify-between p-4 border-b border-slate-100">
+          <h2 className="font-semibold text-slate-800 flex items-center gap-2">
+            <FileText className="w-4 h-4 text-slate-400" />
+            Tramites independientes ({tramitesSueltos.length})
+          </h2>
+          <button
+            onClick={() => onNavigate({ type: 'nuevo-tramite', clienteId })}
+            className="flex items-center gap-1 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-3 py-1.5 rounded-lg hover:shadow-lg hover:shadow-blue-500/25"
+          >
+            <Plus className="w-4 h-4" /> Nuevo Tramite
+          </button>
+        </div>
 
+        {tramitesSueltos.length === 0 ? (
+          <div className="p-8 text-center text-slate-400">
+            <FileText className="w-10 h-10 mx-auto mb-2 opacity-50" />
+            <p>No hay tramites independientes</p>
+            <button
+              onClick={() => onNavigate({ type: 'nuevo-tramite', clienteId })}
+              className="mt-2 text-xs text-blue-600 font-semibold hover:text-blue-700"
+            >
+              Crear primer tramite
+            </button>
+          </div>
+        ) : (
           <div className="divide-y divide-slate-100/80">
             {tramitesSueltos.map((t) => (
               <button
@@ -659,8 +676,8 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
               </button>
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Modal nuevo registro */}
       {showRegistroForm && (

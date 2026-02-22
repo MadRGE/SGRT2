@@ -70,11 +70,17 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
     descripcion: '',
   });
 
+  const [clienteNombre, setClienteNombre] = useState('');
+
   useEffect(() => {
     // Load gestiones with client name
-    filterActive(supabase.from('gestiones').select('id, nombre, cliente_id, clientes(razon_social)'))
-      .not('estado', 'in', '("finalizado","archivado")')
-      .order('created_at', { ascending: false })
+    let query = filterActive(supabase.from('gestiones').select('id, nombre, cliente_id, clientes(razon_social)'))
+      .not('estado', 'in', '("finalizado","archivado")');
+    // Filter by clienteId when coming from a client
+    if (clienteId && !gestionId) {
+      query = query.eq('cliente_id', clienteId);
+    }
+    query.order('created_at', { ascending: false })
       .then(({ data }: any) => {
         if (data) {
           const mapped = data.map((g: any) => ({
@@ -94,11 +100,19 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
         }
       });
 
+    // If clienteId provided, load client name
+    if (clienteId) {
+      supabase.from('clientes').select('razon_social').eq('id', clienteId).single()
+        .then(({ data }: any) => {
+          if (data) setClienteNombre(data.razon_social);
+        });
+    }
+
     supabase.from('tramite_tipos').select('*').order('nombre')
       .then(({ data }: any) => {
         if (data) setCatalogo(data.map(mapRow));
       });
-  }, [gestionId]);
+  }, [gestionId, clienteId]);
 
   // Dynamic organismos from catalog data
   const catalogoOrganismos = [...new Set(catalogo.map(t => t.organismo))].sort();
@@ -112,7 +126,7 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
         cliente_id: gestion ? gestion.cliente_id : prev.cliente_id,
       }));
     } else {
-      setForm(prev => ({ ...prev, gestion_id: '', cliente_id: '' }));
+      setForm(prev => ({ ...prev, gestion_id: '', cliente_id: clienteId || '' }));
     }
   };
 
@@ -149,13 +163,12 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.gestion_id) return;
+    if (!form.gestion_id && !form.cliente_id) return;
     setLoading(true);
     setError('');
 
     // Build insert payload - only include columns that have values
     const payload: Record<string, any> = {
-      gestion_id: form.gestion_id,
       cliente_id: form.cliente_id,
       titulo: form.titulo,
       tipo: form.tipo,
@@ -164,6 +177,7 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
       semaforo: 'verde',
       progreso: 0,
     };
+    if (form.gestion_id) payload.gestion_id = form.gestion_id;
     if (form.tramite_tipo_id) payload.tramite_tipo_id = form.tramite_tipo_id;
     if (form.organismo) payload.organismo = form.organismo;
     if (form.plataforma) payload.plataforma = form.plataforma;
@@ -182,7 +196,6 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
       // If error is about missing column (cantidad_registros_envase), retry without it
       if (insertError.message?.includes('schema cache') || insertError.message?.includes('cantidad_registros_envase')) {
         const fallbackPayload: Record<string, any> = {
-          gestion_id: form.gestion_id,
           cliente_id: form.cliente_id,
           titulo: form.titulo,
           tipo: form.tipo,
@@ -191,6 +204,7 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
           semaforo: 'verde',
           progreso: 0,
         };
+        if (form.gestion_id) fallbackPayload.gestion_id = form.gestion_id;
         if (form.tramite_tipo_id) fallbackPayload.tramite_tipo_id = form.tramite_tipo_id;
         if (form.organismo) fallbackPayload.organismo = form.organismo;
         if (form.plataforma) fallbackPayload.plataforma = form.plataforma;
@@ -253,6 +267,8 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
   const handleBack = () => {
     if (gestionId) {
       onNavigate({ type: 'gestion', id: gestionId });
+    } else if (clienteId) {
+      onNavigate({ type: 'cliente', id: clienteId });
     } else {
       onNavigate({ type: 'gestiones' });
     }
@@ -288,6 +304,29 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
             Gestión: <span className="font-medium text-slate-700">{selectedGestion.nombre}</span>
             {selectedGestion.cliente_nombre && <> — <span className="text-slate-600">{selectedGestion.cliente_nombre}</span></>}
           </p>
+        ) : clienteId ? (
+          <>
+            {clienteNombre && (
+              <p className="text-sm text-slate-500 mt-0.5 mb-4">
+                Cliente: <span className="font-medium text-slate-700">{clienteNombre}</span>
+              </p>
+            )}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Gestión (proyecto) — opcional</label>
+              <select
+                value={form.gestion_id}
+                onChange={e => handleGestionChange(e.target.value)}
+                className={inputClass}
+              >
+                <option value="">Sin gestión (trámite independiente)</option>
+                {gestiones.map(g => (
+                  <option key={g.id} value={g.id}>
+                    {g.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </>
         ) : (
           <>
             <p className="text-sm text-slate-400 mt-0.5 mb-4">Seleccioná una gestión para agregar el trámite</p>
@@ -311,8 +350,8 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
         )}
       </div>
 
-      {/* Step 2: Select from catalog (only if gestion selected) */}
-      {form.gestion_id && showCatalogo && (
+      {/* Step 2: Select from catalog (only if gestion selected or clienteId provided) */}
+      {(form.gestion_id || clienteId) && showCatalogo && (
         <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50">
           <div className="p-4 border-b border-slate-100">
             <div className="flex items-center gap-2 mb-3">
@@ -436,8 +475,8 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
         </div>
       )}
 
-      {/* Step 3: Form details (only if gestion selected) */}
-      {form.gestion_id && (
+      {/* Step 3: Form details (only if gestion selected or clienteId provided) */}
+      {(form.gestion_id || clienteId) && (
         <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50 p-6">
           <h2 className="font-semibold text-slate-800 mb-4">Datos del trámite</h2>
 
@@ -578,7 +617,7 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
             <div className="flex justify-end gap-3 pt-2">
               <button type="button" onClick={handleBack}
                 className="px-4 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50">Cancelar</button>
-              <button type="submit" disabled={loading || !form.gestion_id}
+              <button type="submit" disabled={loading || (!form.gestion_id && !form.cliente_id)}
                 className="px-4 py-2 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:shadow-lg hover:shadow-blue-500/25 disabled:opacity-50">
                 {loading ? <><Loader2 className="w-4 h-4 animate-spin inline mr-1" /> Creando...</> : 'Crear Trámite'}
               </button>
