@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react';
 import { supabase, filterActive } from '../lib/supabase';
 import {
+  GESTION_ESTADO_COLORS, GESTION_ESTADO_LABELS,
+  TRAMITE_ESTADO_COLORS, TRAMITE_ESTADO_LABELS_SHORT as TRAMITE_ESTADO_LABELS,
+  SEMAFORO_COLORS, PRIORIDAD_COLORS,
+} from '../lib/constants/estados';
+import {
   Briefcase, FileText, AlertTriangle, Calendar,
   ChevronRight, Loader2, TrendingUp, Clock
 } from 'lucide-react';
@@ -33,59 +38,6 @@ interface VencimientoRow {
   fecha_vencimiento: string;
   clientes: { razon_social: string } | null;
 }
-
-const GESTION_ESTADO_COLORS: Record<string, string> = {
-  relevamiento: 'bg-purple-100 text-purple-700',
-  en_curso: 'bg-blue-100 text-blue-700',
-  en_espera: 'bg-yellow-100 text-yellow-700',
-  finalizado: 'bg-green-100 text-green-700',
-  archivado: 'bg-slate-100 text-slate-500',
-};
-
-const GESTION_ESTADO_LABELS: Record<string, string> = {
-  relevamiento: 'Relevamiento',
-  en_curso: 'En Curso',
-  en_espera: 'En Espera',
-  finalizado: 'Finalizado',
-  archivado: 'Archivado',
-};
-
-const TRAMITE_ESTADO_COLORS: Record<string, string> = {
-  consulta: 'bg-slate-100 text-slate-600',
-  presupuestado: 'bg-purple-100 text-purple-700',
-  en_curso: 'bg-blue-100 text-blue-700',
-  esperando_cliente: 'bg-yellow-100 text-yellow-700',
-  esperando_organismo: 'bg-orange-100 text-orange-700',
-  observado: 'bg-red-100 text-red-700',
-  aprobado: 'bg-green-100 text-green-700',
-  rechazado: 'bg-red-100 text-red-700',
-  vencido: 'bg-red-100 text-red-700',
-};
-
-const TRAMITE_ESTADO_LABELS: Record<string, string> = {
-  consulta: 'Consulta',
-  presupuestado: 'Presupuestado',
-  en_curso: 'En Curso',
-  esperando_cliente: 'Esp. Cliente',
-  esperando_organismo: 'Esp. Organismo',
-  observado: 'Observado',
-  aprobado: 'Aprobado',
-  rechazado: 'Rechazado',
-  vencido: 'Vencido',
-};
-
-const SEMAFORO_COLORS: Record<string, string> = {
-  verde: 'bg-green-500',
-  amarillo: 'bg-yellow-400',
-  rojo: 'bg-red-500',
-};
-
-const PRIORIDAD_COLORS: Record<string, string> = {
-  urgente: 'bg-red-500',
-  alta: 'bg-orange-400',
-  normal: 'bg-blue-400',
-  baja: 'bg-slate-300',
-};
 
 export default function DashboardV2({ onNavigate }: Props) {
   const [stats, setStats] = useState({

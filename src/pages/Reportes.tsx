@@ -1,16 +1,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { TRAMITE_ESTADO_LABELS as ESTADO_LABELS } from '../lib/constants/estados';
 import { Download, ArrowLeft, TrendingUp, CheckCircle, Clock } from 'lucide-react';
 
 interface Props {
   onBack: () => void;
 }
-
-const ESTADO_LABELS: Record<string, string> = {
-  consulta: 'Consulta', presupuestado: 'Presupuestado', en_curso: 'En Curso',
-  esperando_cliente: 'Esperando Cliente', esperando_organismo: 'Esperando Organismo',
-  observado: 'Observado', aprobado: 'Aprobado', rechazado: 'Rechazado', vencido: 'Vencido',
-};
 
 const downloadCSV = (csvContent: string, fileName: string) => {
   const BOM = '\uFEFF';

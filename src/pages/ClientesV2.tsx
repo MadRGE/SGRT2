@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase, filterActive } from '../lib/supabase';
+import { PROVINCIAS } from '../lib/constants/enums';
 import { Plus, Search, Users, ChevronRight, Loader2, X, Shield, AlertTriangle } from 'lucide-react';
 
 interface Props {
@@ -167,13 +168,6 @@ export default function ClientesV2({ onNavigate, autoOpen }: Props) {
     </div>
   );
 }
-
-const PROVINCIAS = [
-  'Buenos Aires', 'CABA', 'Catamarca', 'Chaco', 'Chubut', 'Córdoba', 'Corrientes',
-  'Entre Ríos', 'Formosa', 'Jujuy', 'La Pampa', 'La Rioja', 'Mendoza', 'Misiones',
-  'Neuquén', 'Río Negro', 'Salta', 'San Juan', 'San Luis', 'Santa Cruz', 'Santa Fe',
-  'Santiago del Estero', 'Tierra del Fuego', 'Tucumán'
-];
 
 function NuevoClienteModal({ onClose, onCreated }: { onClose: () => void; onCreated: (id: string) => void }) {
   const [form, setForm] = useState({

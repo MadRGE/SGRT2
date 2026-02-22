@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase, filterActive } from '../lib/supabase';
+import { PLATAFORMAS } from '../lib/constants/enums';
 import { ArrowLeft, Loader2, Search, BookOpen, X } from 'lucide-react';
 
 interface Props {
@@ -45,8 +46,6 @@ function mapRow(row: any): TramiteTipo {
     documentacion_obligatoria: row.documentacion_obligatoria || null,
   };
 }
-
-const PLATAFORMAS = ['TAD', 'TADO', 'VUCE', 'SIGSA', 'Otro'];
 
 export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Props) {
   const [gestiones, setGestiones] = useState<Gestion[]>([]);
