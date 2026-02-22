@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import {
   Plus, Trash2, Calculator, TrendingUp, AlertTriangle,
-  DollarSign, Percent, Save, X, Search
+  DollarSign, Save, X, Search
 } from 'lucide-react';
 
 interface Props {

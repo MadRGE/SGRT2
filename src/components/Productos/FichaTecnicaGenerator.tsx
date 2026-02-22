@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useRef } from 'react';
 import { FileText, Download, Printer, X } from 'lucide-react';
 import { EnvasesANMATData } from '../../services/EspecificacionService';
 

@@ -16,7 +16,7 @@ interface Vencimiento {
   clientes: { razon_social: string } | null;
 }
 
-export default function VencimientosV2({ onNavigate }: Props) {
+export default function VencimientosV2(_props: Props) {
   const [vencimientos, setVencimientos] = useState<Vencimiento[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);

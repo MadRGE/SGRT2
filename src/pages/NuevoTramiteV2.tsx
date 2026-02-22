@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase, filterActive } from '../lib/supabase';
+import { PLATAFORMAS } from '../lib/constants/enums';
 import { ArrowLeft, Loader2, Search, BookOpen, X } from 'lucide-react';
 
 interface Props {
@@ -46,8 +47,6 @@ function mapRow(row: any): TramiteTipo {
   };
 }
 
-const PLATAFORMAS = ['TAD', 'TADO', 'VUCE', 'SIGSA', 'Otro'];
-
 export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Props) {
   const [gestiones, setGestiones] = useState<Gestion[]>([]);
   const [catalogo, setCatalogo] = useState<TramiteTipo[]>([]);
@@ -76,7 +75,7 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
     filterActive(supabase.from('gestiones').select('id, nombre, cliente_id, clientes(razon_social)'))
       .not('estado', 'in', '("finalizado","archivado")')
       .order('created_at', { ascending: false })
-      .then(({ data }) => {
+      .then(({ data }: any) => {
         if (data) {
           const mapped = data.map((g: any) => ({
             id: g.id,
@@ -87,7 +86,7 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
           setGestiones(mapped);
           // If gestionId was provided, auto-set cliente_id
           if (gestionId) {
-            const gestion = mapped.find(g => g.id === gestionId);
+            const gestion = mapped.find((g: any) => g.id === gestionId);
             if (gestion) {
               setForm(prev => ({ ...prev, cliente_id: gestion.cliente_id }));
             }
@@ -96,7 +95,7 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
       });
 
     supabase.from('tramite_tipos').select('*').order('nombre')
-      .then(({ data }) => {
+      .then(({ data }: any) => {
         if (data) setCatalogo(data.map(mapRow));
       });
   }, [gestionId]);

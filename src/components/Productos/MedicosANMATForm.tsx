@@ -18,15 +18,6 @@ const CLASE_RIESGO_OPTIONS = [
   { value: 'IV', label: 'Clase IV - Riesgo Crítico', description: 'Soporte vital o críticos' }
 ];
 
-const TIPO_DISPOSITIVO_OPTIONS = [
-  'Activo',
-  'Pasivo',
-  'Implantable',
-  'Diagnóstico in vitro',
-  'Quirúrgico',
-  'Otro'
-];
-
 const CONTACTO_CORPORAL_OPTIONS = [
   { value: 'ninguno', label: 'Sin contacto corporal' },
   { value: 'superficie', label: 'Superficie (piel intacta)' },
@@ -85,28 +76,6 @@ export function MedicosANMATForm({
       normas_aplicables: prev.normas_aplicables.includes(norma)
         ? prev.normas_aplicables.filter(n => n !== norma)
         : [...prev.normas_aplicables, norma]
-    }));
-  };
-
-  const handleMaterialAdd = (material: string) => {
-    if (material.trim() && !especData.caracteristicas_tecnicas.materiales_construccion.includes(material.trim())) {
-      setEspecData(prev => ({
-        ...prev,
-        caracteristicas_tecnicas: {
-          ...prev.caracteristicas_tecnicas,
-          materiales_construccion: [...prev.caracteristicas_tecnicas.materiales_construccion, material.trim()]
-        }
-      }));
-    }
-  };
-
-  const handleMaterialRemove = (material: string) => {
-    setEspecData(prev => ({
-      ...prev,
-      caracteristicas_tecnicas: {
-        ...prev.caracteristicas_tecnicas,
-        materiales_construccion: prev.caracteristicas_tecnicas.materiales_construccion.filter(m => m !== material)
-      }
     }));
   };
 

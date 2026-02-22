@@ -3,14 +3,11 @@ import { supabase } from '../../lib/supabase';
 import {
   Plus,
   Search,
-  Filter,
   Building2,
-  Calendar,
   Clock,
   AlertTriangle,
   CheckCircle,
   FileText,
-  Package,
   ChevronRight,
   RefreshCw
 } from 'lucide-react';

@@ -1,4 +1,3 @@
-import React from 'react';
 import { Phone, Circle } from 'lucide-react';
 import { User } from '../hooks/useLANChat';
 

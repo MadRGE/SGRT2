@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Phone, PhoneOff, PhoneIncoming, Mic, MicOff, Volume2 } from 'lucide-react';
-import { User, CallState } from '../hooks/useLANChat';
+import { CallState } from '../hooks/useLANChat';
 
 interface VoiceCallProps {
   callState: CallState;

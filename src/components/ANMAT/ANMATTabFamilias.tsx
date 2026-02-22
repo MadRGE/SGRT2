@@ -242,11 +242,6 @@ export function ANMATTabFamilias({ casoId }: Props) {
     setShowForm(false);
   };
 
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return '—';
-    return new Date(dateString).toLocaleDateString('es-AR');
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -364,7 +359,6 @@ export function ANMATTabFamilias({ casoId }: Props) {
         <div className="space-y-4">
           {familias.map(familia => {
             const estadoConfig = ESTADOS_FAMILIA[familia.estado] || ESTADOS_FAMILIA.PENDIENTE;
-            const Icon = estadoConfig.icon;
             const isExpanded = expandedFamilia === familia.id;
             const productosEnFamilia = productosDisponibles.filter(p => p.familia_id === familia.id);
 

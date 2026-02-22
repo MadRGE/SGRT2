@@ -1,9 +1,17 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase, softDelete, buildSeguimientoData } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { uploadDocumento, getDocumentoUrl, deleteDocumento, formatFileSize } from '../lib/storage';
+import { formatFileSize } from '../lib/storage';
+import { useDocumentUpload } from '../hooks/useDocumentUpload';
 import { TRAMITE_TRANSITIONS, isTransitionAllowed } from '../lib/estadoTransitions';
+import {
+  TRAMITE_ESTADOS, TRAMITE_ESTADO_LABELS, TRAMITE_ESTADO_COLORS_BORDER,
+  DOC_ESTADO_LABELS, DOC_ESTADO_COLORS, DOC_ESTADO_NEXT,
+  SEMAFORO_OPTIONS, PRIORIDADES,
+} from '../lib/constants/estados';
+import { ORGANISMOS, PLATAFORMAS, RESPONSABLES } from '../lib/constants/enums';
 import { ArrowLeft, Clock, Loader2, Save, Pencil, X, Plus, FileCheck, Trash2, CheckCircle2, AlertCircle, AlertTriangle, Link2, Upload, Download, Paperclip } from 'lucide-react';
+import SeguimientoSection from '../components/Tramite/SeguimientoSection';
 
 interface Props {
   tramiteId: string;
@@ -61,60 +69,6 @@ interface Seguimiento {
   usuario_nombre?: string | null;
 }
 
-const ESTADOS = [
-  'consulta', 'presupuestado', 'en_curso', 'esperando_cliente',
-  'esperando_organismo', 'observado', 'aprobado', 'rechazado', 'vencido'
-];
-
-const ESTADO_LABELS: Record<string, string> = {
-  consulta: 'Consulta', presupuestado: 'Presupuestado', en_curso: 'En Curso',
-  esperando_cliente: 'Esperando Cliente', esperando_organismo: 'Esperando Organismo',
-  observado: 'Observado', aprobado: 'Aprobado', rechazado: 'Rechazado', vencido: 'Vencido',
-};
-
-const ESTADO_COLORS: Record<string, string> = {
-  consulta: 'bg-slate-100 text-slate-700 border-slate-300',
-  presupuestado: 'bg-purple-100 text-purple-700 border-purple-300',
-  en_curso: 'bg-blue-100 text-blue-700 border-blue-300',
-  esperando_cliente: 'bg-yellow-100 text-yellow-700 border-yellow-300',
-  esperando_organismo: 'bg-orange-100 text-orange-700 border-orange-300',
-  observado: 'bg-red-100 text-red-700 border-red-300',
-  aprobado: 'bg-green-100 text-green-700 border-green-300',
-  rechazado: 'bg-red-100 text-red-700 border-red-300',
-  vencido: 'bg-red-100 text-red-700 border-red-300',
-};
-
-const DOC_ESTADO_LABELS: Record<string, string> = {
-  pendiente: 'Pendiente', presentado: 'Presentado', aprobado: 'Aprobado',
-  rechazado: 'Rechazado', vencido: 'Vencido',
-};
-
-const DOC_ESTADO_COLORS: Record<string, string> = {
-  pendiente: 'bg-slate-100 text-slate-600',
-  presentado: 'bg-blue-100 text-blue-700',
-  aprobado: 'bg-green-100 text-green-700',
-  rechazado: 'bg-red-100 text-red-700',
-  vencido: 'bg-orange-100 text-orange-700',
-};
-
-const DOC_ESTADO_NEXT: Record<string, string> = {
-  pendiente: 'presentado',
-  presentado: 'aprobado',
-  aprobado: 'pendiente',
-  rechazado: 'pendiente',
-  vencido: 'pendiente',
-};
-
-const SEMAFORO_OPTIONS = [
-  { value: 'verde', color: 'bg-green-500', ring: 'ring-green-300' },
-  { value: 'amarillo', color: 'bg-yellow-400', ring: 'ring-yellow-300' },
-  { value: 'rojo', color: 'bg-red-500', ring: 'ring-red-300' },
-];
-
-const ORGANISMOS = ['ANMAT', 'INAL', 'SENASA', 'CITES', 'RENPRE', 'ENACOM', 'ANMAC', 'SEDRONAR', 'Aduana', 'Otro'];
-const PLATAFORMAS = ['TAD', 'TADO', 'VUCE', 'SIGSA', 'Otro'];
-const PRIORIDADES = ['baja', 'normal', 'alta', 'urgente'];
-const RESPONSABLES = ['Estudio', 'Cliente', 'Organismo'];
 
 export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
   const { user } = useAuth();
@@ -133,10 +87,15 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
   const [docsCliente, setDocsCliente] = useState<DocCliente[]>([]);
   const [docForm, setDocForm] = useState({ nombre: '', obligatorio: false, responsable: '' });
   const [savingDoc, setSavingDoc] = useState(false);
-  const [uploadingDocId, setUploadingDocId] = useState<string | null>(null);
-  const [uploadError, setUploadError] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const pendingUploadDocId = useRef<string | null>(null);
+
+  const {
+    uploadingDocId, uploadError, setUploadError, fileInputRef,
+    triggerUpload, handleFileSelected, handleDownloadFile, handleRemoveFile,
+  } = useDocumentUpload({
+    storagePath: `tramites/${tramiteId}`,
+    tableName: 'documentos_tramite',
+    onSuccess: () => loadData(),
+  });
 
   useEffect(() => { loadData(); }, [tramiteId]);
 
@@ -206,7 +165,7 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
     setSaveError('');
 
     if (!isTransitionAllowed(TRAMITE_TRANSITIONS, tramite!.estado, nuevoEstado)) {
-      setSaveError(`No se puede cambiar de "${ESTADO_LABELS[tramite!.estado]}" a "${ESTADO_LABELS[nuevoEstado]}"`);
+      setSaveError(`No se puede cambiar de "${TRAMITE_ESTADO_LABELS[tramite!.estado]}" a "${TRAMITE_ESTADO_LABELS[nuevoEstado]}"`);
       return;
     }
 
@@ -220,7 +179,7 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
       setSaveError(error.message || 'Error al cambiar estado. Ejecutá la migración 69.');
     } else {
       await supabase.from('seguimientos').insert(
-        buildSeguimientoData({ tramite_id: tramiteId, descripcion: `Estado cambiado a: ${ESTADO_LABELS[nuevoEstado] || nuevoEstado}` }, user)
+        buildSeguimientoData({ tramite_id: tramiteId, descripcion: `Estado cambiado a: ${TRAMITE_ESTADO_LABELS[nuevoEstado] || nuevoEstado}` }, user)
       );
       loadData();
     }
@@ -389,81 +348,6 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
     }
   };
 
-  const triggerUpload = (docId: string) => {
-    pendingUploadDocId.current = docId;
-    setUploadError('');
-    fileInputRef.current?.click();
-  };
-
-  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    const docId = pendingUploadDocId.current;
-    if (!file || !docId) return;
-    // Reset input so same file can be selected again
-    e.target.value = '';
-
-    setUploadingDocId(docId);
-    setUploadError('');
-
-    const { path, error: uploadErr } = await uploadDocumento(
-      `tramites/${tramiteId}`,
-      file
-    );
-
-    if (uploadErr) {
-      setUploadError(uploadErr);
-      setUploadingDocId(null);
-      return;
-    }
-
-    // Save path to DB
-    const { error: dbErr } = await supabase
-      .from('documentos_tramite')
-      .update({
-        archivo_path: path,
-        archivo_nombre: file.name,
-        archivo_size: file.size,
-      })
-      .eq('id', docId);
-
-    if (dbErr) {
-      // Column might not exist yet
-      if (dbErr.message?.includes('archivo_path') || dbErr.message?.includes('schema cache')) {
-        setUploadError('Ejecute la migracion 73 para habilitar subida de archivos.');
-      } else {
-        setUploadError(dbErr.message || 'Error al guardar referencia del archivo.');
-      }
-      // Clean up uploaded file since we couldn't save reference
-      await deleteDocumento(path);
-    } else {
-      loadData();
-    }
-    setUploadingDocId(null);
-  };
-
-  const handleDownloadFile = async (path: string, nombre: string) => {
-    const url = await getDocumentoUrl(path);
-    if (url) {
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = nombre;
-      a.target = '_blank';
-      a.click();
-    }
-  };
-
-  const handleRemoveFile = async (doc: Documento) => {
-    if (!doc.archivo_path) return;
-    if (!confirm('¿Quitar el archivo adjunto? El registro del documento se mantiene.')) return;
-
-    await deleteDocumento(doc.archivo_path);
-    await supabase
-      .from('documentos_tramite')
-      .update({ archivo_path: null, archivo_nombre: null, archivo_size: null })
-      .eq('id', doc.id);
-    loadData();
-  };
-
   if (loading) {
     return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>;
   }
@@ -563,7 +447,7 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
 
         {/* Estado selector pills */}
         <div className="flex flex-wrap gap-2 mb-4">
-          {ESTADOS.map((e) => {
+          {TRAMITE_ESTADOS.map((e) => {
             const isCurrent = tramite.estado === e;
             const isAllowed = isCurrent || isTransitionAllowed(TRAMITE_TRANSITIONS, tramite.estado, e);
             return (
@@ -573,14 +457,14 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
                 disabled={!isAllowed}
                 className={`text-xs px-3 py-1.5 rounded-full font-medium border transition-all ${
                   isCurrent
-                    ? ESTADO_COLORS[e]
+                    ? TRAMITE_ESTADO_COLORS_BORDER[e]
                     : isAllowed
                     ? 'bg-white text-slate-400 border-slate-200 hover:border-slate-300 cursor-pointer'
                     : 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed opacity-50'
                 }`}
-                title={!isAllowed && !isCurrent ? `No se puede cambiar desde "${ESTADO_LABELS[tramite.estado]}"` : undefined}
+                title={!isAllowed && !isCurrent ? `No se puede cambiar desde "${TRAMITE_ESTADO_LABELS[tramite.estado]}"` : undefined}
               >
-                {ESTADO_LABELS[e]}
+                {TRAMITE_ESTADO_LABELS[e]}
               </button>
             );
           })}
@@ -993,7 +877,7 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
                           <Download className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleRemoveFile(doc)}
+                          onClick={() => doc.archivo_path && handleRemoveFile(doc.id, doc.archivo_path)}
                           className="text-slate-300 hover:text-orange-500 transition-colors p-1"
                           title="Quitar archivo"
                         >
@@ -1045,60 +929,13 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
       </div>
 
       {/* ===== SEGUIMIENTOS CARD ===== */}
-      <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50">
-        <div className="p-4 border-b border-slate-100">
-          <h2 className="font-semibold text-slate-800">Seguimiento</h2>
-        </div>
-
-        {/* Add seguimiento */}
-        <div className="p-4 border-b border-slate-100">
-          <div className="flex gap-2">
-            <input
-              value={nuevoSeguimiento}
-              onChange={(e) => setNuevoSeguimiento(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleAddSeguimiento()}
-              placeholder="Agregar nota de seguimiento..."
-              className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors"
-            />
-            <button
-              onClick={handleAddSeguimiento}
-              disabled={savingSeg || !nuevoSeguimiento.trim()}
-              className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm rounded-lg hover:shadow-lg hover:shadow-blue-500/25 disabled:opacity-50"
-            >
-              {savingSeg ? '...' : 'Agregar'}
-            </button>
-          </div>
-        </div>
-
-        {/* Timeline */}
-        {seguimientos.length === 0 ? (
-          <div className="p-8 text-center text-slate-400">
-            <Clock className="w-8 h-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">Sin seguimientos todavía</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-slate-100/80">
-            {seguimientos.map((s) => (
-              <div key={s.id} className="p-4 flex gap-3">
-                <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0" />
-                <div className="flex-1">
-                  <p className="text-sm text-slate-700">{s.descripcion}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <p className="text-xs text-slate-400">
-                      {new Date(s.created_at).toLocaleString('es-AR', {
-                        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                      })}
-                    </p>
-                    {s.usuario_nombre && (
-                      <span className="text-xs text-slate-400">&middot; {s.usuario_nombre}</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      <SeguimientoSection
+        seguimientos={seguimientos}
+        nuevoSeguimiento={nuevoSeguimiento}
+        setNuevoSeguimiento={setNuevoSeguimiento}
+        savingSeg={savingSeg}
+        onAddSeguimiento={handleAddSeguimiento}
+      />
     </div>
   );
 }

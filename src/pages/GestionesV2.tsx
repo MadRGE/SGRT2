@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
 import { supabase, filterActive } from '../lib/supabase';
+import {
+  GESTION_ESTADO_FILTER_OPTIONS, GESTION_ESTADO_COLORS, GESTION_ESTADO_LABELS,
+} from '../lib/constants/estados';
 import { Briefcase, Plus, Search, ChevronRight, Loader2, AlertTriangle } from 'lucide-react';
+import StatusBadge from '../components/UI/StatusBadge';
 
 interface Props {
   onNavigate: (page: any) => void;
@@ -22,30 +26,6 @@ interface Gestion {
   tramites: TramiteResumen[];
 }
 
-const ESTADOS = [
-  { value: 'todos', label: 'Todos' },
-  { value: 'relevamiento', label: 'Relevamiento' },
-  { value: 'en_curso', label: 'En Curso' },
-  { value: 'en_espera', label: 'En Espera' },
-  { value: 'finalizado', label: 'Finalizado' },
-  { value: 'archivado', label: 'Archivado' },
-];
-
-const ESTADO_COLORS: Record<string, string> = {
-  relevamiento: 'bg-purple-100 text-purple-700',
-  en_curso: 'bg-blue-100 text-blue-700',
-  en_espera: 'bg-yellow-100 text-yellow-700',
-  finalizado: 'bg-green-100 text-green-700',
-  archivado: 'bg-slate-100 text-slate-500',
-};
-
-const ESTADO_LABELS: Record<string, string> = {
-  relevamiento: 'Relevamiento',
-  en_curso: 'En Curso',
-  en_espera: 'En Espera',
-  finalizado: 'Finalizado',
-  archivado: 'Archivado',
-};
 
 function buildProgressSummary(tramites: TramiteResumen[]) {
   const total = tramites.length;
@@ -171,7 +151,7 @@ export default function GestionesV2({ onNavigate }: Props) {
           onChange={(e) => setFiltroEstado(e.target.value)}
           className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors"
         >
-          {ESTADOS.map(e => (
+          {GESTION_ESTADO_FILTER_OPTIONS.map(e => (
             <option key={e.value} value={e.value}>{e.label}</option>
           ))}
         </select>
@@ -267,9 +247,10 @@ export default function GestionesV2({ onNavigate }: Props) {
                 </div>
 
                 {/* Estado badge */}
-                <span className={`text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap ${ESTADO_COLORS[g.estado] || 'bg-slate-100 text-slate-600'}`}>
-                  {ESTADO_LABELS[g.estado] || g.estado}
-                </span>
+                <StatusBadge
+                  label={GESTION_ESTADO_LABELS[g.estado] || g.estado}
+                  colorClass={GESTION_ESTADO_COLORS[g.estado]}
+                />
 
                 <ChevronRight className="w-4 h-4 text-slate-300 flex-shrink-0" />
               </button>

@@ -3,7 +3,6 @@ import { supabase } from '../../lib/supabase';
 import {
   ArrowLeft,
   Building2,
-  Calendar,
   Clock,
   FileText,
   Package,
@@ -431,7 +430,7 @@ export function ANMATCasoDetail({ casoId, onBack }: Props) {
           )}
 
           {activeTab === 'productos' && (
-            <ANMATTabProductos casoId={casoId} divisionId={caso.division?.id} />
+            <ANMATTabProductos casoId={casoId} />
           )}
 
           {activeTab === 'familias' && (

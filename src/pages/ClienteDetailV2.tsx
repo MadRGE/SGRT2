@@ -1,7 +1,20 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase, softDelete } from '../lib/supabase';
-import { uploadDocumento, getDocumentoUrl, deleteDocumento, formatFileSize } from '../lib/storage';
+import { formatFileSize } from '../lib/storage';
+import { useDocumentUpload } from '../hooks/useDocumentUpload';
+import {
+  TRAMITE_ESTADO_LABELS, TRAMITE_ESTADO_COLORS,
+  GESTION_ESTADO_LABELS, GESTION_ESTADO_COLORS,
+  PRIORIDAD_COLORS, DOC_CLIENTE_CATEGORIAS, DOC_CLIENTE_ESTADOS,
+} from '../lib/constants/estados';
+import {
+  PROVINCIAS, REGISTRO_TIPOS, REGISTRO_ESTADOS,
+} from '../lib/constants/enums';
 import { ArrowLeft, Plus, FileText, ChevronRight, Loader2, Pencil, Save, X, Shield, Trash2, Briefcase, FolderOpen, CheckCircle2, AlertTriangle, Eye, Upload, Download, Paperclip, AlertCircle } from 'lucide-react';
+import NuevoRegistroModal from '../components/Cliente/NuevoRegistroModal';
+import NuevoDocClienteModal from '../components/Cliente/NuevoDocClienteModal';
+import type { DocumentoCliente } from '../components/Cliente/NuevoDocClienteModal';
+import StatusBadge from '../components/UI/StatusBadge';
 
 interface Props {
   clienteId: string;
@@ -58,111 +71,6 @@ interface TramiteSuelto {
   fecha_vencimiento: string | null;
 }
 
-interface DocumentoCliente {
-  id: string;
-  nombre: string;
-  categoria: string;
-  estado: string;
-  fecha_emision: string | null;
-  fecha_vencimiento: string | null;
-  notas: string | null;
-  archivo_path: string | null;
-  archivo_nombre: string | null;
-  archivo_size: number | null;
-  created_at: string;
-}
-
-const TRAMITE_ESTADO_LABELS: Record<string, string> = {
-  consulta: 'Consulta', presupuestado: 'Presupuestado', en_curso: 'En Curso',
-  esperando_cliente: 'Esp. Cliente', esperando_organismo: 'Esp. Organismo',
-  observado: 'Observado', aprobado: 'Aprobado', rechazado: 'Rechazado', vencido: 'Vencido',
-};
-
-const TRAMITE_ESTADO_COLORS: Record<string, string> = {
-  consulta: 'bg-slate-100 text-slate-600', presupuestado: 'bg-purple-100 text-purple-700',
-  en_curso: 'bg-blue-100 text-blue-700', esperando_cliente: 'bg-yellow-100 text-yellow-700',
-  esperando_organismo: 'bg-orange-100 text-orange-700', observado: 'bg-red-100 text-red-700',
-  aprobado: 'bg-green-100 text-green-700', rechazado: 'bg-red-100 text-red-700', vencido: 'bg-red-100 text-red-700',
-};
-
-const GESTION_ESTADO_LABELS: Record<string, string> = {
-  relevamiento: 'Relevamiento',
-  en_curso: 'En Curso',
-  en_espera: 'En Espera',
-  finalizado: 'Finalizado',
-  archivado: 'Archivado',
-};
-
-const GESTION_ESTADO_COLORS: Record<string, string> = {
-  relevamiento: 'bg-slate-100 text-slate-600',
-  en_curso: 'bg-blue-100 text-blue-700',
-  en_espera: 'bg-yellow-100 text-yellow-700',
-  finalizado: 'bg-green-100 text-green-700',
-  archivado: 'bg-slate-100 text-slate-500',
-};
-
-const PRIORIDAD_COLORS: Record<string, string> = {
-  urgente: 'bg-red-500',
-  alta: 'bg-orange-400',
-  normal: 'bg-blue-400',
-  baja: 'bg-slate-300',
-};
-
-const DOC_CATEGORIAS = [
-  { value: 'general', label: 'General' },
-  { value: 'societario', label: 'Societario' },
-  { value: 'fiscal', label: 'Fiscal' },
-  { value: 'comercio_exterior', label: 'Comercio Exterior' },
-  { value: 'tecnico', label: 'Tecnico' },
-];
-
-const DOC_ESTADOS = [
-  { value: 'vigente', label: 'Vigente', color: 'bg-green-100 text-green-700' },
-  { value: 'vencido', label: 'Vencido', color: 'bg-red-100 text-red-700' },
-  { value: 'pendiente', label: 'Pendiente', color: 'bg-yellow-100 text-yellow-700' },
-];
-
-const DOCS_COMUNES = [
-  'Constancia de CUIT',
-  'Constancia de Inscripcion AFIP',
-  'Estatuto Social / Contrato Social',
-  'Acta de Directorio',
-  'Poder del representante',
-  'DNI del firmante',
-  'Ultimo balance',
-  'Constancia de domicilio fiscal',
-  'Habilitacion municipal',
-  'Certificado de libre deuda AFIP',
-];
-
-const PROVINCIAS = [
-  'Buenos Aires', 'CABA', 'Catamarca', 'Chaco', 'Chubut', 'Córdoba', 'Corrientes',
-  'Entre Ríos', 'Formosa', 'Jujuy', 'La Pampa', 'La Rioja', 'Mendoza', 'Misiones',
-  'Neuquén', 'Río Negro', 'Salta', 'San Juan', 'San Luis', 'Santa Cruz', 'Santa Fe',
-  'Santiago del Estero', 'Tierra del Fuego', 'Tucumán'
-];
-
-const REGISTRO_TIPOS = [
-  { value: 'RNE', label: 'RNE' },
-  { value: 'RNEE', label: 'RNEE' },
-  { value: 'habilitacion_anmat', label: 'Habilitacion ANMAT' },
-  { value: 'habilitacion_senasa', label: 'Habilitacion SENASA' },
-  { value: 'habilitacion_inal', label: 'Habilitacion INAL' },
-  { value: 'habilitacion_enacom', label: 'Habilitacion ENACOM' },
-  { value: 'habilitacion_cites', label: 'Habilitacion CITES' },
-  { value: 'habilitacion_renpre', label: 'Habilitacion RENPRE' },
-  { value: 'habilitacion_sedronar', label: 'Habilitacion SEDRONAR' },
-  { value: 'habilitacion_anmac', label: 'Habilitacion ANMAC' },
-  { value: 'certificado', label: 'Certificado' },
-  { value: 'otro', label: 'Otro' },
-];
-
-const REGISTRO_ESTADOS = [
-  { value: 'vigente', label: 'Vigente', color: 'bg-green-100 text-green-700' },
-  { value: 'en_tramite', label: 'En Tramite', color: 'bg-blue-100 text-blue-700' },
-  { value: 'vencido', label: 'Vencido', color: 'bg-red-100 text-red-700' },
-  { value: 'suspendido', label: 'Suspendido', color: 'bg-yellow-100 text-yellow-700' },
-];
 
 export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
   const [cliente, setCliente] = useState<Cliente | null>(null);
@@ -177,10 +85,15 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
   const [editForm, setEditForm] = useState<Partial<Cliente>>({});
   const [showRegistroForm, setShowRegistroForm] = useState(false);
   const [showDocClienteForm, setShowDocClienteForm] = useState(false);
-  const [uploadingDocId, setUploadingDocId] = useState<string | null>(null);
-  const [uploadError, setUploadError] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const pendingUploadDocId = useRef<string | null>(null);
+
+  const {
+    uploadingDocId, uploadError, setUploadError, fileInputRef,
+    triggerUpload, handleFileSelected, handleDownloadFile, handleRemoveFile,
+  } = useDocumentUpload({
+    storagePath: `clientes/${clienteId}`,
+    tableName: 'documentos_cliente',
+    onSuccess: () => loadData(),
+  });
 
   useEffect(() => { loadData(); }, [clienteId]);
 
@@ -292,76 +205,6 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
     loadData();
   };
 
-  const triggerUpload = (docId: string) => {
-    pendingUploadDocId.current = docId;
-    setUploadError('');
-    fileInputRef.current?.click();
-  };
-
-  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    const docId = pendingUploadDocId.current;
-    if (!file || !docId) return;
-    e.target.value = '';
-
-    setUploadingDocId(docId);
-    setUploadError('');
-
-    const { path, error: uploadErr } = await uploadDocumento(
-      `clientes/${clienteId}`,
-      file
-    );
-
-    if (uploadErr) {
-      setUploadError(uploadErr);
-      setUploadingDocId(null);
-      return;
-    }
-
-    const { error: dbErr } = await supabase
-      .from('documentos_cliente')
-      .update({
-        archivo_path: path,
-        archivo_nombre: file.name,
-        archivo_size: file.size,
-      })
-      .eq('id', docId);
-
-    if (dbErr) {
-      if (dbErr.message?.includes('archivo_path') || dbErr.message?.includes('schema cache')) {
-        setUploadError('Ejecute la migracion 73 para habilitar subida de archivos.');
-      } else {
-        setUploadError(dbErr.message || 'Error al guardar referencia del archivo.');
-      }
-      await deleteDocumento(path);
-    } else {
-      loadData();
-    }
-    setUploadingDocId(null);
-  };
-
-  const handleDownloadFile = async (path: string, nombre: string) => {
-    const url = await getDocumentoUrl(path);
-    if (url) {
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = nombre;
-      a.target = '_blank';
-      a.click();
-    }
-  };
-
-  const handleRemoveFile = async (doc: DocumentoCliente) => {
-    if (!doc.archivo_path) return;
-    if (!confirm('¿Quitar el archivo adjunto? El registro del documento se mantiene.')) return;
-
-    await deleteDocumento(doc.archivo_path);
-    await supabase
-      .from('documentos_cliente')
-      .update({ archivo_path: null, archivo_nombre: null, archivo_size: null })
-      .eq('id', doc.id);
-    loadData();
-  };
 
   if (loading) {
     return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>;
@@ -641,7 +484,7 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium text-slate-800 truncate">{doc.nombre}</span>
                       <span className="text-[10px] font-medium text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
-                        {DOC_CATEGORIAS.find(c => c.value === doc.categoria)?.label || doc.categoria}
+                        {DOC_CLIENTE_CATEGORIAS.find(c => c.value === doc.categoria)?.label || doc.categoria}
                       </span>
                     </div>
                     <div className="flex items-center gap-3 mt-0.5">
@@ -673,7 +516,7 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
                           <Download className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleRemoveFile(doc)}
+                          onClick={() => doc.archivo_path && handleRemoveFile(doc.id, doc.archivo_path)}
                           className="text-slate-300 hover:text-orange-500 transition-colors p-1"
                           title="Quitar archivo"
                         >
@@ -696,11 +539,11 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
                   <button
                     onClick={() => handleToggleDocEstado(doc)}
                     className={`text-xs font-medium px-2.5 py-1 rounded-full transition-all hover:opacity-80 ${
-                      DOC_ESTADOS.find(e => e.value === doc.estado)?.color || 'bg-slate-100 text-slate-600'
+                      DOC_CLIENTE_ESTADOS.find(e => e.value === doc.estado)?.color || 'bg-slate-100 text-slate-600'
                     }`}
                     title="Click para cambiar estado"
                   >
-                    {DOC_ESTADOS.find(e => e.value === doc.estado)?.label || doc.estado}
+                    {DOC_CLIENTE_ESTADOS.find(e => e.value === doc.estado)?.label || doc.estado}
                   </button>
                   <button onClick={() => handleDeleteDocCliente(doc.id)} className="text-slate-300 hover:text-red-500 transition-colors p-1">
                     <Trash2 className="w-4 h-4" />
@@ -766,9 +609,10 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
                     </div>
                   </div>
 
-                  <span className={`text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap ${GESTION_ESTADO_COLORS[g.estado] || 'bg-slate-100 text-slate-600'}`}>
-                    {GESTION_ESTADO_LABELS[g.estado] || g.estado}
-                  </span>
+                  <StatusBadge
+                    label={GESTION_ESTADO_LABELS[g.estado] || g.estado}
+                    colorClass={GESTION_ESTADO_COLORS[g.estado]}
+                  />
 
                   <ChevronRight className="w-4 h-4 text-slate-300 flex-shrink-0" />
                 </button>
@@ -807,9 +651,10 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
                     )}
                   </div>
                 </div>
-                <span className={`text-xs font-medium px-2 py-1 rounded-full ${TRAMITE_ESTADO_COLORS[t.estado] || 'bg-slate-100'}`}>
-                  {TRAMITE_ESTADO_LABELS[t.estado] || t.estado}
-                </span>
+                <StatusBadge
+                  label={TRAMITE_ESTADO_LABELS[t.estado] || t.estado}
+                  colorClass={TRAMITE_ESTADO_COLORS[t.estado]}
+                />
                 <ChevronRight className="w-4 h-4 text-slate-300" />
               </button>
             ))}
@@ -835,310 +680,6 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
           onCreated={() => { setShowDocClienteForm(false); loadData(); }}
         />
       )}
-    </div>
-  );
-}
-
-function NuevoRegistroModal({ clienteId, onClose, onCreated }: { clienteId: string; onClose: () => void; onCreated: () => void }) {
-  const [form, setForm] = useState({
-    tipo: 'RNE', numero: '', organismo: '', descripcion: '',
-    fecha_emision: '', fecha_vencimiento: '', estado: 'vigente', notas: '',
-  });
-  const [saving, setSaving] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-    const { error } = await supabase.from('registros_cliente').insert({
-      cliente_id: clienteId,
-      tipo: form.tipo,
-      numero: form.numero || null,
-      organismo: form.organismo || null,
-      descripcion: form.descripcion || null,
-      fecha_emision: form.fecha_emision || null,
-      fecha_vencimiento: form.fecha_vencimiento || null,
-      estado: form.estado,
-      notas: form.notas || null,
-    });
-    if (!error) onCreated();
-    setSaving(false);
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-5 border-b border-slate-200">
-          <h2 className="text-lg font-bold text-slate-800">Nuevo Registro / Habilitacion</h2>
-          <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
-        </div>
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Tipo *</label>
-              <select required value={form.tipo} onChange={e => setForm({ ...form, tipo: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors">
-                {REGISTRO_TIPOS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Estado</label>
-              <select value={form.estado} onChange={e => setForm({ ...form, estado: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors">
-                {REGISTRO_ESTADOS.map(e => <option key={e.value} value={e.value}>{e.label}</option>)}
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Numero</label>
-              <input value={form.numero} onChange={e => setForm({ ...form, numero: e.target.value })}
-                placeholder="N. de registro"
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Organismo</label>
-              <input value={form.organismo} onChange={e => setForm({ ...form, organismo: e.target.value })}
-                placeholder="Ej: ANMAT, SENASA..."
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Descripcion</label>
-            <input value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })}
-              placeholder="Ej: Habilitacion para importar cosmeticos"
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Fecha Emision</label>
-              <input type="date" value={form.fecha_emision} onChange={e => setForm({ ...form, fecha_emision: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Fecha Vencimiento</label>
-              <input type="date" value={form.fecha_vencimiento} onChange={e => setForm({ ...form, fecha_vencimiento: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Notas</label>
-            <textarea value={form.notas} onChange={e => setForm({ ...form, notas: e.target.value })} rows={2}
-              placeholder="Observaciones adicionales..."
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
-          </div>
-
-          <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50">Cancelar</button>
-            <button type="submit" disabled={saving}
-              className="px-4 py-2 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:shadow-lg hover:shadow-blue-500/25 disabled:opacity-50">
-              {saving ? 'Guardando...' : 'Crear'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function NuevoDocClienteModal({ clienteId, existingDocs, onClose, onCreated }: {
-  clienteId: string;
-  existingDocs: DocumentoCliente[];
-  onClose: () => void;
-  onCreated: () => void;
-}) {
-  const [form, setForm] = useState({
-    nombre: '', categoria: 'general', estado: 'vigente',
-    fecha_emision: '', fecha_vencimiento: '', notas: '',
-  });
-  const [saving, setSaving] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [formError, setFormError] = useState('');
-
-  const existingNames = existingDocs.map(d => d.nombre.toLowerCase());
-  const sugeridos = DOCS_COMUNES.filter(name => !existingNames.includes(name.toLowerCase()));
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-    setFormError('');
-
-    // Build insert payload
-    const payload: Record<string, any> = {
-      cliente_id: clienteId,
-      nombre: form.nombre,
-      categoria: form.categoria,
-      estado: form.estado,
-      fecha_emision: form.fecha_emision || null,
-      fecha_vencimiento: form.fecha_vencimiento || null,
-      notas: form.notas || null,
-    };
-
-    // Upload file first if selected
-    if (selectedFile) {
-      const { path, error: uploadErr } = await uploadDocumento(
-        `clientes/${clienteId}`,
-        selectedFile
-      );
-      if (uploadErr) {
-        setFormError(uploadErr);
-        setSaving(false);
-        return;
-      }
-      payload.archivo_path = path;
-      payload.archivo_nombre = selectedFile.name;
-      payload.archivo_size = selectedFile.size;
-    }
-
-    const { error } = await supabase.from('documentos_cliente').insert(payload);
-
-    if (error) {
-      // If error is about archivo columns, retry without them
-      if (selectedFile && (error.message?.includes('archivo_path') || error.message?.includes('schema cache'))) {
-        delete payload.archivo_path;
-        delete payload.archivo_nombre;
-        delete payload.archivo_size;
-        const { error: e2 } = await supabase.from('documentos_cliente').insert(payload);
-        if (e2) {
-          setFormError(e2.message || 'Error al crear documento.');
-          setSaving(false);
-          return;
-        }
-        setFormError('Documento creado pero sin archivo. Ejecute migracion 73 para habilitar archivos.');
-        // Still call onCreated after a brief delay so user sees the message
-        setTimeout(onCreated, 1500);
-        setSaving(false);
-        return;
-      }
-      setFormError(error.message || 'Error al crear documento.');
-      setSaving(false);
-      return;
-    }
-    onCreated();
-    setSaving(false);
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-5 border-b border-slate-200">
-          <h2 className="text-lg font-bold text-slate-800">Nuevo Documento del Cliente</h2>
-          <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
-        </div>
-
-        {/* Sugeridos - docs comunes que aun no tiene */}
-        {sugeridos.length > 0 && (
-          <div className="px-5 pt-4">
-            <p className="text-xs font-medium text-slate-500 mb-2">Documentos comunes (click para agregar):</p>
-            <div className="flex flex-wrap gap-1.5">
-              {sugeridos.map(name => (
-                <button
-                  key={name}
-                  onClick={() => setForm({ ...form, nombre: name })}
-                  className={`text-xs px-2.5 py-1 rounded-full border transition-all ${
-                    form.nombre === name
-                      ? 'bg-blue-100 text-blue-700 border-blue-300'
-                      : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-blue-300 hover:text-blue-600'
-                  }`}
-                >
-                  {name}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Nombre del documento *</label>
-            <input required value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })}
-              placeholder="Ej: Constancia de CUIT"
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Categoria</label>
-              <select value={form.categoria} onChange={e => setForm({ ...form, categoria: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors">
-                {DOC_CATEGORIAS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Estado</label>
-              <select value={form.estado} onChange={e => setForm({ ...form, estado: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors">
-                {DOC_ESTADOS.map(e => <option key={e.value} value={e.value}>{e.label}</option>)}
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Fecha Emision</label>
-              <input type="date" value={form.fecha_emision} onChange={e => setForm({ ...form, fecha_emision: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Fecha Vencimiento</label>
-              <input type="date" value={form.fecha_vencimiento} onChange={e => setForm({ ...form, fecha_vencimiento: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
-            </div>
-          </div>
-
-          {/* File attachment */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Archivo adjunto</label>
-            <div className="flex items-center gap-3">
-              <label className="flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm cursor-pointer hover:bg-slate-100 transition-colors">
-                <Upload className="w-4 h-4 text-slate-500" />
-                <span className="text-slate-600">{selectedFile ? 'Cambiar archivo' : 'Seleccionar archivo'}</span>
-                <input
-                  type="file"
-                  className="hidden"
-                  accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.webp,.txt,.zip,.rar"
-                  onChange={e => setSelectedFile(e.target.files?.[0] || null)}
-                />
-              </label>
-              {selectedFile && (
-                <div className="flex items-center gap-2 text-sm text-slate-600">
-                  <Paperclip className="w-3.5 h-3.5" />
-                  <span className="truncate max-w-[200px]">{selectedFile.name}</span>
-                  <span className="text-xs text-slate-400">({formatFileSize(selectedFile.size)})</span>
-                  <button type="button" onClick={() => setSelectedFile(null)} className="text-slate-400 hover:text-red-500">
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Notas</label>
-            <textarea value={form.notas} onChange={e => setForm({ ...form, notas: e.target.value })} rows={2}
-              placeholder="Observaciones..."
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors" />
-          </div>
-
-          {formError && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              {formError}
-            </div>
-          )}
-
-          <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50">Cancelar</button>
-            <button type="submit" disabled={saving}
-              className="px-4 py-2 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:shadow-lg hover:shadow-blue-500/25 disabled:opacity-50">
-              {saving ? <><Loader2 className="w-4 h-4 inline mr-1 animate-spin" /> Subiendo...</> : 'Crear'}
-            </button>
-          </div>
-        </form>
-      </div>
     </div>
   );
 }

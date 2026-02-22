@@ -1,14 +1,13 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import type { Database } from './database.types';
+import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const supabaseConfigured = !!(supabaseUrl && supabaseAnonKey);
 
-export const supabase: SupabaseClient<Database> = supabaseConfigured
-  ? createClient<Database>(supabaseUrl, supabaseAnonKey)
-  : createClient<Database>('https://placeholder.supabase.co', 'placeholder');
+export const supabase = supabaseConfigured
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : createClient('https://placeholder.supabase.co', 'placeholder');
 
 // Soft-delete support: detecta si la columna deleted_at existe
 let _softDeleteReady: boolean | null = null;
@@ -30,7 +29,7 @@ export async function checkSoftDelete(): Promise<boolean> {
 }
 
 // Aplica filtro deleted_at solo si la columna existe
-export function filterActive<T>(query: any): any {
+export function filterActive(query: any): any {
   if (_softDeleteReady) {
     return query.is('deleted_at', null);
   }

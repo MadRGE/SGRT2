@@ -3,10 +3,16 @@ import { supabase, softDelete, buildSeguimientoData } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { GESTION_TRANSITIONS, isTransitionAllowed } from '../lib/estadoTransitions';
 import {
+  GESTION_ESTADOS, GESTION_ESTADO_LABELS, GESTION_ESTADO_COLORS_BORDER,
+  TRAMITE_ESTADO_LABELS_SHORT as TRAMITE_ESTADO_LABELS, TRAMITE_ESTADO_COLORS,
+  SEMAFORO_COLORS, PRIORIDADES,
+} from '../lib/constants/estados';
+import {
   ArrowLeft, Plus, FileText, ChevronRight, Loader2, Pencil, Save, X,
-  FolderOpen, BarChart3, Receipt, AlertTriangle, Clock, CheckCircle2,
+  FolderOpen, BarChart3, Receipt, AlertTriangle, Clock,
   MessageSquare, Phone, Mail, FileCheck, Send, Trash2
 } from 'lucide-react';
+import StatusBadge from '../components/UI/StatusBadge';
 
 interface Props {
   gestionId: string;
@@ -55,39 +61,6 @@ interface Seguimiento {
   usuario_nombre?: string | null;
 }
 
-const ESTADOS = ['relevamiento', 'en_curso', 'en_espera', 'finalizado', 'archivado'];
-
-const ESTADO_LABELS: Record<string, string> = {
-  relevamiento: 'Relevamiento', en_curso: 'En Curso', en_espera: 'En Espera',
-  finalizado: 'Finalizado', archivado: 'Archivado',
-};
-
-const ESTADO_COLORS: Record<string, string> = {
-  relevamiento: 'bg-purple-100 text-purple-700 border-purple-300',
-  en_curso: 'bg-blue-100 text-blue-700 border-blue-300',
-  en_espera: 'bg-yellow-100 text-yellow-700 border-yellow-300',
-  finalizado: 'bg-green-100 text-green-700 border-green-300',
-  archivado: 'bg-slate-100 text-slate-700 border-slate-300',
-};
-
-const PRIORIDADES = ['baja', 'normal', 'alta', 'urgente'];
-
-const TRAMITE_ESTADO_LABELS: Record<string, string> = {
-  consulta: 'Consulta', presupuestado: 'Presupuestado', en_curso: 'En Curso',
-  esperando_cliente: 'Esp. Cliente', esperando_organismo: 'Esp. Organismo',
-  observado: 'Observado', aprobado: 'Aprobado', rechazado: 'Rechazado', vencido: 'Vencido',
-};
-
-const TRAMITE_ESTADO_COLORS: Record<string, string> = {
-  consulta: 'bg-slate-100 text-slate-600', presupuestado: 'bg-purple-100 text-purple-700',
-  en_curso: 'bg-blue-100 text-blue-700', esperando_cliente: 'bg-yellow-100 text-yellow-700',
-  esperando_organismo: 'bg-orange-100 text-orange-700', observado: 'bg-red-100 text-red-700',
-  aprobado: 'bg-green-100 text-green-700', rechazado: 'bg-red-100 text-red-700', vencido: 'bg-red-100 text-red-700',
-};
-
-const SEMAFORO_COLORS: Record<string, string> = {
-  verde: 'bg-green-500', amarillo: 'bg-yellow-400', rojo: 'bg-red-500',
-};
 
 const TIPO_SEGUIMIENTO = [
   { value: 'nota', label: 'Nota', icon: MessageSquare },
@@ -174,7 +147,7 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
     setSaveError('');
 
     if (!isTransitionAllowed(GESTION_TRANSITIONS, gestion!.estado, nuevoEstado)) {
-      setSaveError(`No se puede cambiar de "${ESTADO_LABELS[gestion!.estado]}" a "${ESTADO_LABELS[nuevoEstado]}"`);
+      setSaveError(`No se puede cambiar de "${GESTION_ESTADO_LABELS[gestion!.estado]}" a "${GESTION_ESTADO_LABELS[nuevoEstado]}"`);
       return;
     }
 
@@ -188,7 +161,7 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
       setSaveError(error.message || 'Error al cambiar estado');
     } else {
       await supabase.from('seguimientos').insert(
-        buildSeguimientoData({ gestion_id: gestionId, descripcion: `Estado cambiado a: ${ESTADO_LABELS[nuevoEstado] || nuevoEstado}`, tipo: 'nota' }, user)
+        buildSeguimientoData({ gestion_id: gestionId, descripcion: `Estado cambiado a: ${GESTION_ESTADO_LABELS[nuevoEstado] || nuevoEstado}`, tipo: 'nota' }, user)
       );
       loadData();
     }
@@ -351,7 +324,7 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
 
         {/* Estado selector pills */}
         <div className="flex flex-wrap gap-2 mb-4">
-          {ESTADOS.map(e => {
+          {GESTION_ESTADOS.map(e => {
             const isCurrent = gestion.estado === e;
             const isAllowed = isCurrent || isTransitionAllowed(GESTION_TRANSITIONS, gestion.estado, e);
             return (
@@ -361,14 +334,14 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
                 disabled={!isAllowed}
                 className={`text-xs px-3 py-1.5 rounded-full font-medium border transition-all ${
                   isCurrent
-                    ? ESTADO_COLORS[e]
+                    ? GESTION_ESTADO_COLORS_BORDER[e]
                     : isAllowed
                     ? 'bg-white text-slate-400 border-slate-200 hover:border-slate-300 cursor-pointer'
                     : 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed opacity-50'
                 }`}
-                title={!isAllowed && !isCurrent ? `No se puede cambiar desde "${ESTADO_LABELS[gestion.estado]}"` : undefined}
+                title={!isAllowed && !isCurrent ? `No se puede cambiar desde "${GESTION_ESTADO_LABELS[gestion.estado]}"` : undefined}
               >
-                {ESTADO_LABELS[e]}
+                {GESTION_ESTADO_LABELS[e]}
               </button>
             );
           })}
@@ -594,9 +567,10 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
                         </div>
                       </div>
 
-                      <span className={`text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap ${TRAMITE_ESTADO_COLORS[t.estado] || 'bg-slate-100'}`}>
-                        {TRAMITE_ESTADO_LABELS[t.estado] || t.estado}
-                      </span>
+                      <StatusBadge
+                        label={TRAMITE_ESTADO_LABELS[t.estado] || t.estado}
+                        colorClass={TRAMITE_ESTADO_COLORS[t.estado]}
+                      />
 
                       <ChevronRight className="w-4 h-4 text-slate-300 flex-shrink-0" />
                     </button>

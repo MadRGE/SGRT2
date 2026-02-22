@@ -94,7 +94,7 @@ export default function Cotizaciones({ onBack, onConvertirProyecto }: Props) {
     setLoading(false);
   };
 
-  const handleGuardarCotizacion = async (cotizacionId: string) => {
+  const handleGuardarCotizacion = async (_cotizacionId: string) => {
     setVistaActual('lista');
     setCotizacionEditando(undefined);
     await loadCotizaciones();

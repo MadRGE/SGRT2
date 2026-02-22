@@ -112,7 +112,7 @@ export function ChatArea({
             </div>
 
             {/* Mensajes del grupo */}
-            {group.messages.map((msg, msgIndex) => {
+            {group.messages.map((msg, _) => {
               const isSystem = msg.from.id === 0;
               const isOwn = msg.from.id === currentUserId;
 

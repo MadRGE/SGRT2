@@ -1,28 +1,20 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import {
+  TRAMITE_ESTADO_LABELS_SHORT as ESTADO_LABELS,
+  TRAMITE_ESTADO_COLORS as ESTADO_COLORS,
+} from '../lib/constants/estados';
+import {
   DollarSign, FileText, TrendingUp, Landmark, Users, ArrowLeft, Loader2
 } from 'lucide-react';
 import GestionFacturacion from './Finanzas/GestionFacturacion';
 import GestionProveedores from './Finanzas/GestionProveedores';
+import StatusBadge from '../components/UI/StatusBadge';
 
 interface Props {
   onBack: () => void;
   onViewProyecto: (proyectoId: string) => void;
 }
-
-const ESTADO_LABELS: Record<string, string> = {
-  consulta: 'Consulta', presupuestado: 'Presupuestado', en_curso: 'En Curso',
-  esperando_cliente: 'Esp. Cliente', esperando_organismo: 'Esp. Organismo',
-  observado: 'Observado', aprobado: 'Aprobado', rechazado: 'Rechazado', vencido: 'Vencido',
-};
-
-const ESTADO_COLORS: Record<string, string> = {
-  consulta: 'bg-slate-100 text-slate-700', presupuestado: 'bg-purple-100 text-purple-700',
-  en_curso: 'bg-blue-100 text-blue-700', esperando_cliente: 'bg-yellow-100 text-yellow-700',
-  esperando_organismo: 'bg-orange-100 text-orange-700', observado: 'bg-red-100 text-red-700',
-  aprobado: 'bg-green-100 text-green-700', rechazado: 'bg-red-100 text-red-700', vencido: 'bg-red-100 text-red-700',
-};
 
 export default function ModuloFinancieroContable({ onBack, onViewProyecto }: Props) {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'presupuestos' | 'facturacion' | 'proveedores'>('dashboard');
@@ -251,7 +243,7 @@ function GestionPresupuestos({ onNavigate }: { onNavigate: (id: string) => void 
       .not('monto_presupuesto', 'is', null)
       .order('created_at', { ascending: false });
 
-    if (data) setTramites(data as TramitePresupuesto[]);
+    if (data) setTramites(data as unknown as TramitePresupuesto[]);
     setLoading(false);
   };
 
@@ -310,9 +302,10 @@ function GestionPresupuestos({ onNavigate }: { onNavigate: (id: string) => void 
                   {t.clientes?.razon_social || 'N/A'}
                 </td>
                 <td className="p-3">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${ESTADO_COLORS[t.estado] || 'bg-slate-100 text-slate-700'}`}>
-                    {ESTADO_LABELS[t.estado] || t.estado}
-                  </span>
+                  <StatusBadge
+                    label={ESTADO_LABELS[t.estado] || t.estado}
+                    colorClass={ESTADO_COLORS[t.estado]}
+                  />
                 </td>
                 <td className="p-3 text-right font-semibold text-slate-800">
                   ${t.monto_presupuesto.toLocaleString('es-AR')}

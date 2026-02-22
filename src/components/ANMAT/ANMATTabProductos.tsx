@@ -6,15 +6,11 @@ import {
   Edit,
   Trash2,
   CheckCircle,
-  XCircle,
-  Image,
-  FileText,
-  MoreVertical
+  FileText
 } from 'lucide-react';
 
 interface Props {
   casoId: string;
-  divisionId?: string;
 }
 
 interface Producto {
@@ -42,7 +38,7 @@ interface Producto {
   } | null;
 }
 
-export function ANMATTabProductos({ casoId, divisionId }: Props) {
+export function ANMATTabProductos({ casoId }: Props) {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -470,12 +466,12 @@ export function ANMATTabProductos({ casoId, divisionId }: Props) {
                   <td className="px-4 py-4">
                     <div className="flex items-center justify-center gap-2">
                       {producto.tiene_ficha_tecnica ? (
-                        <FileText className="w-4 h-4 text-green-500" title="Ficha técnica" />
+                        <FileText className="w-4 h-4 text-green-500" />
                       ) : (
                         <FileText className="w-4 h-4 text-slate-300" />
                       )}
                       {producto.tiene_certificaciones ? (
-                        <CheckCircle className="w-4 h-4 text-green-500" title="Certificaciones" />
+                        <CheckCircle className="w-4 h-4 text-green-500" />
                       ) : (
                         <CheckCircle className="w-4 h-4 text-slate-300" />
                       )}
