@@ -1,6 +1,6 @@
 import { getApiKey as getStoredApiKey } from './apiKeys';
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
 function getApiKey(): string {
   const key = getStoredApiKey('GEMINI');
