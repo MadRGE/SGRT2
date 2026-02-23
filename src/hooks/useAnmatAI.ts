@@ -106,6 +106,15 @@ export function useAnmatAI(): UseAnmatAIReturn {
 
       if (!response.ok) {
         const errText = await response.text();
+        if (response.status === 401) {
+          throw new Error('API key de DeepSeek inválida o expirada. Revisá la clave en Configuración > API Keys, o verificá la variable VITE_DEEPSEEK_API_KEY en Vercel.');
+        }
+        if (response.status === 402) {
+          throw new Error('Saldo insuficiente en la cuenta de DeepSeek. Recargá créditos en platform.deepseek.com.');
+        }
+        if (response.status === 429) {
+          throw new Error('Demasiadas solicitudes a DeepSeek. Esperá unos segundos e intentá de nuevo.');
+        }
         throw new Error(`Error DeepSeek (${response.status}): ${errText}`);
       }
 

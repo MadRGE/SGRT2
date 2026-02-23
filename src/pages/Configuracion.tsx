@@ -311,7 +311,7 @@ function ApiKeysSection() {
             <p className="text-green-600 text-xs mt-1">Conexión exitosa</p>
           )}
           {testResults.deepseek === 'error' && (
-            <p className="text-red-600 text-xs mt-1">Key inválida o sin permisos</p>
+            <p className="text-red-600 text-xs mt-1">Key inválida, expirada o sin saldo. Verificá en platform.deepseek.com</p>
           )}
         </div>
       </div>
