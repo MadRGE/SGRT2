@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, Bot, User, Loader2, Trash2, AlertCircle, Settings, Sparkles } from 'lucide-react';
-import { sendChat, isDeepSeekAvailable, type ChatMessage } from '../lib/deepseek';
+import { sendChat, isAnthropicAvailable, type ChatMessage } from '../lib/anthropic';
 
 interface Props {
   onNavigate: (page: any) => void;
@@ -28,7 +28,7 @@ export default function AsistenteIA({ onNavigate }: Props) {
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const available = isDeepSeekAvailable();
+  const available = isAnthropicAvailable();
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -86,7 +86,7 @@ export default function AsistenteIA({ onNavigate }: Props) {
       setMessages((prev) => [...prev, assistantMsg]);
       setStreamingText('');
     } catch (err: any) {
-      setError(err.message || 'Error al comunicarse con DeepSeek.');
+      setError(err.message || 'Error al comunicarse con Claude.');
     } finally {
       setIsLoading(false);
     }
@@ -142,7 +142,7 @@ export default function AsistenteIA({ onNavigate }: Props) {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Asistente IA</h1>
-            <p className="text-sm text-slate-500 mt-1">Asistente regulatorio con DeepSeek</p>
+            <p className="text-sm text-slate-500 mt-1">Asistente regulatorio con Claude</p>
           </div>
         </div>
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center">
@@ -151,7 +151,7 @@ export default function AsistenteIA({ onNavigate }: Props) {
           </div>
           <h2 className="text-lg font-semibold text-slate-800 mb-2">API Key no configurada</h2>
           <p className="text-sm text-slate-500 mb-6 max-w-md mx-auto">
-            Para usar el Asistente IA necesitás configurar tu clave de API de DeepSeek en la sección de configuración.
+            Para usar el Asistente IA necesitás configurar tu clave de API de Anthropic (Claude) en la sección de configuración.
           </p>
           <button
             onClick={() => onNavigate({ type: 'configuracion' })}
@@ -175,7 +175,7 @@ export default function AsistenteIA({ onNavigate }: Props) {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Asistente IA</h1>
-            <p className="text-xs text-slate-500">Regulación sanitaria ANMAT &middot; DeepSeek</p>
+            <p className="text-xs text-slate-500">Regulación sanitaria ANMAT &middot; Claude</p>
           </div>
         </div>
         {messages.length > 0 && (
@@ -316,7 +316,7 @@ export default function AsistenteIA({ onNavigate }: Props) {
             </button>
           </div>
           <p className="text-[10px] text-slate-400 mt-2 text-center">
-            DeepSeek puede cometer errores. Verificá siempre la normativa vigente en fuentes oficiales.
+            Claude puede cometer errores. Verificá siempre la normativa vigente en fuentes oficiales.
           </p>
         </div>
       </div>
