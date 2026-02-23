@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Factory, Sparkles, X, Copy, Check, StopCircle, RotateCcw } from 'lucide-react';
+import { Factory, Sparkles, X, Copy, Check, StopCircle, RotateCcw, Download } from 'lucide-react';
 import { useAnmatAI } from '../../hooks/useAnmatAI';
+import { downloadDocx } from '../../lib/markdownToDocx';
 
 const TIPOS_ESTABLECIMIENTO = [
   'Fábrica de alimentos',
@@ -222,9 +223,19 @@ export function HerramientaBPM() {
                 </button>
               )}
               {output && !loading && (
-                <button onClick={handleCopy} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500" title="Copiar">
-                  {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-                </button>
+                <>
+                  <button
+                    onClick={() => downloadDocx(output, `BPM_RNE_${form.razonSocial || 'Documento'}`.replace(/\s+/g, '_'))}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 shadow-sm"
+                    title="Descargar Word"
+                  >
+                    <Download className="w-4 h-4" />
+                    Word
+                  </button>
+                  <button onClick={handleCopy} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500" title="Copiar">
+                    {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                  </button>
+                </>
               )}
               <button onClick={handleReset} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500" title="Nuevo documento">
                 <RotateCcw className="w-4 h-4" />

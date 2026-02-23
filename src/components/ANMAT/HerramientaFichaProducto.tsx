@@ -1,7 +1,8 @@
 import { useState, useRef } from 'react';
-import { ClipboardList, Sparkles, X, Copy, Check, StopCircle, RotateCcw, Upload, Loader2, Camera, MessageSquare, Send, ChevronDown, ChevronUp } from 'lucide-react';
+import { ClipboardList, Sparkles, X, Copy, Check, StopCircle, RotateCcw, Upload, Loader2, Camera, MessageSquare, Send, ChevronDown, ChevronUp, Download } from 'lucide-react';
 import { useAnmatAI } from '../../hooks/useAnmatAI';
 import { analyzeProductImages, chatWithImages, isGeminiAvailable } from '../../lib/geminiVision';
+import { downloadDocx } from '../../lib/markdownToDocx';
 
 const CLASIFICACIONES = [
   'Alimento',
@@ -442,9 +443,19 @@ export function HerramientaFichaProducto() {
                 </button>
               )}
               {output && !loading && (
-                <button onClick={handleCopy} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500" title="Copiar">
-                  {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-                </button>
+                <>
+                  <button
+                    onClick={() => downloadDocx(output, `Ficha_Tecnica_${form.nombre || 'Producto'}`.replace(/\s+/g, '_'))}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm"
+                    title="Descargar Word"
+                  >
+                    <Download className="w-4 h-4" />
+                    Word
+                  </button>
+                  <button onClick={handleCopy} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500" title="Copiar">
+                    {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                  </button>
+                </>
               )}
               <button onClick={handleReset} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500" title="Nueva ficha">
                 <RotateCcw className="w-4 h-4" />
