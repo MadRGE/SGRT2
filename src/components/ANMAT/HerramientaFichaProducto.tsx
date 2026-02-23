@@ -1,5 +1,7 @@
 import { useState, useRef } from 'react';
-import { ClipboardList, Sparkles, X, Copy, Check, StopCircle, RotateCcw, Upload, Loader2, Camera, MessageSquare, Send, ChevronDown, ChevronUp, Download } from 'lucide-react';
+import { ClipboardList, Sparkles, X, Copy, Check, StopCircle, RotateCcw, Upload, Loader2, Camera, MessageSquare, Send, ChevronDown, ChevronUp, Download, FileText, Eye } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useAnmatAI } from '../../hooks/useAnmatAI';
 import { analyzeProductImages, chatWithImages, isGeminiAvailable } from '../../lib/geminiVision';
 import { downloadDocx } from '../../lib/markdownToDocx';
@@ -423,44 +425,39 @@ export function HerramientaFichaProducto() {
         </>
       ) : (
         <>
-          {/* Result view */}
+          {/* Result header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-lg flex items-center justify-center">
                 <ClipboardList className="w-5 h-5 text-white" />
               </div>
-              <h3 className="font-bold text-slate-800">Ficha de Producto</h3>
-              {loading && (
-                <span className="text-xs font-medium px-2 py-1 rounded-full bg-blue-100 text-blue-700 animate-pulse">
-                  Generando...
-                </span>
-              )}
+              <div>
+                <h3 className="font-bold text-slate-800">Ficha de Producto</h3>
+                {loading && (
+                  <p className="text-xs text-blue-600 animate-pulse flex items-center gap-1 mt-0.5">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Generando documento...
+                  </p>
+                )}
+                {output && !loading && (
+                  <p className="text-xs text-green-600 flex items-center gap-1 mt-0.5">
+                    <Check className="w-3 h-3" />
+                    Documento generado — descargá o copiá
+                  </p>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-2">
               {loading && (
-                <button onClick={cancel} className="p-2 hover:bg-red-50 rounded-lg text-red-500" title="Detener">
+                <button onClick={cancel} className="px-3 py-1.5 text-sm text-red-600 border border-red-200 rounded-lg hover:bg-red-50 flex items-center gap-1.5" title="Detener">
                   <StopCircle className="w-4 h-4" />
+                  Detener
                 </button>
               )}
-              {output && !loading && (
-                <>
-                  <button
-                    onClick={() => downloadDocx(output, `Ficha_Tecnica_${form.nombre || 'Producto'}`.replace(/\s+/g, '_'))}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm"
-                    title="Descargar Word"
-                  >
-                    <Download className="w-4 h-4" />
-                    Word
-                  </button>
-                  <button onClick={handleCopy} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500" title="Copiar">
-                    {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-                  </button>
-                </>
-              )}
-              <button onClick={handleReset} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500" title="Nueva ficha">
+              <button onClick={handleReset} className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600" title="Nueva ficha">
                 <RotateCcw className="w-4 h-4" />
               </button>
-              <button onClick={handleReset} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500" title="Cerrar">
+              <button onClick={handleReset} className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600" title="Cerrar">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -473,9 +470,44 @@ export function HerramientaFichaProducto() {
           )}
 
           {output && (
-            <div className="bg-white border border-slate-200 rounded-xl p-6 prose prose-sm prose-slate max-w-none overflow-auto max-h-[70vh] whitespace-pre-wrap">
-              {output}
-            </div>
+            <>
+              {/* Action buttons */}
+              {!loading && (
+                <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-xl">
+                  <button
+                    onClick={() => downloadDocx(output, `Ficha_Tecnica_${form.nombre || 'Producto'}`.replace(/\s+/g, '_'))}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg font-semibold text-sm hover:bg-blue-700 shadow-md shadow-blue-500/20 transition-all"
+                  >
+                    <Download className="w-4 h-4" />
+                    Descargar Word (.docx)
+                  </button>
+                  <button
+                    onClick={handleCopy}
+                    className="flex items-center gap-2 px-4 py-2.5 border border-slate-300 bg-white text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-all"
+                  >
+                    {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                    {copied ? 'Copiado' : 'Copiar texto'}
+                  </button>
+                </div>
+              )}
+
+              {/* Document preview */}
+              <div className="border border-slate-200 rounded-xl overflow-hidden">
+                <div className="bg-slate-50 border-b border-slate-200 px-4 py-2 flex items-center gap-2">
+                  <Eye className="w-4 h-4 text-slate-400" />
+                  <span className="text-xs font-medium text-slate-500">Vista previa del documento</span>
+                </div>
+                <div className="bg-white p-8 overflow-auto max-h-[70vh] prose prose-sm prose-slate max-w-none
+                  prose-headings:text-slate-800 prose-h1:text-xl prose-h1:text-center prose-h1:border-b prose-h1:pb-3 prose-h1:mb-4
+                  prose-h2:text-lg prose-h2:mt-6 prose-h3:text-base
+                  prose-table:border-collapse prose-th:bg-slate-100 prose-th:border prose-th:border-slate-300 prose-th:px-3 prose-th:py-2 prose-th:text-left prose-th:text-xs prose-th:font-semibold
+                  prose-td:border prose-td:border-slate-200 prose-td:px-3 prose-td:py-2 prose-td:text-sm
+                  prose-strong:text-slate-800 prose-p:text-slate-600 prose-li:text-slate-600"
+                >
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{output}</ReactMarkdown>
+                </div>
+              </div>
+            </>
           )}
         </>
       )}
