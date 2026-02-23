@@ -28,6 +28,7 @@ import Notificaciones from './pages/Notificaciones/Notificaciones';
 import ModuloFinancieroContable from './pages/ModuloFinancieroContable';
 import GestionUsuarios from './pages/Admin/GestionUsuarios';
 import CotizacionViewPublica from './components/CotizacionViewPublica';
+import ANMATPage from './pages/ANMATPage';
 
 function AppContent() {
   const [page, setPage] = useState<Page>(() => {
@@ -58,6 +59,7 @@ function AppContent() {
       case 'notificaciones': return 'notificaciones' as const;
       case 'finanzas': return 'finanzas' as const;
       case 'usuarios': return 'usuarios' as const;
+      case 'anmat': return 'anmat' as const;
       default: return 'dashboard' as const;
     }
   };
@@ -96,6 +98,7 @@ function AppContent() {
         />
       )}
       {page.type === 'usuarios' && <GestionUsuarios onBack={() => navigate({ type: 'dashboard' })} />}
+      {page.type === 'anmat' && <ANMATPage />}
     </Layout>
   );
 }

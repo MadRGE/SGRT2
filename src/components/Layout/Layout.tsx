@@ -25,9 +25,10 @@ export type Page =
   | { type: 'cotizacion-publica'; urlPublica: string }
   | { type: 'notificaciones' }
   | { type: 'finanzas' }
-  | { type: 'usuarios' };
+  | { type: 'usuarios' }
+  | { type: 'anmat' };
 
-type NavPage = 'dashboard' | 'clientes' | 'gestiones' | 'tramites' | 'vencimientos' | 'precios' | 'papelera' | 'catalogo' | 'reportes' | 'configuracion' | 'cotizaciones' | 'notificaciones' | 'finanzas' | 'usuarios';
+type NavPage = 'dashboard' | 'clientes' | 'gestiones' | 'tramites' | 'vencimientos' | 'precios' | 'papelera' | 'catalogo' | 'reportes' | 'configuracion' | 'cotizaciones' | 'notificaciones' | 'finanzas' | 'usuarios' | 'anmat';
 
 interface LayoutProps {
   children: ReactNode;
@@ -44,6 +45,7 @@ const NAV_SECTIONS: NavSection[] = [
       { nav: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
       { nav: 'gestiones', label: 'Gestiones', icon: Briefcase },
       { nav: 'tramites', label: 'Trámites', icon: FileText },
+      { nav: 'anmat', label: 'ANMAT', icon: Shield },
       { nav: 'clientes', label: 'Clientes', icon: Users },
       { nav: 'cotizaciones', label: 'Cotizaciones', icon: DollarSign },
       { nav: 'vencimientos', label: 'Vencimientos', icon: Calendar },
