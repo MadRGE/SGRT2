@@ -1,13 +1,15 @@
+import { getApiKey as getStoredApiKey } from './apiKeys';
+
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
 function getApiKey(): string {
-  const key = import.meta.env.VITE_GEMINI_API_KEY;
-  if (!key) throw new Error('El análisis de imágenes con IA no está disponible. Contactá al administrador para configurar la clave de Gemini.');
+  const key = getStoredApiKey('GEMINI');
+  if (!key) throw new Error('El análisis de imágenes con IA no está disponible. Configurá la clave de Gemini en Configuración > API Keys.');
   return key;
 }
 
 export function isGeminiAvailable(): boolean {
-  return !!import.meta.env.VITE_GEMINI_API_KEY;
+  return !!getStoredApiKey('GEMINI');
 }
 
 export interface ProductData {
