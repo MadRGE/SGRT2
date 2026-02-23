@@ -26,7 +26,8 @@ export type Page =
   | { type: 'notificaciones' }
   | { type: 'finanzas' }
   | { type: 'usuarios' }
-  | { type: 'anmat' };
+  | { type: 'anmat' }
+  | { type: 'legal'; section?: 'terms' | 'privacy' | 'confidentiality' };
 
 type NavPage = 'dashboard' | 'clientes' | 'gestiones' | 'tramites' | 'vencimientos' | 'precios' | 'papelera' | 'catalogo' | 'reportes' | 'configuracion' | 'cotizaciones' | 'notificaciones' | 'finanzas' | 'usuarios' | 'anmat';
 
@@ -170,9 +171,38 @@ export default function Layout({ children, currentNav, onNavigate }: LayoutProps
       </aside>
 
       {/* Content */}
-      <main className="ml-[220px] flex-1 p-8 min-h-screen">
-        {children}
-      </main>
+      <div className="ml-[220px] flex-1 flex flex-col min-h-screen">
+        <main className="flex-1 p-8">
+          {children}
+        </main>
+
+        {/* Footer */}
+        <footer className="px-8 py-4 border-t border-slate-200 bg-white/60 backdrop-blur-sm">
+          <div className="flex items-center justify-between text-xs text-slate-400">
+            <span>© 2024–{new Date().getFullYear()} SGRT — Sistema de Gestión Regulatoria de Trámites. Todos los derechos reservados.</span>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => onNavigate({ type: 'legal', section: 'terms' })}
+                className="hover:text-slate-600 transition-colors"
+              >
+                Términos de Servicio
+              </button>
+              <button
+                onClick={() => onNavigate({ type: 'legal', section: 'privacy' })}
+                className="hover:text-slate-600 transition-colors"
+              >
+                Política de Privacidad
+              </button>
+              <button
+                onClick={() => onNavigate({ type: 'legal', section: 'confidentiality' })}
+                className="hover:text-slate-600 transition-colors"
+              >
+                Confidencialidad
+              </button>
+            </div>
+          </div>
+        </footer>
+      </div>
 
       {/* ===== FAB: Quick Create ===== */}
       <div ref={menuRef} className="fixed bottom-6 right-6 z-50">

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase, filterActive } from '../lib/supabase';
-import { ArrowLeft, Loader2, ChevronRight, CheckCircle2, AlertTriangle, Clock, FileText, Upload, MessageCircle, Phone, DollarSign, ThumbsUp, ThumbsDown, Receipt } from 'lucide-react';
+import { ArrowLeft, Loader2, ChevronRight, CheckCircle2, AlertTriangle, Clock, FileText, Upload, MessageCircle, Phone, DollarSign, ThumbsUp, ThumbsDown, Receipt, Shield } from 'lucide-react';
 
 interface Props {
   clienteId: string;
@@ -116,6 +116,14 @@ export default function PortalClienteV2({ clienteId, onNavigate }: Props) {
   const [expandedTramite, setExpandedTramite] = useState<string | null>(null);
   const [expandedCotizacion, setExpandedCotizacion] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [confidentialityAccepted, setConfidentialityAccepted] = useState(() => {
+    return localStorage.getItem(`sgrt_confidentiality_${clienteId}`) === 'accepted';
+  });
+
+  const acceptConfidentiality = () => {
+    localStorage.setItem(`sgrt_confidentiality_${clienteId}`, 'accepted');
+    setConfidentialityAccepted(true);
+  };
 
   useEffect(() => { loadData(); }, [clienteId]);
 
@@ -211,6 +219,32 @@ export default function PortalClienteV2({ clienteId, onNavigate }: Props) {
       <button onClick={() => onNavigate({ type: 'cliente', id: clienteId })} className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 print:hidden">
         <ArrowLeft className="w-4 h-4" /> Volver al detalle interno
       </button>
+
+      {/* Confidentiality Notice */}
+      {!confidentialityAccepted && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 shadow-sm">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Shield className="w-5 h-5 text-amber-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-amber-900 text-sm">Aviso de Confidencialidad</h3>
+              <p className="text-amber-800 text-xs mt-1 leading-relaxed">
+                La información contenida en este portal es de carácter confidencial y está protegida
+                conforme a la Ley 24.766 y el DNU 274/2019. Su acceso, reproducción o divulgación
+                no autorizada queda estrictamente prohibida. Al continuar, usted acepta las obligaciones
+                de confidencialidad vigentes.
+              </p>
+              <button
+                onClick={acceptConfidentiality}
+                className="mt-3 px-4 py-2 bg-amber-600 text-white text-xs font-medium rounded-lg hover:bg-amber-700 transition-colors"
+              >
+                Acepto las condiciones de confidencialidad
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Header - big and clear */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-6 text-white shadow-lg shadow-blue-500/20">

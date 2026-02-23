@@ -2,8 +2,12 @@ const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/
 
 function getApiKey(): string {
   const key = import.meta.env.VITE_GEMINI_API_KEY;
-  if (!key) throw new Error('VITE_GEMINI_API_KEY no está configurada en .env.local');
+  if (!key) throw new Error('El análisis de imágenes con IA no está disponible. Contactá al administrador para configurar la clave de Gemini.');
   return key;
+}
+
+export function isGeminiAvailable(): boolean {
+  return !!import.meta.env.VITE_GEMINI_API_KEY;
 }
 
 export interface ProductData {

@@ -36,9 +36,16 @@ export default function PortalClienteLayout({ children, onLogout }: Props) {
       </main>
       <footer className="bg-white border-t border-slate-200 mt-12">
         <div className="max-w-7xl mx-auto px-6 py-4">
-          <p className="text-center text-sm text-slate-500">
-            © 2025 SGT - Sistema de Gestión de Trámites Regulatorios
-          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
+            <p className="text-sm text-slate-500">
+              © 2024–{new Date().getFullYear()} SGRT — Sistema de Gestión Regulatoria de Trámites. Todos los derechos reservados.
+            </p>
+            <div className="flex items-center gap-4 text-xs text-slate-400">
+              <span className="hover:text-slate-600 cursor-pointer transition-colors">Términos de Servicio</span>
+              <span className="hover:text-slate-600 cursor-pointer transition-colors">Política de Privacidad</span>
+              <span className="hover:text-slate-600 cursor-pointer transition-colors">Confidencialidad</span>
+            </div>
+          </div>
         </div>
       </footer>
     </div>

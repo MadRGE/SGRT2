@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { ClipboardList, Sparkles, X, Copy, Check, StopCircle, RotateCcw, Upload, Loader2, Camera } from 'lucide-react';
 import { useAnmatAI } from '../../hooks/useAnmatAI';
-import { analyzeProductImages } from '../../lib/geminiVision';
+import { analyzeProductImages, isGeminiAvailable } from '../../lib/geminiVision';
 
 const CLASIFICACIONES = [
   'Alimento',
@@ -197,14 +197,18 @@ export function HerramientaFichaProducto() {
 
                 {/* Analyze button */}
                 <div className="flex items-center gap-3">
-                  <button
-                    onClick={handleAnalyze}
-                    disabled={analyzing}
-                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg font-medium text-sm hover:from-blue-700 hover:to-cyan-700 disabled:opacity-50 shadow-sm"
-                  >
-                    {analyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                    {analyzing ? 'Analizando...' : 'Analizar imágenes con IA'}
-                  </button>
+                  {isGeminiAvailable() ? (
+                    <button
+                      onClick={handleAnalyze}
+                      disabled={analyzing}
+                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg font-medium text-sm hover:from-blue-700 hover:to-cyan-700 disabled:opacity-50 shadow-sm"
+                    >
+                      {analyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                      {analyzing ? 'Analizando...' : 'Analizar imágenes con IA'}
+                    </button>
+                  ) : (
+                    <p className="text-xs text-slate-400 italic">Análisis con IA no disponible — completá los datos manualmente abajo</p>
+                  )}
                   {analyzed && (
                     <span className="text-xs font-medium text-green-700 bg-green-100 px-2.5 py-1 rounded-full flex items-center gap-1">
                       <Check className="w-3 h-3" />
