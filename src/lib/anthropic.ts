@@ -1,7 +1,7 @@
 import { getApiKey } from './apiKeys';
 
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
-const MODEL = 'claude-sonnet-4-20250514';
+const MODEL = 'claude-sonnet-4-6';
 const API_VERSION = '2023-06-01';
 
 export interface ChatMessage {

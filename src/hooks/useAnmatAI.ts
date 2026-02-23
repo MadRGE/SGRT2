@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from 'react';
 import { getApiKey } from '../lib/apiKeys';
 
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
-const MODEL = 'claude-sonnet-4-20250514';
+const MODEL = 'claude-sonnet-4-6';
 const API_VERSION = '2023-06-01';
 
 const SYSTEM_PROMPTS: Record<string, string> = {

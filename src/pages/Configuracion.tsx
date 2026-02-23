@@ -207,9 +207,12 @@ function ApiKeysSection() {
     }
   };
 
+  const [anthropicError, setAnthropicError] = useState('');
+
   const testAnthropic = async () => {
     if (!anthropicKey) return;
     setTestResults((prev) => ({ ...prev, anthropic: 'loading' }));
+    setAnthropicError('');
     try {
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
@@ -220,13 +223,18 @@ function ApiKeysSection() {
           'anthropic-dangerous-direct-browser-access': 'true',
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-sonnet-4-6',
           max_tokens: 10,
           messages: [{ role: 'user', content: 'Hi' }],
         }),
       });
+      if (!res.ok) {
+        const errBody = await res.text();
+        setAnthropicError(`${res.status}: ${errBody}`);
+      }
       setTestResults((prev) => ({ ...prev, anthropic: res.ok ? 'ok' : 'error' }));
-    } catch {
+    } catch (e: any) {
+      setAnthropicError(e.message || 'Error de red');
       setTestResults((prev) => ({ ...prev, anthropic: 'error' }));
     }
   };
@@ -322,7 +330,7 @@ function ApiKeysSection() {
             <p className="text-green-600 text-xs mt-1">Conexión exitosa</p>
           )}
           {testResults.anthropic === 'error' && (
-            <p className="text-red-600 text-xs mt-1">Key inválida o sin permisos</p>
+            <p className="text-red-600 text-xs mt-1">{anthropicError || 'Key inválida o sin permisos'}</p>
           )}
         </div>
       </div>
