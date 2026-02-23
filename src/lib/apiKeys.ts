@@ -2,11 +2,6 @@ const STORAGE_KEY = 'sgrt_api_keys';
 
 type ApiKeyName = 'GEMINI' | 'DEEPSEEK';
 
-const ENV_MAP: Record<ApiKeyName, string> = {
-  GEMINI: 'VITE_GEMINI_API_KEY',
-  DEEPSEEK: 'VITE_DEEPSEEK_API_KEY',
-};
-
 function getStoredKeys(): Record<string, string> {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -19,7 +14,10 @@ function getStoredKeys(): Record<string, string> {
 export function getApiKey(name: ApiKeyName): string {
   const stored = getStoredKeys()[name];
   if (stored) return stored;
-  return (import.meta.env[ENV_MAP[name]] as string) || '';
+  // Vite requiere acceso estático a import.meta.env
+  if (name === 'GEMINI') return import.meta.env.VITE_GEMINI_API_KEY || '';
+  if (name === 'DEEPSEEK') return import.meta.env.VITE_DEEPSEEK_API_KEY || '';
+  return '';
 }
 
 export function setApiKey(name: ApiKeyName, value: string): void {
