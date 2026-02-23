@@ -1,5 +1,42 @@
 import { useState, useCallback, useRef } from 'react';
-import { supabase } from '../lib/supabase';
+
+const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
+const MODEL = 'deepseek-chat';
+
+const SYSTEM_PROMPTS: Record<string, string> = {
+  'ficha-producto': `Sos un especialista en regulación sanitaria argentina (ANMAT/INAL/SENASA). Tu tarea es generar una Ficha Técnica de Producto completa y profesional para presentar ante ANMAT.
+
+La ficha debe incluir las siguientes secciones según corresponda al tipo de producto:
+
+1. **DATOS DEL PRODUCTO** - Denominación de venta, Nombre comercial, Marca, Clasificación regulatoria, Código interno / SKU
+
+2. **DATOS DEL ESTABLECIMIENTO** - Razón social del elaborador/importador, RNE, RNPA/RPE, Dirección de planta/depósito
+
+3. **COMPOSICIÓN Y MATERIALES** - Lista de ingredientes / composición cualicuantitativa, Materiales de empaque primario y secundario, Materiales en contacto con el producto
+
+4. **INFORMACIÓN TÉCNICA** - Uso previsto / indicaciones, Condiciones de conservación, Vida útil, Forma de presentación, Lote / codificación
+
+5. **NORMATIVA APLICABLE** - CAA artículos aplicables, Disposiciones ANMAT relevantes, Normas IRAM/ISO si aplican, Resoluciones GMC/MERCOSUR
+
+6. **ROTULADO** - Información obligatoria del rótulo, Declaración de alérgenos, Información nutricional (si aplica), Advertencias obligatorias
+
+Generá la ficha en formato profesional, con lenguaje técnico-regulatorio argentino. Si faltan datos, indicá "[COMPLETAR]" en esos campos. Usá formato Markdown.`,
+
+  'bpm-rne': `Sos un especialista en regulación sanitaria argentina (ANMAT/INAL) experto en Buenas Prácticas de Manufactura (BPM). Tu tarea es generar documentación BPM profesional y completa para la obtención del RNE (Registro Nacional de Establecimiento) ante ANMAT.
+
+Según el tipo de documento solicitado, generá el contenido completo siguiendo la normativa vigente (CAA Cap. II, Resolución GMC 80/96).
+
+Tipos de documentos que podés generar:
+- **Manual de BPM**: Política de calidad, estructura organizativa, instalaciones, control de operaciones, higiene, materias primas, documentación, retiro de productos
+- **POEs**: Recepción, almacenamiento, proceso productivo, envasado, despacho, trazabilidad y recall
+- **POES**: Pre-operacional, operacional, superficies en contacto, contaminación cruzada, higiene del personal, agentes contaminantes, control de plagas, agua segura
+- **Planillas y registros**: Control de temperaturas, limpieza y desinfección, recepción de materias primas, capacitaciones, control de plagas, trazabilidad
+- **Layout/Flujograma**: Descripción de distribución de planta y flujo de proceso
+
+Generá el documento en formato profesional con lenguaje técnico-regulatorio argentino. Donde falten datos específicos del establecimiento, indicá [COMPLETAR]. Usá formato Markdown.`,
+};
+
+const DEFAULT_SYSTEM = `Sos un especialista en regulación sanitaria argentina (ANMAT). Generá documentación técnica profesional en formato Markdown. Donde falten datos, indicá [COMPLETAR].`;
 
 interface UseAnmatAIReturn {
   output: string;
@@ -37,31 +74,40 @@ export function useAnmatAI(): UseAnmatAIReturn {
     const controller = new AbortController();
     abortRef.current = controller;
 
+    const apiKey = import.meta.env.VITE_DEEPSEEK_API_KEY;
+    if (!apiKey) {
+      setError('VITE_DEEPSEEK_API_KEY no está configurada en .env.local');
+      setLoading(false);
+      return;
+    }
+
+    const systemPrompt = SYSTEM_PROMPTS[tool] || DEFAULT_SYSTEM;
+
     try {
-      // Get the session token for auth
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('No hay sesión activa');
-
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-      const response = await fetch(`${supabaseUrl}/functions/v1/anmat-ai`, {
+      const response = await fetch(DEEPSEEK_API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-          'apikey': anonKey,
+          'Authorization': `Bearer ${apiKey}`,
         },
-        body: JSON.stringify({ tool, userMessage }),
+        body: JSON.stringify({
+          model: MODEL,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userMessage },
+          ],
+          stream: true,
+          temperature: 0.7,
+          max_tokens: 4096,
+        }),
         signal: controller.signal,
       });
 
       if (!response.ok) {
-        const errData = await response.json().catch(() => ({ error: 'Error desconocido' }));
-        throw new Error(errData.error || `Error ${response.status}`);
+        const errText = await response.text();
+        throw new Error(`Error DeepSeek (${response.status}): ${errText}`);
       }
 
-      // Read SSE stream
       const reader = response.body?.getReader();
       if (!reader) throw new Error('No se pudo leer la respuesta');
 
@@ -77,8 +123,9 @@ export function useAnmatAI(): UseAnmatAIReturn {
         buffer = lines.pop() || '';
 
         for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          const data = line.slice(6).trim();
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith('data: ')) continue;
+          const data = trimmed.slice(6);
           if (data === '[DONE]') continue;
 
           try {
