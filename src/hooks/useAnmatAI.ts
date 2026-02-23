@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
+import { getApiKey } from '../lib/apiKeys';
 
 const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
 const MODEL = 'deepseek-chat';
@@ -74,9 +75,9 @@ export function useAnmatAI(): UseAnmatAIReturn {
     const controller = new AbortController();
     abortRef.current = controller;
 
-    const apiKey = import.meta.env.VITE_DEEPSEEK_API_KEY;
+    const apiKey = getApiKey('DEEPSEEK');
     if (!apiKey) {
-      setError('VITE_DEEPSEEK_API_KEY no está configurada en .env.local');
+      setError('La clave de DeepSeek no está configurada. Andá a Configuración > API Keys.');
       setLoading(false);
       return;
     }

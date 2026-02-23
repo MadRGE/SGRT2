@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { getApiKey, setApiKey } from '../lib/apiKeys';
 import {
   Plus,
   Trash2,
@@ -7,7 +8,13 @@ import {
   ArrowLeft,
   Edit,
   CheckSquare,
-  List as ListIcon
+  List as ListIcon,
+  Key,
+  Eye,
+  EyeOff,
+  CheckCircle,
+  XCircle,
+  Loader2
 } from 'lucide-react';
 
 interface Props {
@@ -50,6 +57,7 @@ interface Paso {
 }
 
 export default function Configuracion({ onBack }: Props) {
+  const [activeTab, setActiveTab] = useState<'tramites' | 'apikeys'>('tramites');
   const [tramites, setTramites] = useState<TramiteTipo[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingTramite, setEditingTramite] = useState<string | null>(null);
@@ -87,53 +95,240 @@ export default function Configuracion({ onBack }: Props) {
         Volver al Dashboard
       </button>
 
-      <div className="bg-white rounded-xl shadow-lg p-8">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-800">Gestión de Trámites</h1>
-            <p className="text-slate-600 mt-1">Configuración del catálogo de trámites del sistema</p>
+      <div className="border-b border-slate-200 mb-6">
+        <div className="flex gap-6">
+          <button
+            onClick={() => setActiveTab('tramites')}
+            className={`pb-3 px-2 font-medium transition-colors flex items-center gap-2 ${
+              activeTab === 'tramites'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-slate-600 hover:text-slate-800'
+            }`}
+          >
+            <ListIcon className="w-4 h-4" />
+            Trámites
+          </button>
+          <button
+            onClick={() => setActiveTab('apikeys')}
+            className={`pb-3 px-2 font-medium transition-colors flex items-center gap-2 ${
+              activeTab === 'apikeys'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-slate-600 hover:text-slate-800'
+            }`}
+          >
+            <Key className="w-4 h-4" />
+            API Keys
+          </button>
+        </div>
+      </div>
+
+      {activeTab === 'apikeys' && <ApiKeysSection />}
+
+      {activeTab === 'tramites' && (
+        <div className="bg-white rounded-xl shadow-lg p-8">
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <h1 className="text-3xl font-bold text-slate-800">Gestión de Trámites</h1>
+              <p className="text-slate-600 mt-1">Configuración del catálogo de trámites del sistema</p>
+            </div>
           </div>
+
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="p-3 text-left text-sm font-medium text-slate-700">Código</th>
+                    <th className="p-3 text-left text-sm font-medium text-slate-700">Nombre</th>
+                    <th className="p-3 text-left text-sm font-medium text-slate-700">Rubro</th>
+                    <th className="p-3 text-center text-sm font-medium text-slate-700">SLA</th>
+                    <th className="p-3 text-center text-sm font-medium text-slate-700">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tramites.map((tramite) => (
+                    <tr key={tramite.id} className="border-t border-slate-200 hover:bg-slate-50">
+                      <td className="p-3 text-sm font-mono text-slate-700">{tramite.codigo}</td>
+                      <td className="p-3 text-sm text-slate-800">{tramite.nombre}</td>
+                      <td className="p-3 text-sm text-slate-600">{tramite.rubro}</td>
+                      <td className="p-3 text-sm text-slate-600 text-center">
+                        {tramite.sla_total_dias}d
+                      </td>
+                      <td className="p-3 text-center">
+                        <button
+                          onClick={() => setEditingTramite(tramite.id)}
+                          className="inline-flex items-center gap-1 px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                        >
+                          <Edit className="w-4 h-4" />
+                          Editar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ApiKeysSection() {
+  const [geminiKey, setGeminiKey] = useState(() => getApiKey('GEMINI'));
+  const [deepseekKey, setDeepseekKey] = useState(() => getApiKey('DEEPSEEK'));
+  const [showGemini, setShowGemini] = useState(false);
+  const [showDeepseek, setShowDeepseek] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [testResults, setTestResults] = useState<Record<string, 'loading' | 'ok' | 'error'>>({});
+
+  const handleSave = () => {
+    setApiKey('GEMINI', geminiKey);
+    setApiKey('DEEPSEEK', deepseekKey);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
+  };
+
+  const testGemini = async () => {
+    if (!geminiKey) return;
+    setTestResults((prev) => ({ ...prev, gemini: 'loading' }));
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models?key=${geminiKey}`
+      );
+      setTestResults((prev) => ({ ...prev, gemini: res.ok ? 'ok' : 'error' }));
+    } catch {
+      setTestResults((prev) => ({ ...prev, gemini: 'error' }));
+    }
+  };
+
+  const testDeepseek = async () => {
+    if (!deepseekKey) return;
+    setTestResults((prev) => ({ ...prev, deepseek: 'loading' }));
+    try {
+      const res = await fetch('https://api.deepseek.com/v1/models', {
+        headers: { Authorization: `Bearer ${deepseekKey}` },
+      });
+      setTestResults((prev) => ({ ...prev, deepseek: res.ok ? 'ok' : 'error' }));
+    } catch {
+      setTestResults((prev) => ({ ...prev, deepseek: 'error' }));
+    }
+  };
+
+  const renderTestStatus = (key: string) => {
+    const status = testResults[key];
+    if (!status) return null;
+    if (status === 'loading') return <Loader2 className="w-4 h-4 animate-spin text-blue-500" />;
+    if (status === 'ok') return <CheckCircle className="w-4 h-4 text-green-500" />;
+    return <XCircle className="w-4 h-4 text-red-500" />;
+  };
+
+  return (
+    <div className="bg-white rounded-xl shadow-lg p-8">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-slate-800">API Keys</h1>
+        <p className="text-slate-600 mt-1">
+          Configurá las claves de API para los servicios de inteligencia artificial.
+          Las claves se guardan en tu navegador.
+        </p>
+      </div>
+
+      <div className="space-y-6">
+        <div>
+          <label className="text-sm font-medium text-slate-700 block mb-2">
+            Google Gemini (Análisis de imágenes)
+          </label>
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <input
+                type={showGemini ? 'text' : 'password'}
+                value={geminiKey}
+                onChange={(e) => setGeminiKey(e.target.value)}
+                placeholder="AIzaSy..."
+                className="w-full p-2 pr-10 border border-slate-300 rounded-md font-mono text-sm"
+              />
+              <button
+                type="button"
+                onClick={() => setShowGemini(!showGemini)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                {showGemini ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+            <button
+              onClick={testGemini}
+              disabled={!geminiKey || testResults.gemini === 'loading'}
+              className="px-3 py-2 text-sm border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50 flex items-center gap-2"
+            >
+              Probar
+              {renderTestStatus('gemini')}
+            </button>
+          </div>
+          {testResults.gemini === 'ok' && (
+            <p className="text-green-600 text-xs mt-1">Conexión exitosa</p>
+          )}
+          {testResults.gemini === 'error' && (
+            <p className="text-red-600 text-xs mt-1">Key inválida o sin permisos</p>
+          )}
         </div>
 
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div>
+          <label className="text-sm font-medium text-slate-700 block mb-2">
+            DeepSeek (Generación de documentos ANMAT)
+          </label>
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <input
+                type={showDeepseek ? 'text' : 'password'}
+                value={deepseekKey}
+                onChange={(e) => setDeepseekKey(e.target.value)}
+                placeholder="sk-..."
+                className="w-full p-2 pr-10 border border-slate-300 rounded-md font-mono text-sm"
+              />
+              <button
+                type="button"
+                onClick={() => setShowDeepseek(!showDeepseek)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                {showDeepseek ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+            <button
+              onClick={testDeepseek}
+              disabled={!deepseekKey || testResults.deepseek === 'loading'}
+              className="px-3 py-2 text-sm border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50 flex items-center gap-2"
+            >
+              Probar
+              {renderTestStatus('deepseek')}
+            </button>
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th className="p-3 text-left text-sm font-medium text-slate-700">Código</th>
-                  <th className="p-3 text-left text-sm font-medium text-slate-700">Nombre</th>
-                  <th className="p-3 text-left text-sm font-medium text-slate-700">Rubro</th>
-                  <th className="p-3 text-center text-sm font-medium text-slate-700">SLA</th>
-                  <th className="p-3 text-center text-sm font-medium text-slate-700">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tramites.map((tramite) => (
-                  <tr key={tramite.id} className="border-t border-slate-200 hover:bg-slate-50">
-                    <td className="p-3 text-sm font-mono text-slate-700">{tramite.codigo}</td>
-                    <td className="p-3 text-sm text-slate-800">{tramite.nombre}</td>
-                    <td className="p-3 text-sm text-slate-600">{tramite.rubro}</td>
-                    <td className="p-3 text-sm text-slate-600 text-center">
-                      {tramite.sla_total_dias}d
-                    </td>
-                    <td className="p-3 text-center">
-                      <button
-                        onClick={() => setEditingTramite(tramite.id)}
-                        className="inline-flex items-center gap-1 px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
-                      >
-                        <Edit className="w-4 h-4" />
-                        Editar
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {testResults.deepseek === 'ok' && (
+            <p className="text-green-600 text-xs mt-1">Conexión exitosa</p>
+          )}
+          {testResults.deepseek === 'error' && (
+            <p className="text-red-600 text-xs mt-1">Key inválida o sin permisos</p>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-8 flex items-center gap-4">
+        <button
+          onClick={handleSave}
+          className="flex items-center gap-2 px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+        >
+          <Save className="w-5 h-5" />
+          Guardar
+        </button>
+        {saved && (
+          <span className="text-green-600 text-sm flex items-center gap-1">
+            <CheckCircle className="w-4 h-4" />
+            Claves guardadas
+          </span>
         )}
       </div>
     </div>
