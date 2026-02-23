@@ -122,10 +122,20 @@ export function HerramientaFichaProducto() {
     if (form.usoPrevisto) parts.push(`Uso previsto: ${form.usoPrevisto}`);
     if (form.observaciones) parts.push(`Observaciones adicionales: ${form.observaciones}`);
 
-    const userMessage = parts.length > 0
+    let userMessage = parts.length > 0
       ? `Generá una ficha técnica de producto completa con los siguientes datos:\n\n${parts.join('\n\n')}`
       : 'Generá una ficha técnica de producto genérica como template para completar.';
 
+    if (chatResponse) {
+      userMessage += `\n\n--- ANÁLISIS PREVIO DE LAS IMÁGENES DEL PRODUCTO (generado por IA de visión) ---\n${chatResponse}`;
+    }
+
+    generate('ficha-producto', userMessage);
+  };
+
+  const handleGenerateFromChat = () => {
+    if (!chatResponse) return;
+    const userMessage = `Generá una ficha técnica de producto completa basándote en el siguiente análisis de las imágenes del producto:\n\n${chatResponse}`;
     generate('ficha-producto', userMessage);
   };
 
@@ -282,8 +292,17 @@ export function HerramientaFichaProducto() {
                         )}
 
                         {chatResponse && (
-                          <div className="p-4 bg-white border border-blue-200 rounded-lg text-sm text-slate-700 whitespace-pre-wrap max-h-60 overflow-auto">
-                            {chatResponse}
+                          <div className="space-y-2">
+                            <div className="p-4 bg-white border border-blue-200 rounded-lg text-sm text-slate-700 whitespace-pre-wrap max-h-60 overflow-auto">
+                              {chatResponse}
+                            </div>
+                            <button
+                              onClick={handleGenerateFromChat}
+                              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-medium text-sm hover:from-green-700 hover:to-emerald-700 shadow-sm"
+                            >
+                              <Sparkles className="w-4 h-4" />
+                              Generar ficha con este análisis
+                            </button>
                           </div>
                         )}
                       </div>
