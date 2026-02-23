@@ -4,7 +4,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
 };
 
-const DEEPSEEK_API_URL = 'https://api.deepseek.com/chat/completions';
+const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 
 const SYSTEM_PROMPTS: Record<string, string> = {
   'ficha-producto': `Sos un experto regulatorio argentino especializado en ANMAT (Administración Nacional de Medicamentos, Alimentos y Tecnología Médica).
@@ -97,9 +97,9 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const apiKey = Deno.env.get('DEEPSEEK_API_KEY');
+    const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
     if (!apiKey) {
-      throw new Error('DEEPSEEK_API_KEY no está configurada. Configurala con: supabase secrets set DEEPSEEK_API_KEY=tu_key');
+      throw new Error('ANTHROPIC_API_KEY no está configurada. Configurala con: supabase secrets set ANTHROPIC_API_KEY=tu_key');
     }
 
     const { tool, userMessage } = await req.json();
@@ -113,17 +113,18 @@ Deno.serve(async (req: Request) => {
       throw new Error(`Herramienta "${tool}" no reconocida. Opciones: ${Object.keys(SYSTEM_PROMPTS).join(', ')}`);
     }
 
-    // Stream from DeepSeek
-    const response = await fetch(DEEPSEEK_API_URL, {
+    // Stream from Anthropic Claude
+    const response = await fetch(ANTHROPIC_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'deepseek-chat',
+        model: 'claude-sonnet-4-20250514',
+        system: systemPrompt,
         messages: [
-          { role: 'system', content: systemPrompt },
           { role: 'user', content: userMessage },
         ],
         stream: true,
@@ -134,7 +135,7 @@ Deno.serve(async (req: Request) => {
 
     if (!response.ok) {
       const errorBody = await response.text();
-      throw new Error(`DeepSeek API error (${response.status}): ${errorBody}`);
+      throw new Error(`Anthropic API error (${response.status}): ${errorBody}`);
     }
 
     // Forward the SSE stream to the client

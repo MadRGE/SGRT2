@@ -93,7 +93,7 @@ function HerramientasSelector({ onSelect }: { onSelect: (h: Herramienta) => void
         <div className="flex items-start gap-3">
           <Sparkles className="w-5 h-5 text-indigo-600 mt-0.5" />
           <div>
-            <p className="font-semibold text-indigo-900">Herramientas IA - DeepSeek</p>
+            <p className="font-semibold text-indigo-900">Herramientas IA - Claude</p>
             <p className="text-sm text-indigo-700 mt-1">
               Generadores de documentación regulatoria potenciados por IA. Completá los datos de tu producto o establecimiento y la IA genera la documentación técnica.
             </p>

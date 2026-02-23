@@ -1,8 +1,9 @@
 import { useState, useCallback, useRef } from 'react';
 import { getApiKey } from '../lib/apiKeys';
 
-const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
-const MODEL = 'deepseek-chat';
+const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
+const MODEL = 'claude-sonnet-4-20250514';
+const API_VERSION = '2023-06-01';
 
 const SYSTEM_PROMPTS: Record<string, string> = {
   'ficha-producto': `Sos un especialista en regulación sanitaria argentina (ANMAT/INAL/SENASA). Tu tarea es generar una Ficha Técnica de Producto completa y profesional para presentar ante ANMAT.
@@ -75,9 +76,9 @@ export function useAnmatAI(): UseAnmatAIReturn {
     const controller = new AbortController();
     abortRef.current = controller;
 
-    const apiKey = getApiKey('DEEPSEEK');
+    const apiKey = getApiKey('ANTHROPIC');
     if (!apiKey) {
-      setError('La clave de DeepSeek no está configurada. Andá a Configuración > API Keys.');
+      setError('La clave de Anthropic no está configurada. Andá a Configuración > API Keys.');
       setLoading(false);
       return;
     }
@@ -85,16 +86,18 @@ export function useAnmatAI(): UseAnmatAIReturn {
     const systemPrompt = SYSTEM_PROMPTS[tool] || DEFAULT_SYSTEM;
 
     try {
-      const response = await fetch(DEEPSEEK_API_URL, {
+      const response = await fetch(ANTHROPIC_API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
+          'x-api-key': apiKey,
+          'anthropic-version': API_VERSION,
+          'anthropic-dangerous-direct-browser-access': 'true',
         },
         body: JSON.stringify({
           model: MODEL,
+          system: systemPrompt,
           messages: [
-            { role: 'system', content: systemPrompt },
             { role: 'user', content: userMessage },
           ],
           stream: true,
@@ -106,7 +109,7 @@ export function useAnmatAI(): UseAnmatAIReturn {
 
       if (!response.ok) {
         const errText = await response.text();
-        throw new Error(`Error DeepSeek (${response.status}): ${errText}`);
+        throw new Error(`Error Claude (${response.status}): ${errText}`);
       }
 
       const reader = response.body?.getReader();
@@ -127,13 +130,11 @@ export function useAnmatAI(): UseAnmatAIReturn {
           const trimmed = line.trim();
           if (!trimmed || !trimmed.startsWith('data: ')) continue;
           const data = trimmed.slice(6);
-          if (data === '[DONE]') continue;
 
           try {
             const parsed = JSON.parse(data);
-            const content = parsed.choices?.[0]?.delta?.content;
-            if (content) {
-              setOutput(prev => prev + content);
+            if (parsed.type === 'content_block_delta' && parsed.delta?.type === 'text_delta') {
+              setOutput(prev => prev + parsed.delta.text);
             }
           } catch {
             // Skip malformed JSON chunks

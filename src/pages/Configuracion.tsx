@@ -181,17 +181,14 @@ export default function Configuracion({ onBack }: Props) {
 
 function ApiKeysSection() {
   const [geminiKey, setGeminiKey] = useState(() => getApiKey('GEMINI'));
-  const [deepseekKey, setDeepseekKey] = useState(() => getApiKey('DEEPSEEK'));
   const [anthropicKey, setAnthropicKey] = useState(() => getApiKey('ANTHROPIC'));
   const [showGemini, setShowGemini] = useState(false);
-  const [showDeepseek, setShowDeepseek] = useState(false);
   const [showAnthropic, setShowAnthropic] = useState(false);
   const [saved, setSaved] = useState(false);
   const [testResults, setTestResults] = useState<Record<string, 'loading' | 'ok' | 'error'>>({});
 
   const handleSave = () => {
     setApiKey('GEMINI', geminiKey);
-    setApiKey('DEEPSEEK', deepseekKey);
     setApiKey('ANTHROPIC', anthropicKey);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
@@ -207,19 +204,6 @@ function ApiKeysSection() {
       setTestResults((prev) => ({ ...prev, gemini: res.ok ? 'ok' : 'error' }));
     } catch {
       setTestResults((prev) => ({ ...prev, gemini: 'error' }));
-    }
-  };
-
-  const testDeepseek = async () => {
-    if (!deepseekKey) return;
-    setTestResults((prev) => ({ ...prev, deepseek: 'loading' }));
-    try {
-      const res = await fetch('https://api.deepseek.com/v1/models', {
-        headers: { Authorization: `Bearer ${deepseekKey}` },
-      });
-      setTestResults((prev) => ({ ...prev, deepseek: res.ok ? 'ok' : 'error' }));
-    } catch {
-      setTestResults((prev) => ({ ...prev, deepseek: 'error' }));
     }
   };
 
@@ -306,45 +290,7 @@ function ApiKeysSection() {
 
         <div>
           <label className="text-sm font-medium text-slate-700 block mb-2">
-            DeepSeek (Generación de documentos ANMAT)
-          </label>
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <input
-                type={showDeepseek ? 'text' : 'password'}
-                value={deepseekKey}
-                onChange={(e) => setDeepseekKey(e.target.value)}
-                placeholder="sk-..."
-                className="w-full p-2 pr-10 border border-slate-300 rounded-md font-mono text-sm"
-              />
-              <button
-                type="button"
-                onClick={() => setShowDeepseek(!showDeepseek)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-              >
-                {showDeepseek ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-            <button
-              onClick={testDeepseek}
-              disabled={!deepseekKey || testResults.deepseek === 'loading'}
-              className="px-3 py-2 text-sm border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50 flex items-center gap-2"
-            >
-              Probar
-              {renderTestStatus('deepseek')}
-            </button>
-          </div>
-          {testResults.deepseek === 'ok' && (
-            <p className="text-green-600 text-xs mt-1">Conexión exitosa</p>
-          )}
-          {testResults.deepseek === 'error' && (
-            <p className="text-red-600 text-xs mt-1">Key inválida o sin permisos</p>
-          )}
-        </div>
-
-        <div>
-          <label className="text-sm font-medium text-slate-700 block mb-2">
-            Anthropic / Claude (Asistente IA)
+            Anthropic / Claude (Asistente IA y documentos ANMAT)
           </label>
           <div className="flex gap-2">
             <div className="relative flex-1">
