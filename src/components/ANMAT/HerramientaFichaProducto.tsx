@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { ClipboardList, Sparkles, X, Copy, Check, StopCircle, RotateCcw } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { ClipboardList, Sparkles, X, Copy, Check, StopCircle, RotateCcw, Upload, Loader2, Camera } from 'lucide-react';
 import { useAnmatAI } from '../../hooks/useAnmatAI';
+import { analyzeProductImages } from '../../lib/geminiVision';
 
 const CLASIFICACIONES = [
   'Alimento',
@@ -27,8 +28,64 @@ export function HerramientaFichaProducto() {
     observaciones: '',
   });
 
+  // Image upload state
+  const [images, setImages] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analyzeError, setAnalyzeError] = useState('');
+  const [analyzed, setAnalyzed] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const handleChange = (field: string, value: string) => {
     setForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleFilesSelected = (files: FileList | null) => {
+    if (!files) return;
+    const newFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+    if (newFiles.length === 0) return;
+
+    const allFiles = [...images, ...newFiles].slice(0, 5); // max 5
+    setImages(allFiles);
+
+    // Generate previews
+    const previews = allFiles.map(f => URL.createObjectURL(f));
+    // Revoke old previews
+    imagePreviews.forEach(p => URL.revokeObjectURL(p));
+    setImagePreviews(previews);
+    setAnalyzed(false);
+  };
+
+  const removeImage = (index: number) => {
+    URL.revokeObjectURL(imagePreviews[index]);
+    setImages(prev => prev.filter((_, i) => i !== index));
+    setImagePreviews(prev => prev.filter((_, i) => i !== index));
+    setAnalyzed(false);
+  };
+
+  const handleAnalyze = async () => {
+    if (images.length === 0) return;
+    setAnalyzing(true);
+    setAnalyzeError('');
+
+    try {
+      const data = await analyzeProductImages(images);
+      setForm(prev => ({
+        nombre: data.nombre || prev.nombre,
+        marca: data.marca || prev.marca,
+        clasificacion: data.clasificacion || prev.clasificacion,
+        composicion: data.composicion || prev.composicion,
+        paisOrigen: data.paisOrigen || prev.paisOrigen,
+        fabricante: data.fabricante || prev.fabricante,
+        usoPrevisto: data.usoPrevisto || prev.usoPrevisto,
+        observaciones: data.observaciones || prev.observaciones,
+      }));
+      setAnalyzed(true);
+    } catch (err: any) {
+      setAnalyzeError(err.message || 'Error al analizar las imágenes');
+    } finally {
+      setAnalyzing(false);
+    }
   };
 
   const handleGenerate = () => {
@@ -57,6 +114,11 @@ export function HerramientaFichaProducto() {
 
   const handleReset = () => {
     reset();
+    imagePreviews.forEach(p => URL.revokeObjectURL(p));
+    setImages([]);
+    setImagePreviews([]);
+    setAnalyzed(false);
+    setAnalyzeError('');
     setForm({ nombre: '', marca: '', clasificacion: '', composicion: '', paisOrigen: '', fabricante: '', usoPrevisto: '', observaciones: '' });
   };
 
@@ -73,8 +135,96 @@ export function HerramientaFichaProducto() {
             </div>
             <div>
               <h3 className="font-bold text-slate-800">Ficha de Producto</h3>
-              <p className="text-xs text-slate-500">Completá los datos que tengas, la IA genera el resto</p>
+              <p className="text-xs text-slate-500">Subí fotos del producto o completá los datos manualmente</p>
             </div>
+          </div>
+
+          {/* Image Upload Zone */}
+          <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-dashed border-blue-300 rounded-xl p-5">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={e => handleFilesSelected(e.target.files)}
+              className="hidden"
+            />
+
+            {images.length === 0 ? (
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full flex flex-col items-center gap-3 py-4"
+              >
+                <div className="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center">
+                  <Camera className="w-7 h-7 text-blue-600" />
+                </div>
+                <div className="text-center">
+                  <p className="font-semibold text-blue-800">Subí fotos del producto</p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    Etiquetas, packaging, rótulos, certificados - la IA extrae los datos automáticamente
+                  </p>
+                </div>
+              </button>
+            ) : (
+              <div className="space-y-4">
+                {/* Image previews */}
+                <div className="flex gap-3 flex-wrap">
+                  {imagePreviews.map((preview, i) => (
+                    <div key={i} className="relative group">
+                      <img
+                        src={preview}
+                        alt={`Imagen ${i + 1}`}
+                        className="w-24 h-24 object-cover rounded-lg border-2 border-white shadow-sm"
+                      />
+                      <button
+                        onClick={() => removeImage(i)}
+                        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                  {images.length < 5 && (
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-24 h-24 border-2 border-dashed border-blue-300 rounded-lg flex flex-col items-center justify-center text-blue-500 hover:bg-blue-50 transition-colors"
+                    >
+                      <Upload className="w-5 h-5" />
+                      <span className="text-[10px] mt-1">Agregar</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Analyze button */}
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleAnalyze}
+                    disabled={analyzing}
+                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg font-medium text-sm hover:from-blue-700 hover:to-cyan-700 disabled:opacity-50 shadow-sm"
+                  >
+                    {analyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                    {analyzing ? 'Analizando...' : 'Analizar imágenes con IA'}
+                  </button>
+                  {analyzed && (
+                    <span className="text-xs font-medium text-green-700 bg-green-100 px-2.5 py-1 rounded-full flex items-center gap-1">
+                      <Check className="w-3 h-3" />
+                      Datos extraídos - revisá abajo
+                    </span>
+                  )}
+                </div>
+
+                {analyzeError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{analyzeError}</div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Divider */}
+          <div className="flex items-center gap-3">
+            <div className="flex-1 border-t border-slate-200" />
+            <span className="text-xs text-slate-400 font-medium">Datos del producto</span>
+            <div className="flex-1 border-t border-slate-200" />
           </div>
 
           {/* Form */}
@@ -85,7 +235,7 @@ export function HerramientaFichaProducto() {
                 type="text"
                 value={form.nombre}
                 onChange={e => handleChange('nombre', e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${analyzed && form.nombre ? 'border-green-300 bg-green-50/50' : 'border-slate-300'}`}
                 placeholder="Ej: Galletitas de arroz sabor original"
               />
             </div>
@@ -95,7 +245,7 @@ export function HerramientaFichaProducto() {
                 type="text"
                 value={form.marca}
                 onChange={e => handleChange('marca', e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${analyzed && form.marca ? 'border-green-300 bg-green-50/50' : 'border-slate-300'}`}
                 placeholder="Ej: NaturSnack"
               />
             </div>
@@ -104,7 +254,7 @@ export function HerramientaFichaProducto() {
               <select
                 value={form.clasificacion}
                 onChange={e => handleChange('clasificacion', e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${analyzed && form.clasificacion ? 'border-green-300 bg-green-50/50' : 'border-slate-300'}`}
               >
                 <option value="">Seleccionar...</option>
                 {CLASIFICACIONES.map(c => (
@@ -118,7 +268,7 @@ export function HerramientaFichaProducto() {
                 type="text"
                 value={form.paisOrigen}
                 onChange={e => handleChange('paisOrigen', e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${analyzed && form.paisOrigen ? 'border-green-300 bg-green-50/50' : 'border-slate-300'}`}
                 placeholder="Ej: China, Brasil, Argentina"
               />
             </div>
@@ -128,7 +278,7 @@ export function HerramientaFichaProducto() {
                 type="text"
                 value={form.fabricante}
                 onChange={e => handleChange('fabricante', e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${analyzed && form.fabricante ? 'border-green-300 bg-green-50/50' : 'border-slate-300'}`}
                 placeholder="Ej: Shenzhen Foods Co. Ltd."
               />
             </div>
@@ -138,7 +288,7 @@ export function HerramientaFichaProducto() {
                 value={form.composicion}
                 onChange={e => handleChange('composicion', e.target.value)}
                 rows={3}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${analyzed && form.composicion ? 'border-green-300 bg-green-50/50' : 'border-slate-300'}`}
                 placeholder="Listá ingredientes, materiales, aditivos..."
               />
             </div>
@@ -148,7 +298,7 @@ export function HerramientaFichaProducto() {
                 type="text"
                 value={form.usoPrevisto}
                 onChange={e => handleChange('usoPrevisto', e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${analyzed && form.usoPrevisto ? 'border-green-300 bg-green-50/50' : 'border-slate-300'}`}
                 placeholder="Ej: Consumo humano directo, envase para alimentos..."
               />
             </div>
@@ -158,7 +308,7 @@ export function HerramientaFichaProducto() {
                 value={form.observaciones}
                 onChange={e => handleChange('observaciones', e.target.value)}
                 rows={2}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${analyzed && form.observaciones ? 'border-green-300 bg-green-50/50' : 'border-slate-300'}`}
                 placeholder="Cualquier info extra relevante..."
               />
             </div>
