@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
-import { ClipboardList, Sparkles, X, Copy, Check, StopCircle, RotateCcw, Upload, Loader2, Camera } from 'lucide-react';
+import { ClipboardList, Sparkles, X, Copy, Check, StopCircle, RotateCcw, Upload, Loader2, Camera, MessageSquare, Send, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAnmatAI } from '../../hooks/useAnmatAI';
-import { analyzeProductImages, isGeminiAvailable } from '../../lib/geminiVision';
+import { analyzeProductImages, chatWithImages, isGeminiAvailable } from '../../lib/geminiVision';
 
 const CLASIFICACIONES = [
   'Alimento',
@@ -35,6 +35,13 @@ export function HerramientaFichaProducto() {
   const [analyzeError, setAnalyzeError] = useState('');
   const [analyzed, setAnalyzed] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Chat with AI state
+  const [chatPrompt, setChatPrompt] = useState('');
+  const [chatResponse, setChatResponse] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatError, setChatError] = useState('');
+  const [chatOpen, setChatOpen] = useState(false);
 
   const handleChange = (field: string, value: string) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -88,6 +95,22 @@ export function HerramientaFichaProducto() {
     }
   };
 
+  const handleChat = async () => {
+    if (!chatPrompt.trim() || images.length === 0) return;
+    setChatLoading(true);
+    setChatError('');
+    setChatResponse('');
+
+    try {
+      const response = await chatWithImages(images, chatPrompt.trim());
+      setChatResponse(response);
+    } catch (err: any) {
+      setChatError(err.message || 'Error al consultar la IA');
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
   const handleGenerate = () => {
     const parts: string[] = [];
     if (form.nombre) parts.push(`Nombre del producto: ${form.nombre}`);
@@ -99,10 +122,20 @@ export function HerramientaFichaProducto() {
     if (form.usoPrevisto) parts.push(`Uso previsto: ${form.usoPrevisto}`);
     if (form.observaciones) parts.push(`Observaciones adicionales: ${form.observaciones}`);
 
-    const userMessage = parts.length > 0
+    let userMessage = parts.length > 0
       ? `Generá una ficha técnica de producto completa con los siguientes datos:\n\n${parts.join('\n\n')}`
       : 'Generá una ficha técnica de producto genérica como template para completar.';
 
+    if (chatResponse) {
+      userMessage += `\n\n--- ANÁLISIS PREVIO DE LAS IMÁGENES DEL PRODUCTO (generado por IA de visión) ---\n${chatResponse}`;
+    }
+
+    generate('ficha-producto', userMessage);
+  };
+
+  const handleGenerateFromChat = () => {
+    if (!chatResponse) return;
+    const userMessage = `Generá una ficha técnica de producto completa basándote en el siguiente análisis de las imágenes del producto:\n\n${chatResponse}`;
     generate('ficha-producto', userMessage);
   };
 
@@ -120,6 +153,10 @@ export function HerramientaFichaProducto() {
     setAnalyzed(false);
     setAnalyzeError('');
     setForm({ nombre: '', marca: '', clasificacion: '', composicion: '', paisOrigen: '', fabricante: '', usoPrevisto: '', observaciones: '' });
+    setChatPrompt('');
+    setChatResponse('');
+    setChatError('');
+    setChatOpen(false);
   };
 
   const showResult = output || loading || error;
@@ -216,6 +253,62 @@ export function HerramientaFichaProducto() {
                     </span>
                   )}
                 </div>
+
+                {/* Chat with AI about images */}
+                {isGeminiAvailable() && (
+                  <div className="border-t border-blue-200 pt-3">
+                    <button
+                      onClick={() => setChatOpen(!chatOpen)}
+                      className="flex items-center gap-2 text-sm font-medium text-blue-700 hover:text-blue-800"
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      Consultá a la IA sobre las imágenes
+                      {chatOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                    </button>
+
+                    {chatOpen && (
+                      <div className="mt-3 space-y-3">
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={chatPrompt}
+                            onChange={e => setChatPrompt(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && !chatLoading && handleChat()}
+                            placeholder="Ej: ¿Cuál es el código de barras? / Generame una descripción comercial"
+                            className="flex-1 px-3 py-2 border border-blue-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            disabled={chatLoading}
+                          />
+                          <button
+                            onClick={handleChat}
+                            disabled={chatLoading || !chatPrompt.trim()}
+                            className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1"
+                          >
+                            {chatLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                          </button>
+                        </div>
+
+                        {chatError && (
+                          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{chatError}</div>
+                        )}
+
+                        {chatResponse && (
+                          <div className="space-y-2">
+                            <div className="p-4 bg-white border border-blue-200 rounded-lg text-sm text-slate-700 whitespace-pre-wrap max-h-60 overflow-auto">
+                              {chatResponse}
+                            </div>
+                            <button
+                              onClick={handleGenerateFromChat}
+                              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-medium text-sm hover:from-green-700 hover:to-emerald-700 shadow-sm"
+                            >
+                              <Sparkles className="w-4 h-4" />
+                              Generar ficha con este análisis
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {analyzeError && (
                   <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{analyzeError}</div>

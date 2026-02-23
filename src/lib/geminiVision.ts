@@ -101,6 +101,51 @@ export async function analyzeProductImages(files: File[]): Promise<ProductData> 
   }
 }
 
+export async function chatWithImages(files: File[], userPrompt: string): Promise<string> {
+  const apiKey = getApiKey();
+
+  const imageParts = await Promise.all(
+    files.map(async (file) => {
+      const base64 = await fileToBase64(file);
+      return {
+        inline_data: {
+          mime_type: file.type,
+          data: base64,
+        },
+      };
+    })
+  );
+
+  const systemContext = `Sos un asistente especializado en análisis de productos para regulación sanitaria argentina (ANMAT). Analizá las imágenes proporcionadas y respondé la consulta del usuario de forma clara y completa. Si el texto en las imágenes está en otro idioma, traducilo al español.`;
+
+  const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [
+        {
+          parts: [
+            { text: `${systemContext}\n\nConsulta del usuario: ${userPrompt}` },
+            ...imageParts,
+          ],
+        },
+      ],
+      generationConfig: {
+        temperature: 0.4,
+        maxOutputTokens: 4096,
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Error Gemini (${response.status}): ${err}`);
+  }
+
+  const data = await response.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || 'No se obtuvo respuesta.';
+}
+
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
