@@ -1,5 +1,5 @@
 import { ReactNode, useState, useEffect, useRef } from 'react';
-import { LayoutDashboard, Users, FileText, LogOut, Calendar, Briefcase, DollarSign, Plus, X, Trash2, BookOpen, BarChart3, Settings, Bell, Shield } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, LogOut, Calendar, Briefcase, DollarSign, Plus, X, Trash2, BookOpen, BarChart3, Settings, Bell, Shield, Bot } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 export type Page =
@@ -27,9 +27,10 @@ export type Page =
   | { type: 'finanzas' }
   | { type: 'usuarios' }
   | { type: 'anmat' }
-  | { type: 'legal'; section?: 'terms' | 'privacy' | 'confidentiality' };
+  | { type: 'legal'; section?: 'terms' | 'privacy' | 'confidentiality' }
+  | { type: 'asistente-ia' };
 
-type NavPage = 'dashboard' | 'clientes' | 'gestiones' | 'tramites' | 'vencimientos' | 'precios' | 'papelera' | 'catalogo' | 'reportes' | 'configuracion' | 'cotizaciones' | 'notificaciones' | 'finanzas' | 'usuarios' | 'anmat';
+type NavPage = 'dashboard' | 'clientes' | 'gestiones' | 'tramites' | 'vencimientos' | 'precios' | 'papelera' | 'catalogo' | 'reportes' | 'configuracion' | 'cotizaciones' | 'notificaciones' | 'finanzas' | 'usuarios' | 'anmat' | 'asistente-ia';
 
 interface LayoutProps {
   children: ReactNode;
@@ -51,6 +52,7 @@ const NAV_SECTIONS: NavSection[] = [
       { nav: 'cotizaciones', label: 'Cotizaciones', icon: DollarSign },
       { nav: 'vencimientos', label: 'Vencimientos', icon: Calendar },
       { nav: 'notificaciones', label: 'Notificaciones', icon: Bell },
+      { nav: 'asistente-ia', label: 'Asistente IA', icon: Bot },
     ],
   },
   {

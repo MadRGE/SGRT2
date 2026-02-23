@@ -182,14 +182,17 @@ export default function Configuracion({ onBack }: Props) {
 function ApiKeysSection() {
   const [geminiKey, setGeminiKey] = useState(() => getApiKey('GEMINI'));
   const [deepseekKey, setDeepseekKey] = useState(() => getApiKey('DEEPSEEK'));
+  const [anthropicKey, setAnthropicKey] = useState(() => getApiKey('ANTHROPIC'));
   const [showGemini, setShowGemini] = useState(false);
   const [showDeepseek, setShowDeepseek] = useState(false);
+  const [showAnthropic, setShowAnthropic] = useState(false);
   const [saved, setSaved] = useState(false);
   const [testResults, setTestResults] = useState<Record<string, 'loading' | 'ok' | 'error'>>({});
 
   const handleSave = () => {
     setApiKey('GEMINI', geminiKey);
     setApiKey('DEEPSEEK', deepseekKey);
+    setApiKey('ANTHROPIC', anthropicKey);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
@@ -217,6 +220,30 @@ function ApiKeysSection() {
       setTestResults((prev) => ({ ...prev, deepseek: res.ok ? 'ok' : 'error' }));
     } catch {
       setTestResults((prev) => ({ ...prev, deepseek: 'error' }));
+    }
+  };
+
+  const testAnthropic = async () => {
+    if (!anthropicKey) return;
+    setTestResults((prev) => ({ ...prev, anthropic: 'loading' }));
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': anthropicKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 10,
+          messages: [{ role: 'user', content: 'Hi' }],
+        }),
+      });
+      setTestResults((prev) => ({ ...prev, anthropic: res.ok ? 'ok' : 'error' }));
+    } catch {
+      setTestResults((prev) => ({ ...prev, anthropic: 'error' }));
     }
   };
 
@@ -311,6 +338,44 @@ function ApiKeysSection() {
             <p className="text-green-600 text-xs mt-1">Conexión exitosa</p>
           )}
           {testResults.deepseek === 'error' && (
+            <p className="text-red-600 text-xs mt-1">Key inválida o sin permisos</p>
+          )}
+        </div>
+
+        <div>
+          <label className="text-sm font-medium text-slate-700 block mb-2">
+            Anthropic / Claude (Asistente IA)
+          </label>
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <input
+                type={showAnthropic ? 'text' : 'password'}
+                value={anthropicKey}
+                onChange={(e) => setAnthropicKey(e.target.value)}
+                placeholder="sk-ant-..."
+                className="w-full p-2 pr-10 border border-slate-300 rounded-md font-mono text-sm"
+              />
+              <button
+                type="button"
+                onClick={() => setShowAnthropic(!showAnthropic)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                {showAnthropic ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+            <button
+              onClick={testAnthropic}
+              disabled={!anthropicKey || testResults.anthropic === 'loading'}
+              className="px-3 py-2 text-sm border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50 flex items-center gap-2"
+            >
+              Probar
+              {renderTestStatus('anthropic')}
+            </button>
+          </div>
+          {testResults.anthropic === 'ok' && (
+            <p className="text-green-600 text-xs mt-1">Conexión exitosa</p>
+          )}
+          {testResults.anthropic === 'error' && (
             <p className="text-red-600 text-xs mt-1">Key inválida o sin permisos</p>
           )}
         </div>

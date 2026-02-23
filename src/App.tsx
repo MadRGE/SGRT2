@@ -30,6 +30,7 @@ import GestionUsuarios from './pages/Admin/GestionUsuarios';
 import CotizacionViewPublica from './components/CotizacionViewPublica';
 import ANMATPage from './pages/ANMATPage';
 import Legal from './pages/Legal';
+import AsistenteIA from './pages/AsistenteIA';
 
 function AppContent() {
   const [page, setPage] = useState<Page>(() => {
@@ -61,6 +62,7 @@ function AppContent() {
       case 'finanzas': return 'finanzas' as const;
       case 'usuarios': return 'usuarios' as const;
       case 'anmat': return 'anmat' as const;
+      case 'asistente-ia': return 'asistente-ia' as const;
       case 'legal': return 'configuracion' as const;
       default: return 'dashboard' as const;
     }
@@ -101,6 +103,7 @@ function AppContent() {
       )}
       {page.type === 'usuarios' && <GestionUsuarios onBack={() => navigate({ type: 'dashboard' })} />}
       {page.type === 'anmat' && <ANMATPage />}
+      {page.type === 'asistente-ia' && <AsistenteIA onNavigate={navigate} />}
       {page.type === 'legal' && <Legal initialSection={page.section} onBack={() => navigate({ type: 'dashboard' })} />}
     </Layout>
   );
