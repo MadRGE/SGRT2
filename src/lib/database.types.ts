@@ -1791,6 +1791,120 @@ export interface Database {
         }
         Relationships: []
       }
+      whatsapp_config: {
+        Row: {
+          id: string
+          app_id: string | null
+          app_secret: string | null
+          phone_number_id: string | null
+          access_token: string | null
+          verify_token: string | null
+          waba_id: string | null
+          bot_enabled: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          app_id?: string | null
+          app_secret?: string | null
+          phone_number_id?: string | null
+          access_token?: string | null
+          verify_token?: string | null
+          waba_id?: string | null
+          bot_enabled?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          app_id?: string | null
+          app_secret?: string | null
+          phone_number_id?: string | null
+          access_token?: string | null
+          verify_token?: string | null
+          waba_id?: string | null
+          bot_enabled?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      whatsapp_authorized_numbers: {
+        Row: {
+          id: string
+          phone_number: string
+          display_name: string | null
+          usuario_id: string | null
+          is_active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          phone_number: string
+          display_name?: string | null
+          usuario_id?: string | null
+          is_active?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          phone_number?: string
+          display_name?: string | null
+          usuario_id?: string | null
+          is_active?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
+      whatsapp_messages: {
+        Row: {
+          id: string
+          wa_message_id: string | null
+          phone_number: string
+          direction: string
+          message_text: string | null
+          message_type: string | null
+          ai_action: Json | null
+          ai_response_text: string | null
+          pending_action: Json | null
+          status: string
+          error_message: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          wa_message_id?: string | null
+          phone_number: string
+          direction: string
+          message_text?: string | null
+          message_type?: string | null
+          ai_action?: Json | null
+          ai_response_text?: string | null
+          pending_action?: Json | null
+          status?: string
+          error_message?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          wa_message_id?: string | null
+          phone_number?: string
+          direction?: string
+          message_text?: string | null
+          message_type?: string | null
+          ai_action?: Json | null
+          ai_response_text?: string | null
+          pending_action?: Json | null
+          status?: string
+          error_message?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       v_anmat_dashboard: {

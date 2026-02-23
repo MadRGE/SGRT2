@@ -14,7 +14,13 @@ import {
   EyeOff,
   CheckCircle,
   XCircle,
-  Loader2
+  Loader2,
+  MessageSquare,
+  RefreshCw,
+  Copy,
+  Power,
+  Phone,
+  Shield
 } from 'lucide-react';
 
 interface Props {
@@ -57,7 +63,7 @@ interface Paso {
 }
 
 export default function Configuracion({ onBack }: Props) {
-  const [activeTab, setActiveTab] = useState<'tramites' | 'apikeys'>('tramites');
+  const [activeTab, setActiveTab] = useState<'tramites' | 'apikeys' | 'whatsapp'>('tramites');
   const [tramites, setTramites] = useState<TramiteTipo[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingTramite, setEditingTramite] = useState<string | null>(null);
@@ -119,6 +125,17 @@ export default function Configuracion({ onBack }: Props) {
             <Key className="w-4 h-4" />
             API Keys
           </button>
+          <button
+            onClick={() => setActiveTab('whatsapp')}
+            className={`pb-3 px-2 font-medium transition-colors flex items-center gap-2 ${
+              activeTab === 'whatsapp'
+                ? 'text-green-600 border-b-2 border-green-600'
+                : 'text-slate-600 hover:text-slate-800'
+            }`}
+          >
+            <MessageSquare className="w-4 h-4" />
+            WhatsApp
+          </button>
         </div>
       </div>
 
@@ -175,6 +192,632 @@ export default function Configuracion({ onBack }: Props) {
           )}
         </div>
       )}
+
+      {activeTab === 'whatsapp' && <WhatsAppConfigSection />}
+    </div>
+  );
+}
+
+// ─── WhatsApp Configuration Section ─────────────────────────────────────────
+
+interface WaConfig {
+  id?: string;
+  app_id: string;
+  app_secret: string;
+  phone_number_id: string;
+  access_token: string;
+  verify_token: string;
+  waba_id: string;
+  bot_enabled: boolean;
+}
+
+interface WaNumber {
+  id: string;
+  phone_number: string;
+  display_name: string | null;
+  usuario_id: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+interface WaMessage {
+  id: string;
+  phone_number: string;
+  direction: string;
+  message_text: string | null;
+  ai_action: Record<string, unknown> | null;
+  status: string;
+  error_message: string | null;
+  created_at: string;
+}
+
+interface Usuario {
+  id: string;
+  nombre: string;
+  email: string;
+}
+
+function WhatsAppConfigSection() {
+  const [activeSection, setActiveSection] = useState<'config' | 'numbers' | 'log'>('config');
+  const [config, setConfig] = useState<WaConfig>({
+    app_id: '',
+    app_secret: '',
+    phone_number_id: '',
+    access_token: '',
+    verify_token: '',
+    waba_id: '',
+    bot_enabled: false,
+  });
+  const [configLoading, setConfigLoading] = useState(true);
+  const [configSaved, setConfigSaved] = useState(false);
+  const [showSecret, setShowSecret] = useState(false);
+  const [showToken, setShowToken] = useState(false);
+
+  // Numbers state
+  const [numbers, setNumbers] = useState<WaNumber[]>([]);
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
+  const [newPhone, setNewPhone] = useState('');
+  const [newName, setNewName] = useState('');
+  const [newUsuarioId, setNewUsuarioId] = useState('');
+
+  // Log state
+  const [messages, setMessages] = useState<WaMessage[]>([]);
+  const [logFilter, setLogFilter] = useState<'all' | 'inbound' | 'outbound'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'sent' | 'error' | 'rejected'>('all');
+  const [logPage, setLogPage] = useState(0);
+  const LOG_PAGE_SIZE = 20;
+
+  useEffect(() => {
+    loadConfig();
+    loadNumbers();
+    loadUsuarios();
+  }, []);
+
+  useEffect(() => {
+    if (activeSection === 'log') {
+      loadMessages();
+      const interval = setInterval(loadMessages, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [activeSection, logFilter, statusFilter, logPage]);
+
+  const loadConfig = async () => {
+    setConfigLoading(true);
+    const { data } = await supabase.from('whatsapp_config').select('*').limit(1).single();
+    if (data) {
+      setConfig(data);
+    }
+    setConfigLoading(false);
+  };
+
+  const loadNumbers = async () => {
+    const { data } = await supabase
+      .from('whatsapp_authorized_numbers')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (data) setNumbers(data);
+  };
+
+  const loadUsuarios = async () => {
+    const { data } = await supabase.from('usuarios').select('id, nombre, email').order('nombre');
+    if (data) setUsuarios(data);
+  };
+
+  const loadMessages = async () => {
+    let query = supabase
+      .from('whatsapp_messages')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .range(logPage * LOG_PAGE_SIZE, (logPage + 1) * LOG_PAGE_SIZE - 1);
+
+    if (logFilter !== 'all') query = query.eq('direction', logFilter);
+    if (statusFilter !== 'all') query = query.eq('status', statusFilter);
+
+    const { data } = await query;
+    if (data) setMessages(data);
+  };
+
+  const handleSaveConfig = async () => {
+    const payload = { ...config, updated_at: new Date().toISOString() };
+    if (config.id) {
+      await supabase.from('whatsapp_config').update(payload).eq('id', config.id);
+    } else {
+      const { data } = await supabase.from('whatsapp_config').insert(payload).select().single();
+      if (data) setConfig(data);
+    }
+    setConfigSaved(true);
+    setTimeout(() => setConfigSaved(false), 3000);
+  };
+
+  const generateVerifyToken = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let token = '';
+    for (let i = 0; i < 32; i++) token += chars.charAt(Math.floor(Math.random() * chars.length));
+    setConfig((prev) => ({ ...prev, verify_token: token }));
+  };
+
+  const handleAddNumber = async () => {
+    if (!newPhone) return;
+    const { error } = await supabase.from('whatsapp_authorized_numbers').insert({
+      phone_number: newPhone,
+      display_name: newName || null,
+      usuario_id: newUsuarioId || null,
+    });
+    if (!error) {
+      setNewPhone('');
+      setNewName('');
+      setNewUsuarioId('');
+      loadNumbers();
+    }
+  };
+
+  const handleToggleNumber = async (id: string, currentActive: boolean) => {
+    await supabase.from('whatsapp_authorized_numbers').update({ is_active: !currentActive }).eq('id', id);
+    loadNumbers();
+  };
+
+  const handleDeleteNumber = async (id: string) => {
+    await supabase.from('whatsapp_authorized_numbers').delete().eq('id', id);
+    loadNumbers();
+  };
+
+  const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL || 'https://[TU-PROYECTO].supabase.co'}/functions/v1/whatsapp-webhook`;
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+  };
+
+  if (configLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Section tabs */}
+      <div className="bg-white rounded-xl shadow-lg p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-800 flex items-center gap-3">
+              <MessageSquare className="w-8 h-8 text-green-600" />
+              WhatsApp Bot
+            </h1>
+            <p className="text-slate-600 mt-1">Agente IA para carga rápida de datos por WhatsApp</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className={`text-sm font-medium ${config.bot_enabled ? 'text-green-600' : 'text-slate-400'}`}>
+              {config.bot_enabled ? 'Bot Activo' : 'Bot Inactivo'}
+            </span>
+            <button
+              onClick={() => setConfig((prev) => ({ ...prev, bot_enabled: !prev.bot_enabled }))}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                config.bot_enabled ? 'bg-green-600' : 'bg-slate-300'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  config.bot_enabled ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+
+        <div className="border-b border-slate-200 mb-6">
+          <div className="flex gap-6">
+            <button
+              onClick={() => setActiveSection('config')}
+              className={`pb-3 px-2 font-medium transition-colors flex items-center gap-2 ${
+                activeSection === 'config'
+                  ? 'text-green-600 border-b-2 border-green-600'
+                  : 'text-slate-600 hover:text-slate-800'
+              }`}
+            >
+              <Shield className="w-4 h-4" />
+              Credenciales Meta
+            </button>
+            <button
+              onClick={() => setActiveSection('numbers')}
+              className={`pb-3 px-2 font-medium transition-colors flex items-center gap-2 ${
+                activeSection === 'numbers'
+                  ? 'text-green-600 border-b-2 border-green-600'
+                  : 'text-slate-600 hover:text-slate-800'
+              }`}
+            >
+              <Phone className="w-4 h-4" />
+              Números Autorizados ({numbers.length})
+            </button>
+            <button
+              onClick={() => setActiveSection('log')}
+              className={`pb-3 px-2 font-medium transition-colors flex items-center gap-2 ${
+                activeSection === 'log'
+                  ? 'text-green-600 border-b-2 border-green-600'
+                  : 'text-slate-600 hover:text-slate-800'
+              }`}
+            >
+              <ListIcon className="w-4 h-4" />
+              Log de Mensajes
+            </button>
+          </div>
+        </div>
+
+        {/* ── Section A: Credenciales Meta ── */}
+        {activeSection === 'config' && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-slate-700 block mb-2">App ID</label>
+                <input
+                  type="text"
+                  value={config.app_id}
+                  onChange={(e) => setConfig((p) => ({ ...p, app_id: e.target.value }))}
+                  placeholder="123456789012345"
+                  className="w-full p-2 border border-slate-300 rounded-md font-mono text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-700 block mb-2">App Secret</label>
+                <div className="relative">
+                  <input
+                    type={showSecret ? 'text' : 'password'}
+                    value={config.app_secret}
+                    onChange={(e) => setConfig((p) => ({ ...p, app_secret: e.target.value }))}
+                    placeholder="abc123..."
+                    className="w-full p-2 pr-10 border border-slate-300 rounded-md font-mono text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowSecret(!showSecret)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-700 block mb-2">Phone Number ID</label>
+                <input
+                  type="text"
+                  value={config.phone_number_id}
+                  onChange={(e) => setConfig((p) => ({ ...p, phone_number_id: e.target.value }))}
+                  placeholder="109876543210987"
+                  className="w-full p-2 border border-slate-300 rounded-md font-mono text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-700 block mb-2">Access Token</label>
+                <div className="relative">
+                  <input
+                    type={showToken ? 'text' : 'password'}
+                    value={config.access_token}
+                    onChange={(e) => setConfig((p) => ({ ...p, access_token: e.target.value }))}
+                    placeholder="EAAx..."
+                    className="w-full p-2 pr-10 border border-slate-300 rounded-md font-mono text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowToken(!showToken)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-700 block mb-2">Verify Token</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={config.verify_token}
+                    onChange={(e) => setConfig((p) => ({ ...p, verify_token: e.target.value }))}
+                    placeholder="mi_token_secreto"
+                    className="flex-1 p-2 border border-slate-300 rounded-md font-mono text-sm"
+                  />
+                  <button
+                    onClick={generateVerifyToken}
+                    className="px-3 py-2 text-sm border border-slate-300 rounded-md hover:bg-slate-50"
+                    title="Generar token aleatorio"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-700 block mb-2">WABA ID (opcional)</label>
+                <input
+                  type="text"
+                  value={config.waba_id}
+                  onChange={(e) => setConfig((p) => ({ ...p, waba_id: e.target.value }))}
+                  placeholder="WhatsApp Business Account ID"
+                  className="w-full p-2 border border-slate-300 rounded-md font-mono text-sm"
+                />
+              </div>
+            </div>
+
+            {/* Webhook URL */}
+            <div>
+              <label className="text-sm font-medium text-slate-700 block mb-2">
+                Webhook URL (copiar a Meta Dashboard)
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={webhookUrl}
+                  readOnly
+                  className="flex-1 p-2 border border-slate-200 rounded-md font-mono text-sm bg-slate-50 text-slate-600"
+                />
+                <button
+                  onClick={() => copyToClipboard(webhookUrl)}
+                  className="px-3 py-2 text-sm border border-slate-300 rounded-md hover:bg-slate-50 flex items-center gap-1"
+                >
+                  <Copy className="w-4 h-4" />
+                  Copiar
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <button
+                onClick={handleSaveConfig}
+                className="flex items-center gap-2 px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              >
+                <Save className="w-5 h-5" />
+                Guardar Configuración
+              </button>
+              {configSaved && (
+                <span className="text-green-600 text-sm flex items-center gap-1">
+                  <CheckCircle className="w-4 h-4" />
+                  Configuración guardada
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Section B: Números Autorizados ── */}
+        {activeSection === 'numbers' && (
+          <div className="space-y-6">
+            {/* Add number form */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 p-4 bg-slate-50 rounded-lg border border-slate-200">
+              <div>
+                <label className="text-xs font-medium text-slate-700 block mb-1">Teléfono (E.164)</label>
+                <input
+                  type="text"
+                  value={newPhone}
+                  onChange={(e) => setNewPhone(e.target.value)}
+                  placeholder="+5491112345678"
+                  className="w-full p-2 border border-slate-300 rounded-md text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate-700 block mb-1">Nombre</label>
+                <input
+                  type="text"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="Juan Pérez"
+                  className="w-full p-2 border border-slate-300 rounded-md text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate-700 block mb-1">Usuario vinculado</label>
+                <select
+                  value={newUsuarioId}
+                  onChange={(e) => setNewUsuarioId(e.target.value)}
+                  className="w-full p-2 border border-slate-300 rounded-md text-sm bg-white"
+                >
+                  <option value="">Sin vincular</option>
+                  {usuarios.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.nombre} ({u.email})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-end">
+                <button
+                  onClick={handleAddNumber}
+                  disabled={!newPhone}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 text-sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  Agregar
+                </button>
+              </div>
+            </div>
+
+            {/* Numbers table */}
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="p-3 text-left text-sm font-medium text-slate-700">Número</th>
+                    <th className="p-3 text-left text-sm font-medium text-slate-700">Nombre</th>
+                    <th className="p-3 text-left text-sm font-medium text-slate-700">Usuario</th>
+                    <th className="p-3 text-center text-sm font-medium text-slate-700">Activo</th>
+                    <th className="p-3 text-center text-sm font-medium text-slate-700">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {numbers.map((num) => {
+                    const linkedUser = usuarios.find((u) => u.id === num.usuario_id);
+                    return (
+                      <tr key={num.id} className="border-t border-slate-200 hover:bg-slate-50">
+                        <td className="p-3 text-sm font-mono text-slate-700">{num.phone_number}</td>
+                        <td className="p-3 text-sm text-slate-800">{num.display_name || '-'}</td>
+                        <td className="p-3 text-sm text-slate-600">
+                          {linkedUser ? `${linkedUser.nombre}` : '-'}
+                        </td>
+                        <td className="p-3 text-center">
+                          <button
+                            onClick={() => handleToggleNumber(num.id, num.is_active)}
+                            className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
+                              num.is_active
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-slate-100 text-slate-500'
+                            }`}
+                          >
+                            <Power className="w-3 h-3" />
+                            {num.is_active ? 'Activo' : 'Inactivo'}
+                          </button>
+                        </td>
+                        <td className="p-3 text-center">
+                          <button
+                            onClick={() => handleDeleteNumber(num.id)}
+                            className="p-1 text-red-500 hover:bg-red-50 rounded"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {numbers.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="p-6 text-center text-slate-400">
+                        No hay números autorizados. Agregá uno arriba.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ── Section C: Log de Mensajes ── */}
+        {activeSection === 'log' && (
+          <div className="space-y-4">
+            {/* Filters */}
+            <div className="flex gap-4 items-center">
+              <div>
+                <label className="text-xs font-medium text-slate-700 block mb-1">Dirección</label>
+                <select
+                  value={logFilter}
+                  onChange={(e) => { setLogFilter(e.target.value as typeof logFilter); setLogPage(0); }}
+                  className="p-2 border border-slate-300 rounded-md text-sm bg-white"
+                >
+                  <option value="all">Todos</option>
+                  <option value="inbound">Entrantes</option>
+                  <option value="outbound">Salientes</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate-700 block mb-1">Estado</label>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => { setStatusFilter(e.target.value as typeof statusFilter); setLogPage(0); }}
+                  className="p-2 border border-slate-300 rounded-md text-sm bg-white"
+                >
+                  <option value="all">Todos</option>
+                  <option value="sent">Enviado</option>
+                  <option value="error">Error</option>
+                  <option value="rejected">Rechazado</option>
+                </select>
+              </div>
+              <div className="flex items-end ml-auto">
+                <button
+                  onClick={loadMessages}
+                  className="flex items-center gap-1 px-3 py-2 text-sm border border-slate-300 rounded-md hover:bg-slate-50"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Actualizar
+                </button>
+              </div>
+            </div>
+
+            {/* Messages table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="p-3 text-left font-medium text-slate-700">Hora</th>
+                    <th className="p-3 text-left font-medium text-slate-700">Teléfono</th>
+                    <th className="p-3 text-center font-medium text-slate-700">Dir</th>
+                    <th className="p-3 text-left font-medium text-slate-700">Mensaje</th>
+                    <th className="p-3 text-left font-medium text-slate-700">Acción IA</th>
+                    <th className="p-3 text-center font-medium text-slate-700">Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {messages.map((msg) => (
+                    <tr key={msg.id} className="border-t border-slate-200 hover:bg-slate-50">
+                      <td className="p-3 text-slate-600 whitespace-nowrap">
+                        {new Date(msg.created_at).toLocaleString('es-AR', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </td>
+                      <td className="p-3 font-mono text-slate-700">{msg.phone_number}</td>
+                      <td className="p-3 text-center">
+                        <span
+                          className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
+                            msg.direction === 'inbound'
+                              ? 'bg-blue-100 text-blue-700'
+                              : 'bg-green-100 text-green-700'
+                          }`}
+                        >
+                          {msg.direction === 'inbound' ? 'IN' : 'OUT'}
+                        </span>
+                      </td>
+                      <td className="p-3 text-slate-800 max-w-xs truncate" title={msg.message_text || ''}>
+                        {msg.message_text || '-'}
+                      </td>
+                      <td className="p-3 text-slate-600 max-w-[120px] truncate">
+                        {msg.ai_action ? (msg.ai_action as Record<string, unknown>).action as string || '-' : '-'}
+                      </td>
+                      <td className="p-3 text-center">
+                        <span
+                          className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
+                            msg.status === 'sent'
+                              ? 'bg-green-100 text-green-700'
+                              : msg.status === 'error' || msg.status === 'rejected'
+                                ? 'bg-red-100 text-red-700'
+                                : 'bg-yellow-100 text-yellow-700'
+                          }`}
+                        >
+                          {msg.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                  {messages.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="p-6 text-center text-slate-400">
+                        No hay mensajes registrados.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            <div className="flex justify-between items-center">
+              <button
+                onClick={() => setLogPage((p) => Math.max(0, p - 1))}
+                disabled={logPage === 0}
+                className="px-3 py-1 text-sm border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50"
+              >
+                Anterior
+              </button>
+              <span className="text-sm text-slate-600">Página {logPage + 1}</span>
+              <button
+                onClick={() => setLogPage((p) => p + 1)}
+                disabled={messages.length < LOG_PAGE_SIZE}
+                className="px-3 py-1 text-sm border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50"
+              >
+                Siguiente
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
