@@ -178,7 +178,6 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
       progreso: 0,
     };
     if (form.gestion_id) payload.gestion_id = form.gestion_id;
-    if (form.tramite_tipo_id) payload.tramite_tipo_id = form.tramite_tipo_id;
     if (form.organismo) payload.organismo = form.organismo;
     if (form.plataforma) payload.plataforma = form.plataforma;
     if (form.fecha_vencimiento) payload.fecha_vencimiento = form.fecha_vencimiento;
@@ -205,7 +204,6 @@ export default function NuevoTramiteV2({ gestionId, clienteId, onNavigate }: Pro
           progreso: 0,
         };
         if (form.gestion_id) fallbackPayload.gestion_id = form.gestion_id;
-        if (form.tramite_tipo_id) fallbackPayload.tramite_tipo_id = form.tramite_tipo_id;
         if (form.organismo) fallbackPayload.organismo = form.organismo;
         if (form.plataforma) fallbackPayload.plataforma = form.plataforma;
         if (form.fecha_vencimiento) fallbackPayload.fecha_vencimiento = form.fecha_vencimiento;

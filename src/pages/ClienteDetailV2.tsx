@@ -13,6 +13,7 @@ import {
 import { ArrowLeft, Plus, FileText, ChevronRight, Loader2, Pencil, Save, X, Shield, Trash2, Briefcase, FolderOpen, CheckCircle2, AlertTriangle, Eye, Upload, Download, Paperclip, AlertCircle } from 'lucide-react';
 import NuevoRegistroModal from '../components/Cliente/NuevoRegistroModal';
 import NuevoDocClienteModal from '../components/Cliente/NuevoDocClienteModal';
+import { TabUsuarios } from '../components/Cliente/TabUsuarios';
 import type { DocumentoCliente } from '../components/Cliente/NuevoDocClienteModal';
 import StatusBadge from '../components/UI/StatusBadge';
 
@@ -677,6 +678,11 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
             ))}
           </div>
         )}
+      </div>
+
+      {/* 6. Usuarios del Cliente */}
+      <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50 p-4">
+        <TabUsuarios clienteId={clienteId} />
       </div>
 
       {/* Modal nuevo registro */}

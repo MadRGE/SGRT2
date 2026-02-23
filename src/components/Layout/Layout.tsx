@@ -22,6 +22,7 @@ export type Page =
   | { type: 'reportes' }
   | { type: 'configuracion' }
   | { type: 'cotizaciones' }
+  | { type: 'cotizacion-publica'; urlPublica: string }
   | { type: 'notificaciones' }
   | { type: 'finanzas' }
   | { type: 'usuarios' };

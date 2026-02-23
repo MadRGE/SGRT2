@@ -27,9 +27,16 @@ import Cotizaciones from './pages/Cotizaciones';
 import Notificaciones from './pages/Notificaciones/Notificaciones';
 import ModuloFinancieroContable from './pages/ModuloFinancieroContable';
 import GestionUsuarios from './pages/Admin/GestionUsuarios';
+import CotizacionViewPublica from './components/CotizacionViewPublica';
 
 function AppContent() {
-  const [page, setPage] = useState<Page>({ type: 'dashboard' });
+  const [page, setPage] = useState<Page>(() => {
+    // Check if URL path is for a public cotizacion
+    const path = window.location.pathname;
+    const cotizMatch = path.match(/^\/cotizacion\/(.+)$/);
+    if (cotizMatch) return { type: 'cotizacion-publica', urlPublica: cotizMatch[1] };
+    return { type: 'dashboard' };
+  });
 
   useEffect(() => { checkSoftDelete(); checkSeguimientoUserCol(); }, []);
 
@@ -47,13 +54,18 @@ function AppContent() {
       case 'catalogo': return 'catalogo' as const;
       case 'reportes': return 'reportes' as const;
       case 'configuracion': return 'configuracion' as const;
-      case 'cotizaciones': return 'cotizaciones' as const;
+      case 'cotizaciones': case 'cotizacion-publica': return 'cotizaciones' as const;
       case 'notificaciones': return 'notificaciones' as const;
       case 'finanzas': return 'finanzas' as const;
       case 'usuarios': return 'usuarios' as const;
       default: return 'dashboard' as const;
     }
   };
+
+  // Public cotizacion view - render without layout
+  if (page.type === 'cotizacion-publica') {
+    return <CotizacionViewPublica urlPublica={page.urlPublica} />;
+  }
 
   return (
     <Layout currentNav={currentNav()} onNavigate={navigate}>
@@ -92,6 +104,13 @@ function AuthenticatedApp() {
   const { user, loading } = useAuth();
   const [showSignUp, setShowSignUp] = useState(false);
   const [isResetPassword, setIsResetPassword] = useState(false);
+
+  // Public cotizacion view - no auth required
+  const path = window.location.pathname;
+  const cotizMatch = path.match(/^\/cotizacion\/(.+)$/);
+  if (cotizMatch) {
+    return <CotizacionViewPublica urlPublica={cotizMatch[1]} />;
+  }
 
   useEffect(() => {
     const hash = window.location.hash;
