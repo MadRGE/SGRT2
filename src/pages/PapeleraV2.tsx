@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { supabase, checkSoftDelete } from '../lib/supabase';
-import { Trash2, RotateCcw, Loader2, Users, Briefcase, FileText, AlertTriangle } from 'lucide-react';
+import { Trash2, RotateCcw, Loader2, Users, Briefcase, FileText, AlertTriangle, DollarSign } from 'lucide-react';
 
 interface DeletedItem {
   id: string;
-  type: 'cliente' | 'gestion' | 'tramite';
+  type: 'cliente' | 'gestion' | 'tramite' | 'cotizacion';
   nombre: string;
   detalle: string;
   deleted_at: string;
@@ -36,6 +36,11 @@ export default function PapeleraV2() {
       supabase.from('tramites').select('id, titulo, organismo, deleted_at').not('deleted_at', 'is', null),
     ]);
 
+    // Cotizaciones via Edge Function (bypasea PostgREST cache)
+    const cotizacionesRes = await supabase.functions.invoke('cotizacion-actions', {
+      body: { action: 'list-deleted' },
+    });
+
     const all: DeletedItem[] = [];
 
     (clientes || []).forEach((c: any) => {
@@ -53,23 +58,43 @@ export default function PapeleraV2() {
       all.push({ id: t.id, type: 'tramite', nombre: t.titulo, detalle: t.organismo || '', deleted_at: t.deleted_at, dias_restantes: dias });
     });
 
+    const cotizaciones = cotizacionesRes.data?.data || [];
+    (cotizaciones).forEach((c: any) => {
+      const dias = 30 - Math.floor((now - new Date(c.deleted_at).getTime()) / (1000 * 60 * 60 * 24));
+      all.push({ id: c.id, type: 'cotizacion', nombre: c.numero_cotizacion, detalle: c.nombre_cliente || '', deleted_at: c.deleted_at, dias_restantes: dias });
+    });
+
     all.sort((a, b) => new Date(b.deleted_at).getTime() - new Date(a.deleted_at).getTime());
     setItems(all);
     setLoading(false);
   };
 
-  const handleRestore = async (item: DeletedItem) => {
-    const table = item.type === 'cliente' ? 'clientes' : item.type === 'gestion' ? 'gestiones' : 'tramites';
-    await supabase.from(table).update({ deleted_at: null }).eq('id', item.id);
-
-    // If restoring a gestión, also restore its tramites
-    if (item.type === 'gestion') {
-      await supabase.from('tramites').update({ deleted_at: null }).eq('gestion_id', item.id);
+  const getTable = (type: string) => {
+    switch (type) {
+      case 'cliente': return 'clientes';
+      case 'gestion': return 'gestiones';
+      case 'tramite': return 'tramites';
+      case 'cotizacion': return 'cotizaciones';
+      default: return type;
     }
-    // If restoring a cliente, also restore its gestiones and tramites
-    if (item.type === 'cliente') {
-      await supabase.from('gestiones').update({ deleted_at: null }).eq('cliente_id', item.id);
-      await supabase.from('tramites').update({ deleted_at: null }).eq('cliente_id', item.id);
+  };
+
+  const handleRestore = async (item: DeletedItem) => {
+    if (item.type === 'cotizacion') {
+      await supabase.functions.invoke('cotizacion-actions', {
+        body: { action: 'restore', cotizacionId: item.id },
+      });
+    } else {
+      const table = getTable(item.type);
+      await supabase.from(table).update({ deleted_at: null }).eq('id', item.id);
+
+      if (item.type === 'gestion') {
+        await supabase.from('tramites').update({ deleted_at: null }).eq('gestion_id', item.id);
+      }
+      if (item.type === 'cliente') {
+        await supabase.from('gestiones').update({ deleted_at: null }).eq('cliente_id', item.id);
+        await supabase.from('tramites').update({ deleted_at: null }).eq('cliente_id', item.id);
+      }
     }
 
     loadPapelera();
@@ -77,8 +102,16 @@ export default function PapeleraV2() {
 
   const handleDeletePermanent = async (item: DeletedItem) => {
     if (!confirm(`¿Eliminar "${item.nombre}" de forma PERMANENTE? No se puede recuperar.`)) return;
-    const table = item.type === 'cliente' ? 'clientes' : item.type === 'gestion' ? 'gestiones' : 'tramites';
-    await supabase.from(table).delete().eq('id', item.id);
+
+    if (item.type === 'cotizacion') {
+      await supabase.functions.invoke('cotizacion-actions', {
+        body: { action: 'hard-delete', cotizacionId: item.id },
+      });
+    } else {
+      const table = getTable(item.type);
+      await supabase.from(table).delete().eq('id', item.id);
+    }
+
     loadPapelera();
   };
 
@@ -87,6 +120,7 @@ export default function PapeleraV2() {
       case 'cliente': return <Users className="w-4 h-4" />;
       case 'gestion': return <Briefcase className="w-4 h-4" />;
       case 'tramite': return <FileText className="w-4 h-4" />;
+      case 'cotizacion': return <DollarSign className="w-4 h-4" />;
       default: return null;
     }
   };
@@ -96,6 +130,7 @@ export default function PapeleraV2() {
       case 'cliente': return 'Cliente';
       case 'gestion': return 'Gestión';
       case 'tramite': return 'Trámite';
+      case 'cotizacion': return 'Cotización';
       default: return type;
     }
   };
@@ -146,6 +181,7 @@ export default function PapeleraV2() {
               <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
                 item.type === 'cliente' ? 'bg-emerald-100 text-emerald-600' :
                 item.type === 'gestion' ? 'bg-blue-100 text-blue-600' :
+                item.type === 'cotizacion' ? 'bg-purple-100 text-purple-600' :
                 'bg-violet-100 text-violet-600'
               }`}>
                 {typeIcon(item.type)}

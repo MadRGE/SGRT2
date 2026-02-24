@@ -4,7 +4,7 @@ import CotizacionCalculadora from '../components/CotizacionCalculadora';
 import {
   Plus, Search, ArrowLeft, FileText, Calendar, DollarSign,
   TrendingUp, Send, CheckCircle, XCircle, Clock, Share2,
-  ExternalLink, Package, Eye
+  ExternalLink, Package, Eye, Trash2
 } from 'lucide-react';
 
 interface Props {
@@ -84,6 +84,7 @@ export default function Cotizaciones({ onBack, onConvertirProyecto }: Props) {
         usuarios_created:created_by(nombre, email),
         usuarios_updated:updated_by(nombre, email)
       `)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
     if (data) {
@@ -123,6 +124,18 @@ export default function Cotizaciones({ onBack, onConvertirProyecto }: Props) {
     if (!error) {
       await loadCotizaciones();
     }
+  };
+
+  const handleEliminar = async (cotizacion: Cotizacion) => {
+    if (!confirm(`¿Eliminar la cotización ${cotizacion.numero_cotizacion} de "${cotizacion.nombre_cliente}"?`)) return;
+    const { data, error } = await supabase.functions.invoke('cotizacion-actions', {
+      body: { action: 'soft-delete', cotizacionId: cotizacion.id },
+    });
+    if (error || (data && !data.success)) {
+      alert('Error al eliminar: ' + (error?.message || data?.error));
+      return;
+    }
+    await loadCotizaciones();
   };
 
   const copiarUrlPublica = (urlPublica: string) => {
@@ -411,6 +424,14 @@ export default function Cotizaciones({ onBack, onConvertirProyecto }: Props) {
                         >
                           <Eye className="w-3 h-3" />
                           Ver
+                        </button>
+
+                        <button
+                          onClick={() => handleEliminar(cotizacion)}
+                          className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-sm transition-colors flex items-center gap-1"
+                          title="Eliminar cotización"
+                        >
+                          <Trash2 className="w-3 h-3" />
                         </button>
                       </div>
                     </div>
