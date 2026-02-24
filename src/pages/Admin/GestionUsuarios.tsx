@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Shield, Loader2 } from 'lucide-react';
+import { Plus, Edit, Shield, Loader2, Trash2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import UsuarioFormModal from '../../components/Admin/UsuarioFormModal';
 
@@ -54,6 +54,23 @@ export default function GestionUsuarios(_props: Props) {
   const openEditModal = (usuario: Usuario) => {
     setSelectedUser(usuario);
     setIsModalOpen(true);
+  };
+
+  const handleDelete = async (usuario: Usuario) => {
+    if (!confirm(`¿Está seguro de eliminar al usuario "${usuario.nombre}" (${usuario.email})? Esta acción no se puede deshacer.`)) {
+      return;
+    }
+    const { data, error } = await supabase.functions.invoke('delete-user', {
+      body: { userId: usuario.id },
+    });
+    if (error) {
+      console.error('Error eliminando usuario:', error);
+      alert('Error al eliminar usuario: ' + error.message);
+    } else if (data && !data.success) {
+      alert('Error al eliminar usuario: ' + data.error);
+    } else {
+      loadUsuarios();
+    }
   };
 
   const getRolColor = (rol: string) => {
@@ -114,7 +131,7 @@ export default function GestionUsuarios(_props: Props) {
                 <th className="p-3 text-left text-sm font-medium text-slate-700">Rol</th>
                 <th className="p-3 text-left text-sm font-medium text-slate-700">Empresa</th>
                 <th className="p-3 text-left text-sm font-medium text-slate-700">Creado</th>
-                <th className="p-3 text-center text-sm font-medium text-slate-700">Acción</th>
+                <th className="p-3 text-center text-sm font-medium text-slate-700">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -126,7 +143,11 @@ export default function GestionUsuarios(_props: Props) {
                 </tr>
               ) : (
                 usuarios.map((u) => (
-                  <tr key={u.id} className="border-t border-slate-200 hover:bg-slate-50 transition-colors">
+                  <tr
+                    key={u.id}
+                    className="border-t border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer"
+                    onClick={() => openEditModal(u)}
+                  >
                     <td className="p-3">
                       <span className="font-medium text-slate-800">{u.nombre}</span>
                     </td>
@@ -145,13 +166,22 @@ export default function GestionUsuarios(_props: Props) {
                       {u.created_at ? new Date(u.created_at).toLocaleDateString('es-AR') : '-'}
                     </td>
                     <td className="p-3 text-center">
-                      <button
-                        onClick={() => openEditModal(u)}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        title="Editar usuario"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); openEditModal(u); }}
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="Editar usuario"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDelete(u); }}
+                          className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Eliminar usuario"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))

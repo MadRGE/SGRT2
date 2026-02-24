@@ -117,12 +117,23 @@ export default function UsuarioFormModal({ isOpen, onClose, usuario, onSuccess }
 
         if (error) throw error;
       } else {
+        // Guardar sesión del admin antes de crear el usuario
+        const { data: { session: adminSession } } = await supabase.auth.getSession();
+
         // Create: sign up new user, then update their rol
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email: formData.email,
           password: formData.password,
           options: { data: { nombre: formData.nombre, rol: formData.rol, cliente_id: clienteId } },
         });
+
+        // Restaurar sesión del admin (signUp loguea al nuevo usuario)
+        if (adminSession) {
+          await supabase.auth.setSession({
+            access_token: adminSession.access_token,
+            refresh_token: adminSession.refresh_token,
+          });
+        }
 
         if (authError) throw authError;
 
@@ -134,6 +145,21 @@ export default function UsuarioFormModal({ isOpen, onClose, usuario, onSuccess }
             .update({ rol: formData.rol, nombre: formData.nombre, cliente_id: clienteId })
             .eq('id', authData.user.id);
         }
+      }
+
+      // Enviar email de bienvenida para usuarios cliente (fallback si el trigger de DB no lo hace)
+      if (formData.rol === 'cliente') {
+        supabase.functions.invoke('send-welcome-email', {
+          body: {
+            type: usuario ? 'UPDATE' : 'INSERT',
+            record: {
+              email: formData.email,
+              nombre: formData.nombre,
+              rol: 'cliente',
+              cliente_id: clienteId,
+            },
+          },
+        }).catch((err) => console.warn('Welcome email fallback error (non-blocking):', err));
       }
 
       onSuccess();
