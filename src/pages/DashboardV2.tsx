@@ -9,6 +9,10 @@ import {
   Briefcase, FileText, AlertTriangle, Calendar,
   ChevronRight, Loader2, TrendingUp, Clock
 } from 'lucide-react';
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, AreaChart, Area,
+} from 'recharts';
 
 interface Props {
   onNavigate: (page: any) => void;
@@ -39,6 +43,58 @@ interface VencimientoRow {
   clientes: { razon_social: string } | null;
 }
 
+interface ChartDataItem {
+  name: string;
+  value: number;
+}
+
+// Colors for the charts
+const CHART_COLORS = {
+  blue: '#3b82f6',
+  green: '#10b981',
+  amber: '#f59e0b',
+  red: '#ef4444',
+  purple: '#8b5cf6',
+  indigo: '#6366f1',
+  cyan: '#06b6d4',
+  pink: '#ec4899',
+  slate: '#64748b',
+};
+
+// Tramite estado → chart color mapping
+const TRAMITE_CHART_COLORS: Record<string, string> = {
+  consulta: CHART_COLORS.slate,
+  presupuestado: CHART_COLORS.purple,
+  en_curso: CHART_COLORS.blue,
+  esperando_cliente: CHART_COLORS.amber,
+  esperando_organismo: CHART_COLORS.cyan,
+  observado: CHART_COLORS.pink,
+  aprobado: CHART_COLORS.green,
+  rechazado: CHART_COLORS.red,
+  vencido: CHART_COLORS.red,
+};
+
+// Cotizacion estado → chart color mapping
+const COTIZACION_CHART_COLORS: Record<string, string> = {
+  borrador: CHART_COLORS.slate,
+  enviada: CHART_COLORS.blue,
+  negociacion: CHART_COLORS.amber,
+  aceptada: CHART_COLORS.green,
+  rechazada: CHART_COLORS.red,
+  vencida: CHART_COLORS.pink,
+  convertida: CHART_COLORS.purple,
+};
+
+const COTIZACION_ESTADO_LABELS: Record<string, string> = {
+  borrador: 'Borrador',
+  enviada: 'Enviada',
+  negociacion: 'Negociación',
+  aceptada: 'Aceptada',
+  rechazada: 'Rechazada',
+  vencida: 'Vencida',
+  convertida: 'Convertida',
+};
+
 export default function DashboardV2({ onNavigate }: Props) {
   const [stats, setStats] = useState({
     gestionesActivas: 0,
@@ -49,6 +105,9 @@ export default function DashboardV2({ onNavigate }: Props) {
   const [gestiones, setGestiones] = useState<GestionRow[]>([]);
   const [tramitesAtencion, setTramitesAtencion] = useState<TramiteRow[]>([]);
   const [vencimientos, setVencimientos] = useState<VencimientoRow[]>([]);
+  const [tramitesPorEstado, setTramitesPorEstado] = useState<ChartDataItem[]>([]);
+  const [gestionesPorMes, setGestionesPorMes] = useState<ChartDataItem[]>([]);
+  const [cotizacionesPorEstado, setCotizacionesPorEstado] = useState<ChartDataItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -121,6 +180,89 @@ export default function DashboardV2({ onNavigate }: Props) {
         .limit(5);
 
       setVencimientos((vencimientosData as any) || []);
+
+      // ── Chart data: Trámites por estado (Pie Chart) ────────────────────────
+      const { data: tramitesAll } = await filterActive(supabase
+        .from('tramites')
+        .select('estado'));
+
+      if (tramitesAll) {
+        const counts: Record<string, number> = {};
+        (tramitesAll as { estado: string }[]).forEach((t) => {
+          const est = t.estado || 'sin_estado';
+          counts[est] = (counts[est] || 0) + 1;
+        });
+        const tramiteChartData = Object.entries(counts)
+          .map(([key, val]) => ({
+            name: TRAMITE_ESTADO_LABELS[key] || key,
+            value: val,
+            _key: key,
+          }))
+          .sort((a, b) => b.value - a.value);
+        setTramitesPorEstado(tramiteChartData);
+      }
+
+      // ── Chart data: Gestiones creadas últimos 6 meses (Area Chart) ─────────
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+      sixMonthsAgo.setDate(1);
+      sixMonthsAgo.setHours(0, 0, 0, 0);
+
+      const { data: gestionesByMonth } = await filterActive(supabase
+        .from('gestiones')
+        .select('created_at')
+        .gte('created_at', sixMonthsAgo.toISOString()));
+
+      if (gestionesByMonth) {
+        // Build 6 months of buckets
+        const monthBuckets: Record<string, number> = {};
+        const monthLabels: string[] = [];
+        for (let i = 0; i < 6; i++) {
+          const d = new Date();
+          d.setMonth(d.getMonth() - (5 - i));
+          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+          const label = d.toLocaleDateString('es-AR', { month: 'short', year: '2-digit' });
+          monthBuckets[key] = 0;
+          monthLabels.push(key);
+        }
+        (gestionesByMonth as { created_at: string }[]).forEach((g) => {
+          const d = new Date(g.created_at);
+          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+          if (monthBuckets[key] !== undefined) {
+            monthBuckets[key]++;
+          }
+        });
+        const gestionesChartData = monthLabels.map((key) => {
+          const d = new Date(key + '-01');
+          return {
+            name: d.toLocaleDateString('es-AR', { month: 'short' }).replace('.', ''),
+            value: monthBuckets[key],
+          };
+        });
+        setGestionesPorMes(gestionesChartData);
+      }
+
+      // ── Chart data: Cotizaciones por estado (Bar Chart) ────────────────────
+      const { data: cotizacionesAll } = await supabase
+        .from('cotizaciones')
+        .select('estado');
+
+      if (cotizacionesAll) {
+        const counts: Record<string, number> = {};
+        (cotizacionesAll as { estado: string }[]).forEach((c) => {
+          const est = c.estado || 'sin_estado';
+          counts[est] = (counts[est] || 0) + 1;
+        });
+        const cotizChartData = Object.entries(counts)
+          .map(([key, val]) => ({
+            name: COTIZACION_ESTADO_LABELS[key] || key,
+            value: val,
+            _key: key,
+          }))
+          .sort((a, b) => b.value - a.value);
+        setCotizacionesPorEstado(cotizChartData);
+      }
+
     } catch (e) {
       console.warn('Error cargando dashboard:', e);
       setError('Error al cargar los datos del dashboard. Verifique su conexión.');
@@ -206,6 +348,184 @@ export default function DashboardV2({ onNavigate }: Props) {
             textColor="text-amber-700"
             onClick={() => onNavigate({ type: 'vencimientos' })}
           />
+        </div>
+
+        {/* Charts Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Trámites por Estado - Pie Chart */}
+          <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50 p-6">
+            <h3 className="font-semibold text-slate-800 text-[15px] mb-4 flex items-center gap-2">
+              <FileText className="w-4 h-4 text-slate-400" />
+              Trámites por Estado
+            </h3>
+            {tramitesPorEstado.length === 0 ? (
+              <div className="flex items-center justify-center h-[220px] text-sm text-slate-400">
+                Sin datos
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={220}>
+                <PieChart>
+                  <Pie
+                    data={tramitesPorEstado}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={85}
+                    paddingAngle={2}
+                    dataKey="value"
+                    stroke="none"
+                  >
+                    {tramitesPorEstado.map((entry: any, index: number) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={TRAMITE_CHART_COLORS[entry._key] || CHART_COLORS.slate}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#1e293b',
+                      border: 'none',
+                      borderRadius: '10px',
+                      color: '#f8fafc',
+                      fontSize: '12px',
+                      padding: '8px 12px',
+                    }}
+                    itemStyle={{ color: '#f8fafc' }}
+                    formatter={(value: number, name: string) => [`${value}`, name]}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+            {/* Legend */}
+            {tramitesPorEstado.length > 0 && (
+              <div className="flex flex-wrap gap-x-3 gap-y-1.5 mt-2">
+                {tramitesPorEstado.map((entry: any, index: number) => (
+                  <div key={index} className="flex items-center gap-1.5 text-[11px] text-slate-500">
+                    <span
+                      className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: TRAMITE_CHART_COLORS[entry._key] || CHART_COLORS.slate }}
+                    />
+                    {entry.name} ({entry.value})
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Gestiones últimos 6 meses - Area Chart */}
+          <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50 p-6">
+            <h3 className="font-semibold text-slate-800 text-[15px] mb-4 flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-slate-400" />
+              Gestiones (últimos 6 meses)
+            </h3>
+            {gestionesPorMes.length === 0 ? (
+              <div className="flex items-center justify-center h-[220px] text-sm text-slate-400">
+                Sin datos
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={220}>
+                <AreaChart data={gestionesPorMes} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="gradientGestiones" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={CHART_COLORS.blue} stopOpacity={0.3} />
+                      <stop offset="95%" stopColor={CHART_COLORS.blue} stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis
+                    dataKey="name"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 11, fill: '#94a3b8' }}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 11, fill: '#94a3b8' }}
+                    allowDecimals={false}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#1e293b',
+                      border: 'none',
+                      borderRadius: '10px',
+                      color: '#f8fafc',
+                      fontSize: '12px',
+                      padding: '8px 12px',
+                    }}
+                    itemStyle={{ color: '#f8fafc' }}
+                    formatter={(value: number) => [`${value}`, 'Gestiones']}
+                    labelStyle={{ color: '#94a3b8', fontSize: '11px', marginBottom: '2px' }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="value"
+                    stroke={CHART_COLORS.blue}
+                    strokeWidth={2.5}
+                    fill="url(#gradientGestiones)"
+                    dot={{ fill: CHART_COLORS.blue, strokeWidth: 0, r: 3.5 }}
+                    activeDot={{ fill: CHART_COLORS.blue, strokeWidth: 2, stroke: '#fff', r: 5 }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+
+          {/* Cotizaciones por Estado - Bar Chart */}
+          <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50 p-6">
+            <h3 className="font-semibold text-slate-800 text-[15px] mb-4 flex items-center gap-2">
+              <Briefcase className="w-4 h-4 text-slate-400" />
+              Cotizaciones por Estado
+            </h3>
+            {cotizacionesPorEstado.length === 0 ? (
+              <div className="flex items-center justify-center h-[220px] text-sm text-slate-400">
+                Sin datos
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={cotizacionesPorEstado} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                  <XAxis
+                    dataKey="name"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 10, fill: '#94a3b8' }}
+                    interval={0}
+                    angle={-25}
+                    textAnchor="end"
+                    height={45}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 11, fill: '#94a3b8' }}
+                    allowDecimals={false}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#1e293b',
+                      border: 'none',
+                      borderRadius: '10px',
+                      color: '#f8fafc',
+                      fontSize: '12px',
+                      padding: '8px 12px',
+                    }}
+                    itemStyle={{ color: '#f8fafc' }}
+                    formatter={(value: number, _name: string, props: any) => [`${value}`, props.payload.name]}
+                    labelFormatter={() => ''}
+                    cursor={{ fill: 'rgba(148, 163, 184, 0.08)' }}
+                  />
+                  <Bar dataKey="value" radius={[6, 6, 0, 0]} maxBarSize={40}>
+                    {cotizacionesPorEstado.map((entry: any, index: number) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={COTIZACION_CHART_COLORS[entry._key] || CHART_COLORS.slate}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
         </div>
 
         {/* Two-column layout */}

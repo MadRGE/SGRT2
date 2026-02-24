@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { Users, UserPlus, Mail, Trash2, Key } from 'lucide-react';
 
@@ -48,6 +49,7 @@ export function TabUsuarios({ clienteId }: Props) {
     const { error } = await supabase.from('usuarios').delete().eq('id', usuarioId);
 
     if (!error) {
+      toast.success('Usuario eliminado');
       loadUsuarios();
     }
   };

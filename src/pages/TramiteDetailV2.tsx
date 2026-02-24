@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { supabase, softDelete, buildSeguimientoData } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { formatFileSize } from '../lib/storage';
@@ -325,6 +326,7 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
   const handleDeleteDoc = async (docId: string) => {
     if (!confirm('¿Eliminar este documento?')) return;
     await supabase.from('documentos_tramite').delete().eq('id', docId);
+    toast.success('Documento eliminado');
     loadData();
   };
 
@@ -434,6 +436,7 @@ export default function TramiteDetailV2({ tramiteId, onNavigate }: Props) {
                   onClick={async () => {
                     if (!confirm('¿Eliminar este trámite? Se enviará a la papelera.')) return;
                     await softDelete('tramites', 'id', tramite.id);
+                    toast.success('Trámite enviado a la papelera');
                     onNavigate(backTarget);
                   }}
                   className="flex items-center gap-1 text-sm text-red-500 hover:text-red-700"

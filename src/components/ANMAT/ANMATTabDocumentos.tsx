@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import {
   Plus,
@@ -126,7 +127,7 @@ export function ANMATTabDocumentos({ casoId, divisionCodigo }: Props) {
 
   const handleGenerarChecklist = async () => {
     if (requisitos.length === 0) {
-      alert('No hay requisitos configurados para esta división');
+      toast.error('No hay requisitos configurados para esta división');
       return;
     }
 
@@ -142,7 +143,7 @@ export function ANMATTabDocumentos({ casoId, divisionCodigo }: Props) {
 
     if (error) {
       console.error('Error generando checklist:', error);
-      alert('Error al generar checklist');
+      toast.error('Error al generar checklist');
     } else {
       loadData();
     }
@@ -164,7 +165,7 @@ export function ANMATTabDocumentos({ casoId, divisionCodigo }: Props) {
       .eq('id', itemId);
 
     if (error) {
-      alert('Error: ' + error.message);
+      toast.error('Error: ' + error.message);
     } else {
       loadData();
     }
@@ -185,7 +186,7 @@ export function ANMATTabDocumentos({ casoId, divisionCodigo }: Props) {
       }]);
 
     if (error) {
-      alert('Error: ' + error.message);
+      toast.error('Error: ' + error.message);
     } else {
       setFormData({ nombre: '', tipo_documento: '', fecha_vencimiento: '', notas: '' });
       setShowForm(false);
@@ -201,7 +202,10 @@ export function ANMATTabDocumentos({ casoId, divisionCodigo }: Props) {
       .delete()
       .eq('id', id);
 
-    if (!error) loadData();
+    if (!error) {
+      toast.success('Documento eliminado');
+      loadData();
+    }
   };
 
   if (loading) {

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { supabase, filterActive } from '../lib/supabase';
 import { ArrowLeft, Loader2, Search, BookOpen, X, DollarSign, Plus, Package } from 'lucide-react';
 
@@ -206,7 +207,7 @@ export default function NuevaGestionV2({ clienteId, onNavigate }: Props) {
 
     if (tramitesFallidos.length > 0) {
       // Some succeeded, some failed - still navigate but warn
-      alert(`Gestión creada. ${tramitesCreados} trámite(s) creado(s). No se pudieron crear: ${tramitesFallidos.join(', ')}`);
+      toast.error(`Gestión creada. ${tramitesCreados} trámite(s) creado(s). No se pudieron crear: ${tramitesFallidos.join(', ')}`);
     }
 
     // Navigate: if tramites were created, go to presupuesto; otherwise gestion detail

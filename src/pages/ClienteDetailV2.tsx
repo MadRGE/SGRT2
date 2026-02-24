@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { supabase, softDelete } from '../lib/supabase';
 import { formatFileSize } from '../lib/storage';
 import { useDocumentUpload } from '../hooks/useDocumentUpload';
@@ -191,12 +192,14 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
   const handleDeleteRegistro = async (id: string) => {
     if (!confirm('Eliminar este registro/habilitacion?')) return;
     await supabase.from('registros_cliente').delete().eq('id', id);
+    toast.success('Registro eliminado');
     loadData();
   };
 
   const handleDeleteDocCliente = async (id: string) => {
     if (!confirm('Eliminar este documento? Los tramites que lo referencian perderan el vinculo.')) return;
     await supabase.from('documentos_cliente').delete().eq('id', id);
+    toast.success('Documento eliminado');
     loadData();
   };
 
@@ -268,6 +271,7 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
                   await softDelete('tramites', 'cliente_id', clienteId);
                   await softDelete('gestiones', 'cliente_id', clienteId);
                   await softDelete('clientes', 'id', clienteId);
+                  toast.success('Cliente enviado a la papelera');
                   onNavigate({ type: 'clientes' });
                 }}
                 className="flex items-center gap-1 text-sm text-red-500 hover:text-red-700"

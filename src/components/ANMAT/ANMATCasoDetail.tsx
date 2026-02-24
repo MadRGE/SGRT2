@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import {
   ArrowLeft,
@@ -140,7 +141,7 @@ export function ANMATCasoDetail({ casoId, onBack }: Props) {
       .eq('id', casoId);
 
     if (error) {
-      alert('Error al cambiar estado: ' + error.message);
+      toast.error('Error al cambiar estado: ' + error.message);
     } else {
       await loadCaso();
     }

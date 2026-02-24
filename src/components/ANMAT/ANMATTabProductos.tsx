@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import {
   Plus,
@@ -112,7 +113,7 @@ export function ANMATTabProductos({ casoId }: Props) {
         .eq('id', editingProducto.id);
 
       if (error) {
-        alert('Error al actualizar: ' + error.message);
+        toast.error('Error al actualizar: ' + error.message);
         return;
       }
     } else {
@@ -121,7 +122,7 @@ export function ANMATTabProductos({ casoId }: Props) {
         .insert([dataToSave]);
 
       if (error) {
-        alert('Error al crear: ' + error.message);
+        toast.error('Error al crear: ' + error.message);
         return;
       }
     }
@@ -158,8 +159,9 @@ export function ANMATTabProductos({ casoId }: Props) {
       .eq('id', id);
 
     if (error) {
-      alert('Error al eliminar: ' + error.message);
+      toast.error('Error al eliminar: ' + error.message);
     } else {
+      toast.success('Producto eliminado');
       loadProductos();
     }
   };

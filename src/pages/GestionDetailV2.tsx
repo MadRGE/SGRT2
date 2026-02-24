@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { supabase, softDelete, buildSeguimientoData } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { GESTION_TRANSITIONS, isTransitionAllowed } from '../lib/estadoTransitions';
@@ -311,6 +312,7 @@ export default function GestionDetailV2({ gestionId, onNavigate }: Props) {
                     if (!confirm('¿Eliminar esta gestión? Se enviará a la papelera.')) return;
                     await softDelete('tramites', 'gestion_id', gestionId);
                     await softDelete('gestiones', 'id', gestionId);
+                    toast.success('Gestión enviada a la papelera');
                     onNavigate({ type: 'gestiones' });
                   }}
                   className="flex items-center gap-1 text-sm text-red-500 hover:text-red-700"

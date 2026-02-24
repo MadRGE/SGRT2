@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import {
   Users,
@@ -112,7 +113,7 @@ export default function GestionProveedores() {
     ]);
 
     if (error) {
-      alert(`Error al crear proveedor: ${error.message}`);
+      toast.error(`Error al crear proveedor: ${error.message}`);
       return;
     }
 
@@ -145,7 +146,7 @@ export default function GestionProveedores() {
     ]);
 
     if (error) {
-      alert(`Error al cargar factura: ${error.message}`);
+      toast.error(`Error al cargar factura: ${error.message}`);
       return;
     }
 
@@ -172,7 +173,7 @@ export default function GestionProveedores() {
       .eq('id', facturaId);
 
     if (error) {
-      alert(`Error al marcar como pagada: ${error.message}`);
+      toast.error(`Error al marcar como pagada: ${error.message}`);
       return;
     }
 

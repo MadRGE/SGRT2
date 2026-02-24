@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
+import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { checkSoftDelete, checkSeguimientoUserCol } from './lib/supabase';
 import Login from './pages/Auth/Login';
@@ -156,6 +157,7 @@ export default function App() {
   return (
     <AuthProvider>
       <AuthenticatedApp />
+      <Toaster position="top-right" toastOptions={{ duration: 3000, style: { background: '#1e293b', color: '#fff' } }} />
     </AuthProvider>
   );
 }

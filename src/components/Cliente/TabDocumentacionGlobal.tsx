@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { FileText, Calendar, Trash2, Download, Plus } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
@@ -101,7 +102,7 @@ export const TabDocumentacionGlobal: React.FC<TabDocumentacionGlobalProps> = ({ 
       setFormData({ tipo_documento: '', fecha_vencimiento: '', archivo: null });
     } catch (error) {
       console.error('Error uploading documento:', error);
-      alert('Error al subir el documento');
+      toast.error('Error al subir el documento');
     } finally {
       setUploading(false);
     }
@@ -124,10 +125,11 @@ export const TabDocumentacionGlobal: React.FC<TabDocumentacionGlobalProps> = ({ 
         .eq('id', id);
 
       if (error) throw error;
+      toast.success('Documento eliminado');
       await fetchDocumentos();
     } catch (error) {
       console.error('Error deleting documento:', error);
-      alert('Error al eliminar el documento');
+      toast.error('Error al eliminar el documento');
     }
   };
 

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 import CotizacionCalculadora from '../components/CotizacionCalculadora';
 import {
@@ -111,7 +112,7 @@ export default function Cotizaciones({ onBack, onConvertirProyecto }: Props) {
 
     if (!error) {
       await loadCotizaciones();
-      alert('URL pública generada exitosamente');
+      toast.success('URL pública generada exitosamente');
     }
   };
 
@@ -132,16 +133,17 @@ export default function Cotizaciones({ onBack, onConvertirProyecto }: Props) {
       body: { action: 'soft-delete', cotizacionId: cotizacion.id },
     });
     if (error || (data && !data.success)) {
-      alert('Error al eliminar: ' + (error?.message || data?.error));
+      toast.error('Error al eliminar: ' + (error?.message || data?.error));
       return;
     }
+    toast.success('Cotización eliminada');
     await loadCotizaciones();
   };
 
   const copiarUrlPublica = (urlPublica: string) => {
     const url = `${window.location.origin}/cotizacion/${urlPublica}`;
     navigator.clipboard.writeText(url);
-    alert('URL copiada al portapapeles');
+    toast.success('URL copiada al portapapeles');
   };
 
   const getEstadoInfo = (estado: string) => {

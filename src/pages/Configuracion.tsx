@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 import { getApiKey, setApiKey } from '../lib/apiKeys';
 import {
@@ -1117,7 +1118,7 @@ function EditarTramite({ tramiteId, onBack }: { tramiteId: string; onBack: () =>
     }
 
     setSaving(false);
-    alert('Cambios guardados correctamente');
+    toast.success('Cambios guardados correctamente');
   };
 
   const handleTramiteChange = (field: keyof TramiteTipo, value: any) => {

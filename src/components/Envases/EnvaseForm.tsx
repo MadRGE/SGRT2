@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { ArrowLeft, Save } from 'lucide-react';
 
@@ -75,7 +76,7 @@ export default function EnvaseForm({ clienteId, envase, onClose, onSuccess }: Pr
     }
     setSaving(false);
     if (!error) onSuccess();
-    else alert('Error: ' + error.message);
+    else toast.error('Error: ' + error.message);
   };
 
   return (

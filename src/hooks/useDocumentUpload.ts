@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
+import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 import { uploadDocumento, getDocumentoUrl, deleteDocumento } from '../lib/storage';
 
@@ -78,6 +79,7 @@ export function useDocumentUpload({ storagePath, tableName, onSuccess }: UseDocu
       .from(tableName)
       .update({ archivo_path: null, archivo_nombre: null, archivo_size: null })
       .eq('id', docId);
+    toast.success('Archivo adjunto eliminado');
     onSuccess();
   }, [tableName, onSuccess]);
 

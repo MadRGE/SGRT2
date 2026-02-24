@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 import {
   Plus, Trash2, Calculator, TrendingUp, AlertTriangle,
@@ -305,22 +306,22 @@ export default function CotizacionCalculadora({ cotizacionId, onSave, onCancel }
 
   const handleGuardar = async () => {
     if (tipoCliente === 'existente' && !clienteId) {
-      alert('Debe seleccionar un cliente existente');
+      toast.error('Debe seleccionar un cliente existente');
       return;
     }
 
     if (tipoCliente === 'contacto' && !contactoTemporalId) {
-      alert('Debe seleccionar un lead/contacto');
+      toast.error('Debe seleccionar un lead/contacto');
       return;
     }
 
     if (tipoCliente === 'nuevo' && !nombreCliente.trim()) {
-      alert('Debe ingresar el nombre del cliente');
+      toast.error('Debe ingresar el nombre del cliente');
       return;
     }
 
     if (items.length === 0) {
-      alert('Debe agregar al menos un ítem');
+      toast.error('Debe agregar al menos un ítem');
       return;
     }
 
@@ -352,7 +353,7 @@ export default function CotizacionCalculadora({ cotizacionId, onSave, onCancel }
         .eq('id', cotizacionId);
 
       if (cotizError) {
-        alert('Error al actualizar cotización: ' + cotizError.message);
+        toast.error('Error al actualizar cotización: ' + cotizError.message);
         setSaving(false);
         return;
       }
@@ -367,7 +368,7 @@ export default function CotizacionCalculadora({ cotizacionId, onSave, onCancel }
       const { error: itemsError } = await supabase.from('cotizacion_items').insert(itemsData);
 
       if (itemsError) {
-        alert('Error al guardar ítems: ' + itemsError.message);
+        toast.error('Error al guardar ítems: ' + itemsError.message);
         setSaving(false);
         return;
       }
@@ -381,7 +382,7 @@ export default function CotizacionCalculadora({ cotizacionId, onSave, onCancel }
         .single();
 
       if (cotizError || !nuevaCotizacion) {
-        alert('Error al crear cotización: ' + cotizError?.message);
+        toast.error('Error al crear cotización: ' + cotizError?.message);
         setSaving(false);
         return;
       }
@@ -394,7 +395,7 @@ export default function CotizacionCalculadora({ cotizacionId, onSave, onCancel }
       const { error: itemsError } = await supabase.from('cotizacion_items').insert(itemsData);
 
       if (itemsError) {
-        alert('Error al guardar ítems: ' + itemsError.message);
+        toast.error('Error al guardar ítems: ' + itemsError.message);
         setSaving(false);
         return;
       }

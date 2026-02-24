@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { Plus, Package, Search, MoreVertical, Edit2, Trash2 } from 'lucide-react';
 import EnvaseForm from './EnvaseForm';
@@ -74,6 +75,7 @@ export default function EnvasesList({ clienteId }: Props) {
   const handleDelete = async (id: string) => {
     if (!confirm('¿Eliminar este envase?')) return;
     await supabase.from('envases').delete().eq('id', id);
+    toast.success('Envase eliminado');
     loadEnvases();
     setMenuOpen(null);
   };

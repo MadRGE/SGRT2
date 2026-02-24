@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 import { Plus, Calendar, Loader2, X, AlertTriangle, CheckCircle } from 'lucide-react';
 
@@ -56,6 +57,7 @@ export default function VencimientosV2(_props: Props) {
   const handleDelete = async (id: string) => {
     if (!confirm('¿Eliminar este vencimiento?')) return;
     await supabase.from('vencimientos').delete().eq('id', id);
+    toast.success('Vencimiento eliminado');
     loadData();
   };
 

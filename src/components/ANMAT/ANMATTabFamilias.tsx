@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import {
   Plus,
@@ -150,7 +151,7 @@ export function ANMATTabFamilias({ casoId }: Props) {
         .eq('id', editingFamilia.id);
 
       if (error) {
-        alert('Error al actualizar: ' + error.message);
+        toast.error('Error al actualizar: ' + error.message);
         return;
       }
     } else {
@@ -159,7 +160,7 @@ export function ANMATTabFamilias({ casoId }: Props) {
         .insert([dataToSave]);
 
       if (error) {
-        alert('Error al crear: ' + error.message);
+        toast.error('Error al crear: ' + error.message);
         return;
       }
     }
@@ -195,8 +196,9 @@ export function ANMATTabFamilias({ casoId }: Props) {
       .eq('id', id);
 
     if (error) {
-      alert('Error al eliminar: ' + error.message);
+      toast.error('Error al eliminar: ' + error.message);
     } else {
+      toast.success('Familia eliminada');
       loadFamilias();
       loadProductosDisponibles();
     }
@@ -209,7 +211,7 @@ export function ANMATTabFamilias({ casoId }: Props) {
       .eq('id', familiaId);
 
     if (error) {
-      alert('Error al cambiar estado: ' + error.message);
+      toast.error('Error al cambiar estado: ' + error.message);
     } else {
       loadFamilias();
     }
@@ -222,7 +224,7 @@ export function ANMATTabFamilias({ casoId }: Props) {
       .eq('id', productoId);
 
     if (error) {
-      alert('Error al asignar: ' + error.message);
+      toast.error('Error al asignar: ' + error.message);
     } else {
       loadFamilias();
       loadProductosDisponibles();

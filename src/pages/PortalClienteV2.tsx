@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { supabase, filterActive } from '../lib/supabase';
 import { ArrowLeft, Loader2, ChevronRight, CheckCircle2, AlertTriangle, Clock, FileText, Upload, MessageCircle, Phone, DollarSign, ThumbsUp, ThumbsDown, Receipt, Shield } from 'lucide-react';
 
@@ -691,6 +692,7 @@ export default function PortalClienteV2({ clienteId, onNavigate }: Props) {
                                 .from('cotizaciones')
                                 .update({ estado: 'aceptada' })
                                 .eq('id', c.id);
+                              toast.success('Presupuesto aceptado');
                               await loadData();
                               setActionLoading(null);
                             }}
@@ -712,6 +714,7 @@ export default function PortalClienteV2({ clienteId, onNavigate }: Props) {
                                 .from('cotizaciones')
                                 .update({ estado: 'rechazada' })
                                 .eq('id', c.id);
+                              toast.success('Presupuesto rechazado');
                               await loadData();
                               setActionLoading(null);
                             }}

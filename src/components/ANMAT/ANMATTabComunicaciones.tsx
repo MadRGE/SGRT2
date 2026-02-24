@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import {
   Plus,
@@ -93,7 +94,7 @@ export function ANMATTabComunicaciones({ casoId }: Props) {
       }]);
 
     if (error) {
-      alert('Error al guardar: ' + error.message);
+      toast.error('Error al guardar: ' + error.message);
     } else {
       resetForm();
       loadComunicaciones();

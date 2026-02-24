@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { supabase, checkSoftDelete } from '../lib/supabase';
 import { Trash2, RotateCcw, Loader2, Users, Briefcase, FileText, AlertTriangle, DollarSign } from 'lucide-react';
 
@@ -112,6 +113,7 @@ export default function PapeleraV2() {
       await supabase.from(table).delete().eq('id', item.id);
     }
 
+    toast.success('Elemento eliminado permanentemente');
     loadPapelera();
   };
 

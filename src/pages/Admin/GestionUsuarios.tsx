@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { Plus, Edit, Shield, Loader2, Trash2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import UsuarioFormModal from '../../components/Admin/UsuarioFormModal';
@@ -65,10 +66,11 @@ export default function GestionUsuarios(_props: Props) {
     });
     if (error) {
       console.error('Error eliminando usuario:', error);
-      alert('Error al eliminar usuario: ' + error.message);
+      toast.error('Error al eliminar usuario: ' + error.message);
     } else if (data && !data.success) {
-      alert('Error al eliminar usuario: ' + data.error);
+      toast.error('Error al eliminar usuario: ' + data.error);
     } else {
+      toast.success('Usuario eliminado');
       loadUsuarios();
     }
   };
