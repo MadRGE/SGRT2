@@ -12,7 +12,9 @@ type Usuario = {
   nombre: string;
   email: string;
   rol: string;
+  cliente_id?: string | null;
   created_at?: string;
+  clientes?: { razon_social: string } | null;
 };
 
 export default function GestionUsuarios(_props: Props) {
@@ -29,7 +31,7 @@ export default function GestionUsuarios(_props: Props) {
     setLoading(true);
     const { data, error } = await supabase
       .from('usuarios')
-      .select('id, email, nombre, rol, created_at')
+      .select('id, email, nombre, rol, cliente_id, created_at, clientes(razon_social)')
       .order('nombre', { ascending: true });
 
     if (error) {
@@ -110,6 +112,7 @@ export default function GestionUsuarios(_props: Props) {
                 <th className="p-3 text-left text-sm font-medium text-slate-700">Usuario</th>
                 <th className="p-3 text-left text-sm font-medium text-slate-700">Email</th>
                 <th className="p-3 text-left text-sm font-medium text-slate-700">Rol</th>
+                <th className="p-3 text-left text-sm font-medium text-slate-700">Empresa</th>
                 <th className="p-3 text-left text-sm font-medium text-slate-700">Creado</th>
                 <th className="p-3 text-center text-sm font-medium text-slate-700">Acción</th>
               </tr>
@@ -117,7 +120,7 @@ export default function GestionUsuarios(_props: Props) {
             <tbody>
               {usuarios.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-slate-400">
+                  <td colSpan={6} className="p-8 text-center text-slate-400">
                     No hay usuarios registrados
                   </td>
                 </tr>
@@ -134,6 +137,9 @@ export default function GestionUsuarios(_props: Props) {
                       >
                         {ROL_LABELS[u.rol] || u.rol}
                       </span>
+                    </td>
+                    <td className="p-3 text-sm text-slate-600">
+                      {u.clientes?.razon_social || '-'}
                     </td>
                     <td className="p-3 text-sm text-slate-500">
                       {u.created_at ? new Date(u.created_at).toLocaleDateString('es-AR') : '-'}

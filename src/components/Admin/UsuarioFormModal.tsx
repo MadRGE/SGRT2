@@ -7,7 +7,14 @@ type Usuario = {
   nombre: string;
   email: string;
   rol: string;
+  cliente_id?: string | null;
   created_at?: string;
+};
+
+type Cliente = {
+  id: string;
+  razon_social: string;
+  cuit: string;
 };
 
 interface Props {
@@ -31,9 +38,18 @@ export default function UsuarioFormModal({ isOpen, onClose, usuario, onSuccess }
     email: '',
     password: '',
     rol: 'gestor',
+    cliente_id: '',
   });
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [loadingClientes, setLoadingClientes] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      loadClientes();
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (usuario) {
@@ -42,13 +58,24 @@ export default function UsuarioFormModal({ isOpen, onClose, usuario, onSuccess }
         email: usuario.email || '',
         password: '',
         rol: usuario.rol || 'gestor',
+        cliente_id: usuario.cliente_id || '',
       });
     } else {
-      setFormData({ nombre: '', email: '', password: '', rol: 'gestor' });
+      setFormData({ nombre: '', email: '', password: '', rol: 'gestor', cliente_id: '' });
     }
     setErrors({});
     setSubmitError('');
   }, [usuario, isOpen]);
+
+  const loadClientes = async () => {
+    setLoadingClientes(true);
+    const { data } = await supabase
+      .from('clientes')
+      .select('id, razon_social, cuit')
+      .order('razon_social');
+    if (data) setClientes(data);
+    setLoadingClientes(false);
+  };
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -64,6 +91,9 @@ export default function UsuarioFormModal({ isOpen, onClose, usuario, onSuccess }
     if (!usuario && formData.password.length > 0 && formData.password.length < 6) {
       newErrors.password = 'Mínimo 6 caracteres';
     }
+    if (formData.rol === 'cliente' && !formData.cliente_id) {
+      newErrors.cliente_id = 'Debe seleccionar una empresa/cliente';
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -76,11 +106,13 @@ export default function UsuarioFormModal({ isOpen, onClose, usuario, onSuccess }
     setSubmitError('');
 
     try {
+      const clienteId = formData.rol === 'cliente' ? formData.cliente_id : null;
+
       if (usuario) {
-        // Edit: update nombre and rol in usuarios table
+        // Edit: update nombre, rol and cliente_id in usuarios table
         const { error } = await supabase
           .from('usuarios')
-          .update({ nombre: formData.nombre, rol: formData.rol })
+          .update({ nombre: formData.nombre, rol: formData.rol, cliente_id: clienteId })
           .eq('id', usuario.id);
 
         if (error) throw error;
@@ -89,17 +121,17 @@ export default function UsuarioFormModal({ isOpen, onClose, usuario, onSuccess }
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email: formData.email,
           password: formData.password,
-          options: { data: { nombre: formData.nombre, rol: formData.rol } },
+          options: { data: { nombre: formData.nombre, rol: formData.rol, cliente_id: clienteId } },
         });
 
         if (authError) throw authError;
 
         // The trigger handle_new_user creates the usuarios record with default 'gestor' rol.
-        // Update to the selected rol if different:
+        // Update to the selected rol and cliente_id:
         if (authData.user) {
           await supabase
             .from('usuarios')
-            .update({ rol: formData.rol, nombre: formData.nombre })
+            .update({ rol: formData.rol, nombre: formData.nombre, cliente_id: clienteId })
             .eq('id', authData.user.id);
         }
       }
@@ -191,7 +223,7 @@ export default function UsuarioFormModal({ isOpen, onClose, usuario, onSuccess }
             <label className="block text-sm font-medium text-slate-700 mb-2">Rol *</label>
             <select
               value={formData.rol}
-              onChange={(e) => setFormData({ ...formData, rol: e.target.value })}
+              onChange={(e) => setFormData({ ...formData, rol: e.target.value, cliente_id: '' })}
               className="w-full p-2 border rounded-md bg-white border-slate-300"
             >
               {ROLES.map((rol) => (
@@ -201,6 +233,42 @@ export default function UsuarioFormModal({ isOpen, onClose, usuario, onSuccess }
               ))}
             </select>
           </div>
+
+          {formData.rol === 'cliente' && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Empresa / Cliente *
+              </label>
+              {loadingClientes ? (
+                <div className="flex items-center gap-2 text-sm text-slate-500 p-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  Cargando clientes...
+                </div>
+              ) : clientes.length === 0 ? (
+                <p className="text-sm text-amber-600 p-2 bg-amber-50 rounded-md border border-amber-200">
+                  No hay clientes registrados. Primero debe crear un cliente.
+                </p>
+              ) : (
+                <select
+                  value={formData.cliente_id}
+                  onChange={(e) => setFormData({ ...formData, cliente_id: e.target.value })}
+                  className={`w-full p-2 border rounded-md bg-white ${
+                    errors.cliente_id ? 'border-red-500' : 'border-slate-300'
+                  }`}
+                >
+                  <option value="">-- Seleccionar empresa --</option>
+                  {clientes.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.razon_social} {c.cuit ? `(CUIT: ${c.cuit})` : ''}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {errors.cliente_id && (
+                <p className="text-sm text-red-600 mt-1">{errors.cliente_id}</p>
+              )}
+            </div>
+          )}
 
           {submitError && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
