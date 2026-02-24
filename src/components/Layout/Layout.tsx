@@ -1,5 +1,5 @@
 import { ReactNode, useState, useEffect, useRef } from 'react';
-import { LayoutDashboard, Users, FileText, LogOut, Calendar, Briefcase, DollarSign, Plus, X, Trash2, BookOpen, BarChart3, Settings, Bell, Shield, Bot } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, LogOut, Calendar, Briefcase, DollarSign, Plus, X, Trash2, BookOpen, BarChart3, Settings, Bell, Shield, Bot, Menu } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 export type Page =
@@ -83,6 +83,7 @@ const QUICK_ACTIONS = [
 export default function Layout({ children, currentNav, onNavigate }: LayoutProps) {
   const { user, signOut } = useAuth();
   const [quickOpen, setQuickOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Close on click outside
@@ -99,21 +100,68 @@ export default function Layout({ children, currentNav, onNavigate }: LayoutProps
 
   // Close on Escape
   useEffect(() => {
-    if (!quickOpen) return;
+    if (!quickOpen && !sidebarOpen) return;
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setQuickOpen(false);
+      if (e.key === 'Escape') {
+        setQuickOpen(false);
+        setSidebarOpen(false);
+      }
     };
     document.addEventListener('keydown', handleKey);
     return () => document.removeEventListener('keydown', handleKey);
-  }, [quickOpen]);
+  }, [quickOpen, sidebarOpen]);
+
+  // Close sidebar on window resize to desktop
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        setSidebarOpen(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Helper: navigate and close sidebar on mobile
+  const handleNavClick = (page: Page) => {
+    onNavigate(page);
+    setSidebarOpen(false);
+  };
 
   return (
     <div className="min-h-screen bg-[#f5f7fb] flex">
+      {/* Mobile top bar with hamburger */}
+      <div className="fixed top-0 left-0 right-0 z-40 md:hidden bg-[#0f172a] flex items-center justify-between px-4 py-3">
+        <button onClick={() => handleNavClick({ type: 'dashboard' })} className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
+            <span className="text-white font-black text-xs tracking-tight">SG</span>
+          </div>
+          <span className="font-bold text-white text-sm tracking-tight">SGT</span>
+        </button>
+        <button
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          className="p-2 text-slate-300 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
+          aria-label="Abrir menú"
+        >
+          {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+        </button>
+      </div>
+
+      {/* Mobile overlay backdrop */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar oscuro */}
-      <aside className="w-[220px] bg-[#0f172a] h-screen fixed left-0 top-0 flex flex-col">
+      <aside className={`w-[220px] bg-[#0f172a] h-screen fixed left-0 top-0 flex flex-col z-50 transition-transform duration-300 ease-in-out ${
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      } md:translate-x-0`}>
         {/* Brand */}
         <div className="px-5 py-5">
-          <button onClick={() => onNavigate({ type: 'dashboard' })} className="flex items-center gap-3">
+          <button onClick={() => handleNavClick({ type: 'dashboard' })} className="flex items-center gap-3">
             <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
               <span className="text-white font-black text-sm tracking-tight">SG</span>
             </div>
@@ -137,7 +185,7 @@ export default function Layout({ children, currentNav, onNavigate }: LayoutProps
                   return (
                     <button
                       key={nav}
-                      onClick={() => onNavigate({ type: nav })}
+                      onClick={() => handleNavClick({ type: nav })}
                       className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] font-medium transition-all duration-200 ${
                         active
                           ? 'bg-white/10 text-white shadow-sm'
@@ -173,30 +221,30 @@ export default function Layout({ children, currentNav, onNavigate }: LayoutProps
       </aside>
 
       {/* Content */}
-      <div className="ml-[220px] flex-1 flex flex-col min-h-screen">
-        <main className="flex-1 p-8">
+      <div className="md:ml-[220px] flex-1 flex flex-col min-h-screen pt-14 md:pt-0">
+        <main className="flex-1 p-4 md:p-8">
           {children}
         </main>
 
         {/* Footer */}
-        <footer className="px-8 py-4 border-t border-slate-200 bg-white/60 backdrop-blur-sm">
-          <div className="flex items-center justify-between text-xs text-slate-400">
-            <span>© 2024–{new Date().getFullYear()} SGRT — Sistema de Gestión Regulatoria de Trámites. Todos los derechos reservados.</span>
+        <footer className="px-4 md:px-8 py-4 border-t border-slate-200 bg-white/60 backdrop-blur-sm">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-2 text-xs text-slate-400">
+            <span className="text-center md:text-left">© 2024–{new Date().getFullYear()} SGRT — Sistema de Gestión Regulatoria de Trámites.</span>
             <div className="flex items-center gap-4">
               <button
-                onClick={() => onNavigate({ type: 'legal', section: 'terms' })}
+                onClick={() => handleNavClick({ type: 'legal', section: 'terms' })}
                 className="hover:text-slate-600 transition-colors"
               >
-                Términos de Servicio
+                Términos
               </button>
               <button
-                onClick={() => onNavigate({ type: 'legal', section: 'privacy' })}
+                onClick={() => handleNavClick({ type: 'legal', section: 'privacy' })}
                 className="hover:text-slate-600 transition-colors"
               >
-                Política de Privacidad
+                Privacidad
               </button>
               <button
-                onClick={() => onNavigate({ type: 'legal', section: 'confidentiality' })}
+                onClick={() => handleNavClick({ type: 'legal', section: 'confidentiality' })}
                 className="hover:text-slate-600 transition-colors"
               >
                 Confidencialidad

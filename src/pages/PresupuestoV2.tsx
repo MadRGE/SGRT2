@@ -161,8 +161,8 @@ export default function PresupuestoV2({ gestionId, onNavigate }: Props) {
         </div>
 
         {/* Items table */}
-        <div className="px-8 py-6">
-          <table className="w-full text-sm">
+        <div className="px-4 md:px-8 py-6 overflow-x-auto">
+          <table className="w-full text-sm min-w-[600px]">
             <thead>
               <tr className="border-b-2 border-slate-200">
                 <th className="text-left py-2 font-semibold text-slate-600 text-xs uppercase tracking-wider">Tramite</th>

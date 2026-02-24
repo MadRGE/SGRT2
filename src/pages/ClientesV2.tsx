@@ -83,14 +83,14 @@ export default function ClientesV2({ onNavigate, autoOpen }: Props) {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-[26px] tracking-tight font-bold text-slate-800">Clientes</h1>
-          <p className="text-sm text-slate-400 mt-0.5">Gestiona tu cartera de clientes</p>
+          <h1 className="text-xl md:text-[26px] tracking-tight font-bold text-slate-800">Clientes</h1>
+          <p className="text-xs md:text-sm text-slate-400 mt-0.5">Gestiona tu cartera de clientes</p>
         </div>
         <button
           onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-lg hover:shadow-lg hover:shadow-blue-500/25 transition-colors text-sm font-medium"
+          className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-lg hover:shadow-lg hover:shadow-blue-500/25 transition-colors text-sm font-medium w-full sm:w-auto justify-center"
         >
           <Plus className="w-4 h-4" />
           Nuevo Cliente
@@ -130,26 +130,29 @@ export default function ClientesV2({ onNavigate, autoOpen }: Props) {
             <button
               key={c.id}
               onClick={() => onNavigate({ type: 'cliente', id: c.id })}
-              className="w-full flex items-center gap-4 p-4 hover:bg-slate-50 transition-colors text-left"
+              className="w-full flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 p-4 hover:bg-slate-50 transition-colors text-left"
             >
-              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <span className="text-blue-700 font-bold text-sm">{c.razon_social.charAt(0).toUpperCase()}</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-slate-800">{c.razon_social}</p>
-                <div className="flex items-center gap-3 mt-0.5">
-                  {c.cuit && <span className="text-xs text-slate-500">CUIT: {c.cuit}</span>}
+              <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-blue-700 font-bold text-sm">{c.razon_social.charAt(0).toUpperCase()}</span>
                 </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-slate-800 truncate">{c.razon_social}</p>
+                  <div className="flex items-center gap-3 mt-0.5">
+                    {c.cuit && <span className="text-xs text-slate-500">CUIT: {c.cuit}</span>}
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-300 flex-shrink-0 sm:hidden" />
               </div>
-              <div className="flex items-center gap-4 text-sm text-slate-500">
+              <div className="flex items-center gap-4 text-sm text-slate-500 pl-[52px] sm:pl-0">
                 {(c.registros_count ?? 0) > 0 && (
                   <span className="flex items-center gap-1 text-xs">
                     <Shield className="w-3 h-3" /> {c.registros_count}
                   </span>
                 )}
-                <span>{c.tramites_count} trámites</span>
+                <span className="text-xs sm:text-sm">{c.tramites_count} trámites</span>
               </div>
-              <ChevronRight className="w-4 h-4 text-slate-300" />
+              <ChevronRight className="w-4 h-4 text-slate-300 hidden sm:block flex-shrink-0" />
             </button>
           ))}
         </div>

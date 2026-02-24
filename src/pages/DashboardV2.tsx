@@ -301,17 +301,17 @@ export default function DashboardV2({ onNavigate }: Props) {
 
   return (
     <div className="min-h-screen bg-[#f5f7fb]">
-      <div className="max-w-[1100px] mx-auto space-y-8 py-2">
+      <div className="max-w-[1100px] mx-auto space-y-6 md:space-y-8 py-2">
         {/* Header */}
         <div className="flex items-end justify-between">
           <div>
-            <h1 className="text-[26px] font-bold text-slate-900 tracking-tight">Dashboard</h1>
-            <p className="text-sm text-slate-400 mt-0.5">Resumen de tu actividad</p>
+            <h1 className="text-xl md:text-[26px] font-bold text-slate-900 tracking-tight">Dashboard</h1>
+            <p className="text-xs md:text-sm text-slate-400 mt-0.5">Resumen de tu actividad</p>
           </div>
         </div>
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5">
           <KpiCard
             icon={Briefcase}
             label="Gestiones Activas"
@@ -351,7 +351,7 @@ export default function DashboardV2({ onNavigate }: Props) {
         </div>
 
         {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {/* Trámites por Estado - Pie Chart */}
           <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50 p-6">
             <h3 className="font-semibold text-slate-800 text-[15px] mb-4 flex items-center gap-2">
@@ -529,7 +529,7 @@ export default function DashboardV2({ onNavigate }: Props) {
         </div>
 
         {/* Two-column layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 md:gap-6">
           {/* Left column (wider) */}
           <div className="lg:col-span-3 space-y-6">
             {/* Gestiones Activas */}
@@ -776,8 +776,8 @@ function KpiCard({
         </div>
         <ChevronRight className="w-4 h-4 text-slate-200 group-hover:text-slate-400 transition-colors" />
       </div>
-      <p className={`text-3xl font-bold ${textColor} tracking-tight`}>{value}</p>
-      <p className="text-[12px] text-slate-400 font-medium mt-0.5">{label}</p>
+      <p className={`text-2xl md:text-3xl font-bold ${textColor} tracking-tight`}>{value}</p>
+      <p className="text-[11px] md:text-[12px] text-slate-400 font-medium mt-0.5">{label}</p>
     </button>
   );
 }
