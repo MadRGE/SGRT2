@@ -115,20 +115,20 @@ function AuthenticatedApp() {
   const [showSignUp, setShowSignUp] = useState(false);
   const [isResetPassword, setIsResetPassword] = useState(false);
 
+  useEffect(() => {
+    const hash = window.location.hash;
+    const pathname = window.location.pathname;
+    if (hash.includes('type=recovery') || pathname === '/reset-password') {
+      setIsResetPassword(true);
+    }
+  }, []);
+
   // Public cotizacion view - no auth required
   const path = window.location.pathname;
   const cotizMatch = path.match(/^\/cotizacion\/(.+)$/);
   if (cotizMatch) {
     return <CotizacionViewPublica urlPublica={cotizMatch[1]} />;
   }
-
-  useEffect(() => {
-    const hash = window.location.hash;
-    const path = window.location.pathname;
-    if (hash.includes('type=recovery') || path === '/reset-password') {
-      setIsResetPassword(true);
-    }
-  }, []);
 
   if (loading) {
     return (
