@@ -116,13 +116,6 @@ function AuthenticatedApp() {
   const [showSignUp, setShowSignUp] = useState(false);
   const [isResetPassword, setIsResetPassword] = useState(false);
 
-  // Public cotizacion view - no auth required
-  const path = window.location.pathname;
-  const cotizMatch = path.match(/^\/cotizacion\/(.+)$/);
-  if (cotizMatch) {
-    return <CotizacionViewPublica urlPublica={cotizMatch[1]} />;
-  }
-
   useEffect(() => {
     const hash = window.location.hash;
     const path = window.location.pathname;
@@ -130,6 +123,13 @@ function AuthenticatedApp() {
       setIsResetPassword(true);
     }
   }, []);
+
+  // Public cotizacion view - no auth required
+  const path = window.location.pathname;
+  const cotizMatch = path.match(/^\/cotizacion\/(.+)$/);
+  if (cotizMatch) {
+    return <CotizacionViewPublica urlPublica={cotizMatch[1]} />;
+  }
 
   if (loading) {
     return (
