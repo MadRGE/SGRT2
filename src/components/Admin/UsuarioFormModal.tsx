@@ -24,10 +24,11 @@ interface Props {
   onSuccess: () => void;
 }
 
-const ROLES = ['admin', 'gestor', 'cliente'];
+const ROLES = ['admin', 'gestor', 'despachante', 'cliente'];
 const ROL_LABELS: Record<string, string> = {
   admin: 'Administrador',
   gestor: 'Gestor',
+  despachante: 'Despachante',
   cliente: 'Cliente',
 };
 

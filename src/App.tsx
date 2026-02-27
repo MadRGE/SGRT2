@@ -32,6 +32,7 @@ import CotizacionViewPublica from './components/CotizacionViewPublica';
 import ANMATPage from './pages/ANMATPage';
 import Legal from './pages/Legal';
 import AsistenteIA from './pages/AsistenteIA';
+import PortalDespachanteApp from './pages/Despachante/PortalDespachante';
 
 function AppContent() {
   const [page, setPage] = useState<Page>(() => {
@@ -111,7 +112,7 @@ function AppContent() {
 }
 
 function AuthenticatedApp() {
-  const { user, loading } = useAuth();
+  const { user, loading, userRole } = useAuth();
   const [showSignUp, setShowSignUp] = useState(false);
   const [isResetPassword, setIsResetPassword] = useState(false);
 
@@ -149,6 +150,8 @@ function AuthenticatedApp() {
       <Login onSwitchToSignUp={() => setShowSignUp(true)} />
     );
   }
+
+  if (userRole === 'despachante') return <PortalDespachanteApp />;
 
   return <AppContent />;
 }

@@ -81,6 +81,8 @@ export default function GestionUsuarios(_props: Props) {
         return 'bg-red-100 text-red-800';
       case 'gestor':
         return 'bg-blue-100 text-blue-800';
+      case 'despachante':
+        return 'bg-amber-100 text-amber-800';
       case 'cliente':
         return 'bg-green-100 text-green-800';
       default:
@@ -91,6 +93,7 @@ export default function GestionUsuarios(_props: Props) {
   const ROL_LABELS: Record<string, string> = {
     admin: 'Administrador',
     gestor: 'Gestor',
+    despachante: 'Despachante',
     cliente: 'Cliente',
   };
 
@@ -198,7 +201,7 @@ export default function GestionUsuarios(_props: Props) {
           <Shield className="w-5 h-5" />
           Roles
         </h4>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
           <div>
             <p className="text-sm font-medium text-blue-800 mb-1">Administrador</p>
             <p className="text-xs text-blue-700">Acceso completo al sistema</p>
@@ -206,6 +209,10 @@ export default function GestionUsuarios(_props: Props) {
           <div>
             <p className="text-sm font-medium text-blue-800 mb-1">Gestor</p>
             <p className="text-xs text-blue-700">Gestión de trámites y clientes</p>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-blue-800 mb-1">Despachante</p>
+            <p className="text-xs text-blue-700">Portal de despachos aduaneros</p>
           </div>
           <div>
             <p className="text-sm font-medium text-blue-800 mb-1">Cliente</p>

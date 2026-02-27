@@ -54,10 +54,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const loadUserData = async (_userId: string) => {
-    // Solo consultant app - no need for usuarios table lookup
-    setUserRole('admin');
-    setClienteId(null);
+  const loadUserData = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('usuarios')
+        .select('rol, cliente_id')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (error || !data) {
+        // Fallback: if no record in usuarios table, default to admin (backward compat)
+        setUserRole('admin');
+        setClienteId(null);
+      } else {
+        setUserRole(data.rol || 'admin');
+        setClienteId(data.cliente_id || null);
+      }
+    } catch {
+      setUserRole('admin');
+      setClienteId(null);
+    }
     setLoading(false);
   };
 
