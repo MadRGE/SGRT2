@@ -1,0 +1,167 @@
+# Vigil IDS - Reglas de detección predefinidas
+# Cada regla evalúa campos de SecurityEvent.data
+
+rules:
+  # ── Red ──────────────────────────────────────────────
+  - id: NET001
+    name: "Nuevo listener detectado"
+    description: "Un proceso no confiable abrió un puerto de escucha que no existía antes"
+    severity: MEDIUM
+    source: network
+    event_type: new_listener
+    conditions:
+      - field: state
+        op: eq
+        value: LISTENING
+      - field: trusted
+        op: eq
+        value: false
+    alert_title: "Nuevo listener: {process} en puerto {local_port}"
+    alert_description: "El proceso {process} (PID {pid}) abrió el puerto {local_port}/{proto}"
+
+  - id: NET002
+    name: "Puerto sospechoso en escucha"
+    description: "Listener en un puerto comúnmente usado por malware o herramientas de ataque"
+    severity: HIGH
+    source: network
+    event_type: new_listener
+    conditions:
+      - field: local_port
+        op: in
+        value: [4444, 5555, 6666, 1337, 31337, 8888, 9999, 4443, 4445, 6667, 6697]
+    alert_title: "Puerto sospechoso: {local_port} ({process})"
+    alert_description: "El puerto {local_port} es conocido por uso malicioso. Proceso: {process} PID {pid}"
+
+  - id: NET003
+    name: "Proceso no confiable con listener"
+    description: "Un proceso fuera de la lista de confianza abrió un listener"
+    severity: MEDIUM
+    source: network
+    event_type: new_listener
+    conditions:
+      - field: trusted
+        op: eq
+        value: false
+    alert_title: "Listener de proceso no confiable: {process}"
+    alert_description: "{process} (PID {pid}) abrió puerto {local_port} y no está en la lista de confianza"
+
+  # ── Port Scan ────────────────────────────────────────
+  - id: SCAN001
+    name: "Port scan detectado"
+    description: "Más de 10 conexiones a puertos distintos desde la misma IP en ventana de 2 minutos"
+    severity: HIGH
+    source: portscan
+    event_type: port_scan_detected
+    conditions:
+      - field: unique_ports
+        op: gt
+        value: 10
+    alert_title: "Port scan desde {remote_ip}"
+    alert_description: "{remote_ip} contactó {unique_ports} puertos distintos en {window_seconds}s"
+
+  # ── Event Log ────────────────────────────────────────
+  - id: EVT001
+    name: "Login fallido repetido"
+    description: "Múltiples intentos de login fallidos (Event ID 4625)"
+    severity: HIGH
+    source: eventlog
+    event_type: login_failed
+    conditions:
+      - field: event_id
+        op: eq
+        value: 4625
+    alert_title: "Login fallido: usuario {target_user}"
+    alert_description: "Intento de login fallido para {target_user} desde {source_ip}. Razón: {failure_reason}"
+
+  - id: EVT002
+    name: "Nuevo servicio instalado"
+    description: "Se instaló un nuevo servicio en el sistema (Event ID 7045)"
+    severity: MEDIUM
+    source: eventlog
+    event_type: service_installed
+    conditions:
+      - field: event_id
+        op: eq
+        value: 7045
+    alert_title: "Servicio nuevo: {service_name}"
+    alert_description: "Se instaló el servicio '{service_name}' ({service_path})"
+
+  - id: EVT003
+    name: "Windows Defender desactivado"
+    description: "Protección en tiempo real fue deshabilitada"
+    severity: CRITICAL
+    source: eventlog
+    event_type: defender_disabled
+    conditions:
+      - field: event_id
+        op: eq
+        value: 5001
+    alert_title: "Windows Defender desactivado"
+    alert_description: "La protección en tiempo real de Windows Defender fue deshabilitada"
+
+  - id: EVT004
+    name: "PowerShell script block logging"
+    description: "Se ejecutó un script de PowerShell potencialmente sospechoso"
+    severity: MEDIUM
+    source: eventlog
+    event_type: powershell_script
+    conditions:
+      - field: event_id
+        op: eq
+        value: 4104
+    alert_title: "PowerShell script ejecutado"
+    alert_description: "Script PowerShell detectado: {script_preview}"
+
+  # ── Procesos ─────────────────────────────────────────
+  - id: PROC001
+    name: "Proceso sospechoso detectado"
+    description: "Se encontró un proceso cuyo nombre coincide con herramientas conocidas de ataque"
+    severity: HIGH
+    source: process
+    event_type: suspicious_process
+    conditions:
+      - field: suspicious
+        op: eq
+        value: true
+    alert_title: "Proceso sospechoso: {name}"
+    alert_description: "Proceso '{name}' (PID {pid}) coincide con herramienta conocida. Sesión: {session}"
+
+  - id: PROC002
+    name: "Proceso desde path temporal"
+    description: "Un proceso se ejecuta desde carpeta temporal (posible dropper)"
+    severity: MEDIUM
+    source: process
+    event_type: temp_path_process
+    conditions:
+      - field: from_temp
+        op: eq
+        value: true
+    alert_title: "Proceso en temp: {name}"
+    alert_description: "Proceso '{name}' (PID {pid}) ejecutándose desde path temporal"
+
+  # ── Filesystem ───────────────────────────────────────
+  - id: FS001
+    name: "Archivo crítico modificado"
+    description: "Un archivo del sistema en la lista de vigilancia fue modificado"
+    severity: HIGH
+    source: filesystem
+    event_type: file_modified
+    conditions:
+      - field: watched
+        op: eq
+        value: true
+    alert_title: "Archivo modificado: {path}"
+    alert_description: "El archivo vigilado {path} fue modificado ({change_type})"
+
+  - id: FS002
+    name: "Archivo creado en directorio vigilado"
+    description: "Se creó un nuevo archivo en un directorio vigilado"
+    severity: MEDIUM
+    source: filesystem
+    event_type: file_created
+    conditions:
+      - field: watched
+        op: eq
+        value: true
+    alert_title: "Archivo creado: {path}"
+    alert_description: "Nuevo archivo en directorio vigilado: {path}"

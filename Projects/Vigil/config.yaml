@@ -1,0 +1,63 @@
+# Vigil IDS — Configuración
+# Editar según necesidad. Valores comentados = defaults.
+
+monitors:
+  network:
+    enabled: true
+    interval: 15        # segundos entre polls
+
+  portscan:
+    enabled: true
+    interval: 10
+
+  eventlog:
+    enabled: true
+    interval: 60        # Event Log es más pesado, poll menos frecuente
+
+  process:
+    enabled: true
+    interval: 20
+
+  filesystem:
+    enabled: true
+    interval: 5         # watchdog acumula eventos, poll drena la cola
+
+# Paths a vigilar (filesystem monitor)
+watched_paths:
+  - C:\Windows\System32\drivers\etc\hosts
+  - C:\Windows\System32\drivers\etc\networks
+
+# Procesos confiables (no alertar si abren listeners)
+trusted_processes:
+  - svchost.exe
+  - System
+  - explorer.exe
+  - csrss.exe
+  - lsass.exe
+  - services.exe
+  - wininit.exe
+  - winlogon.exe
+  - ollama.exe
+  - chrome.exe
+  - claude.exe
+
+# Ollama (enriquecimiento LLM)
+ollama:
+  url: http://localhost:11434
+  model: phi3
+  timeout: 30
+  min_severity: MEDIUM  # solo enriquecer alertas >= MEDIUM
+  rate_limit: 2.0       # segundos entre llamadas
+
+# Dashboard web
+dashboard:
+  enabled: true
+  host: "127.0.0.1"
+  port: 8080
+
+# Alertas
+alerts:
+  log_file: alerts.jsonl
+  toast_enabled: true
+  dedup_window: 300     # 5 min — ignorar alertas idénticas
+  throttle_per_rule: 60 # 1 min — mínimo entre misma regla

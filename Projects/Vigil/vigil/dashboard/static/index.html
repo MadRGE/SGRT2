@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vigil IDS</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0e17;--bg-card:#111827;--bg-card-hover:#1a2332;
+  --border:#1e293b;--text:#e2e8f0;--text-dim:#94a3b8;--accent:#3b82f6;
+  --low:#22c55e;--medium:#eab308;--high:#ef4444;--critical:#dc2626;
+  --trusted:#22c55e;--untrusted:#ef4444;
+}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh}
+a{color:var(--accent)}
+
+/* Header */
+.header{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid var(--border);background:#0d1220}
+.header h1{font-size:1.3rem;letter-spacing:1px}
+.header h1 span{color:var(--accent)}
+.header-right{display:flex;align-items:center;gap:16px;font-size:.85rem;color:var(--text-dim)}
+.ws-status{display:flex;align-items:center;gap:6px}
+.ws-dot{width:8px;height:8px;border-radius:50%;background:var(--untrusted)}
+.ws-dot.connected{background:var(--trusted)}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:16px 24px}
+.stat-card{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:16px;text-align:center}
+.stat-card .value{font-size:1.8rem;font-weight:700;color:var(--accent)}
+.stat-card .label{font-size:.75rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-top:4px}
+
+/* Grid */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:0 24px 16px}
+.panel{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.panel-header{padding:12px 16px;border-bottom:1px solid var(--border);font-size:.85rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-dim);display:flex;justify-content:space-between;align-items:center}
+.panel-header .count{color:var(--accent);font-size:.8rem}
+.panel-body{max-height:400px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.full-width{grid-column:1/-1}
+
+/* Table */
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th{text-align:left;padding:8px 12px;color:var(--text-dim);font-weight:500;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg-card)}
+td{padding:6px 12px;border-bottom:1px solid var(--border)}
+tr:hover td{background:var(--bg-card-hover)}
+.trusted-yes{color:var(--trusted)}
+.trusted-no{color:var(--untrusted)}
+.mono{font-family:'Cascadia Code','Consolas',monospace;font-size:.78rem}
+
+/* Alerts */
+.alert-card{padding:12px 16px;border-left:3px solid var(--border);border-bottom:1px solid var(--border)}
+.alert-card.LOW{border-left-color:var(--low)}
+.alert-card.MEDIUM{border-left-color:var(--medium)}
+.alert-card.HIGH{border-left-color:var(--high)}
+.alert-card.CRITICAL{border-left-color:var(--critical);background:rgba(220,38,38,.06)}
+.alert-title{font-size:.85rem;font-weight:600;margin-bottom:4px}
+.alert-meta{display:flex;gap:12px;font-size:.72rem;color:var(--text-dim)}
+.alert-severity{font-weight:700;text-transform:uppercase}
+.alert-severity.LOW{color:var(--low)}
+.alert-severity.MEDIUM{color:var(--medium)}
+.alert-severity.HIGH{color:var(--high)}
+.alert-severity.CRITICAL{color:var(--critical)}
+.alert-desc{font-size:.78rem;color:var(--text-dim);margin-top:4px}
+.alert-llm{font-size:.78rem;color:var(--accent);margin-top:4px;font-style:italic}
+
+/* Events log */
+.event-row{padding:6px 16px;border-bottom:1px solid var(--border);font-size:.78rem;display:flex;gap:12px;align-items:center}
+.event-row:hover{background:var(--bg-card-hover)}
+.event-time{color:var(--text-dim);min-width:70px;font-family:'Cascadia Code','Consolas',monospace;font-size:.72rem}
+.event-source{background:var(--border);padding:2px 8px;border-radius:4px;font-size:.7rem;min-width:70px;text-align:center}
+.event-type{color:var(--accent);min-width:120px}
+.event-detail{color:var(--text-dim);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Empty state */
+.empty{padding:32px;text-align:center;color:var(--text-dim);font-size:.85rem}
+
+/* Flash animation */
+@keyframes flash{0%{background:rgba(59,130,246,.12)}100%{background:transparent}}
+.flash{animation:flash 1.5s ease-out}
+
+/* Responsive */
+@media(max-width:900px){
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1><span>VIGIL</span> IDS</h1>
+  <div class="header-right">
+    <span id="uptime">--:--:--</span>
+    <div class="ws-status">
+      <div class="ws-dot" id="ws-dot"></div>
+      <span id="ws-label">Desconectado</span>
+    </div>
+  </div>
+</div>
+
+<div class="stats">
+  <div class="stat-card"><div class="value" id="stat-events">0</div><div class="label">Eventos</div></div>
+  <div class="stat-card"><div class="value" id="stat-alerts">0</div><div class="label">Alertas</div></div>
+  <div class="stat-card"><div class="value" id="stat-listeners">0</div><div class="label">Listeners</div></div>
+  <div class="stat-card"><div class="value" id="stat-clients">0</div><div class="label">Clientes WS</div></div>
+</div>
+
+<div class="grid">
+  <!-- Listeners -->
+  <div class="panel">
+    <div class="panel-header">
+      Listeners Activos
+      <span class="count" id="listeners-count">0</span>
+    </div>
+    <div class="panel-body" id="listeners-body">
+      <table>
+        <thead><tr><th>Proto</th><th>Puerto</th><th>Proceso</th><th>PID</th><th>Confiable</th></tr></thead>
+        <tbody id="listeners-table"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Alertas -->
+  <div class="panel">
+    <div class="panel-header">
+      Alertas Recientes
+      <span class="count" id="alerts-count">0</span>
+    </div>
+    <div class="panel-body" id="alerts-body"></div>
+  </div>
+
+  <!-- Eventos -->
+  <div class="panel full-width">
+    <div class="panel-header">
+      Eventos Recientes
+      <span class="count" id="events-count">0</span>
+    </div>
+    <div class="panel-body" id="events-body" style="max-height:250px"></div>
+  </div>
+</div>
+
+<script>
+let ws = null;
+let reconnectTimer = null;
+let alertCount = 0;
+let eventCount = 0;
+
+function connect() {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(`${proto}//${location.host}/ws`);
+
+  ws.onopen = () => {
+    document.getElementById('ws-dot').classList.add('connected');
+    document.getElementById('ws-label').textContent = 'Conectado';
+    if (reconnectTimer) { clearInterval(reconnectTimer); reconnectTimer = null; }
+  };
+
+  ws.onclose = () => {
+    document.getElementById('ws-dot').classList.remove('connected');
+    document.getElementById('ws-label').textContent = 'Reconectando...';
+    if (!reconnectTimer) reconnectTimer = setInterval(connect, 3000);
+  };
+
+  ws.onerror = () => ws.close();
+
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    switch(msg.type) {
+      case 'snapshot': handleSnapshot(msg.data); break;
+      case 'event': handleEvent(msg.data); break;
+      case 'alert': handleAlert(msg.data); break;
+      case 'stats': handleStats(msg.data); break;
+      case 'listeners_update': renderListeners(msg.data.listeners, msg.data.total); break;
+    }
+  };
+}
+
+function handleSnapshot(data) {
+  // Stats
+  if (data.stats) {
+    document.getElementById('stat-events').textContent = data.stats.events_total || 0;
+    document.getElementById('stat-alerts').textContent = data.stats.alerts_total || 0;
+    updateUptime(data.stats.uptime_seconds || 0);
+  }
+
+  // Listeners del network monitor
+  const net = data.monitors?.network;
+  if (net?.state?.listeners) {
+    renderListeners(net.state.listeners, net.state.total);
+  }
+
+  // Alertas recientes
+  if (data.recent_alerts) {
+    data.recent_alerts.forEach(a => addAlertCard(a, false));
+    alertCount = data.recent_alerts.length;
+    document.getElementById('alerts-count').textContent = alertCount;
+  }
+
+  // Eventos recientes
+  if (data.recent_events) {
+    data.recent_events.forEach(ev => addEventRow(ev, false));
+    eventCount = data.recent_events.length;
+    document.getElementById('events-count').textContent = eventCount;
+  }
+}
+
+function handleEvent(data) {
+  addEventRow(data, true);
+  eventCount++;
+  document.getElementById('events-count').textContent = eventCount;
+  const el = document.getElementById('stat-events');
+  el.textContent = parseInt(el.textContent) + 1;
+}
+
+function handleAlert(data) {
+  addAlertCard(data, true);
+  alertCount++;
+  document.getElementById('alerts-count').textContent = alertCount;
+  const el = document.getElementById('stat-alerts');
+  el.textContent = parseInt(el.textContent) + 1;
+}
+
+function handleStats(data) {
+  if (data.events_total != null) document.getElementById('stat-events').textContent = data.events_total;
+  if (data.alerts_total != null) document.getElementById('stat-alerts').textContent = data.alerts_total;
+  if (data.ws_clients != null) document.getElementById('stat-clients').textContent = data.ws_clients;
+  if (data.uptime_seconds != null) updateUptime(data.uptime_seconds);
+  if (data.listeners) {
+    renderListeners(data.listeners.listeners, data.listeners.total);
+  }
+}
+
+function renderListeners(listeners, total) {
+  const tbody = document.getElementById('listeners-table');
+  tbody.innerHTML = '';
+  if (!listeners || listeners.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty">Sin listeners</td></tr>';
+    document.getElementById('stat-listeners').textContent = '0';
+    document.getElementById('listeners-count').textContent = '0';
+    return;
+  }
+  listeners.forEach(l => {
+    const tr = document.createElement('tr');
+    const trusted = l.trusted;
+    tr.innerHTML = `
+      <td class="mono">${esc(l.proto)}</td>
+      <td class="mono">${l.local_port}</td>
+      <td>${esc(l.process)}</td>
+      <td class="mono">${l.pid}</td>
+      <td class="${trusted ? 'trusted-yes' : 'trusted-no'}">${trusted ? 'Si' : 'No'}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('stat-listeners').textContent = total || listeners.length;
+  document.getElementById('listeners-count').textContent = total || listeners.length;
+}
+
+function addAlertCard(alert, prepend) {
+  const container = document.getElementById('alerts-body');
+  const div = document.createElement('div');
+  const sev = alert.severity || 'MEDIUM';
+  div.className = `alert-card ${sev}` + (prepend ? ' flash' : '');
+  const time = formatTime(alert.timestamp);
+  div.innerHTML = `
+    <div class="alert-title">${esc(alert.title)}</div>
+    <div class="alert-meta">
+      <span class="alert-severity ${sev}">${sev}</span>
+      <span>${esc(alert.rule_id)}</span>
+      <span>${time}</span>
+    </div>
+    <div class="alert-desc">${esc(alert.description)}</div>
+    ${alert.llm_explanation ? `<div class="alert-llm">${esc(alert.llm_explanation)}</div>` : ''}
+  `;
+  if (prepend) container.prepend(div); else container.appendChild(div);
+
+  // Limitar a 50
+  while (container.children.length > 50) container.removeChild(container.lastChild);
+}
+
+function addEventRow(ev, prepend) {
+  const container = document.getElementById('events-body');
+  const div = document.createElement('div');
+  div.className = 'event-row' + (prepend ? ' flash' : '');
+  const time = formatTime(ev.timestamp);
+  const detail = ev.data ? summarizeEvent(ev) : '';
+  div.innerHTML = `
+    <span class="event-time">${time}</span>
+    <span class="event-source">${esc(ev.source)}</span>
+    <span class="event-type">${esc(ev.event_type)}</span>
+    <span class="event-detail">${esc(detail)}</span>
+  `;
+  if (prepend) container.prepend(div); else container.appendChild(div);
+
+  // Limitar a 100
+  while (container.children.length > 100) container.removeChild(container.lastChild);
+}
+
+function summarizeEvent(ev) {
+  const d = ev.data;
+  if (ev.source === 'network') return `${d.process || '?'} :${d.local_port || '?'} (${d.proto || '?'})`;
+  if (ev.source === 'portscan') return `${d.remote_ip || '?'} -> ${d.unique_ports || '?'} puertos`;
+  if (ev.source === 'process') return `${d.process || '?'} PID ${d.pid || '?'}${d.reason ? ' (' + d.reason + ')' : ''}`;
+  if (ev.source === 'filesystem') return `${d.file_name || d.file_path || '?'} (${ev.event_type})`;
+  if (ev.source === 'eventlog') {
+    let detail = `Event ${d.event_id || '?'} [${d.channel || '?'}]`;
+    if (d.target_user) detail += ` user=${d.target_user}`;
+    else if (d.service_name) detail += ` svc=${d.service_name}`;
+    else if (d.script_path) detail += ` ${d.script_path}`;
+    return detail.slice(0, 80);
+  }
+  return JSON.stringify(d).slice(0, 80);
+}
+
+function updateUptime(seconds) {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  document.getElementById('uptime').textContent =
+    `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+function formatTime(iso) {
+  if (!iso) return '--:--:--';
+  const d = new Date(iso);
+  return d.toLocaleTimeString('es-AR', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+
+function esc(s) {
+  if (s == null) return '';
+  const div = document.createElement('div');
+  div.textContent = String(s);
+  return div.innerHTML;
+}
+
+connect();
+</script>
+</body>
+</html>
