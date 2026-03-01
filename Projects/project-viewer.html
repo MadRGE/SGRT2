@@ -246,6 +246,17 @@
   .suggest-footer { padding: 0.8rem 1.2rem; border-top: 1px solid var(--border); display: flex; gap: 0.5rem; justify-content: flex-end; }
   .suggest-footer button { padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-family: inherit; border: 1px solid var(--border); transition: all 0.15s; }
   .suggest-footer button:disabled { opacity: 0.4; cursor: default; }
+  .todo-select { accent-color: var(--accent); cursor: pointer; margin-right: 0.1rem; }
+  .todo-batch-bar { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.7rem; background: var(--accent-glow); border: 1px solid var(--accent); border-radius: 8px; margin-bottom: 0.5rem; font-size: 0.75rem; }
+  .todo-batch-bar button { padding: 0.3rem 0.6rem; border-radius: 6px; cursor: pointer; font-size: 0.72rem; font-family: inherit; border: none; transition: all 0.15s; }
+  .todo-batch-prompt { background: var(--accent); color: white; }
+  .todo-batch-count { flex: 1; color: var(--text-dim); }
+  .updates-toggle { background: none; border: none; color: var(--text-dim); font-size: 0.75rem; cursor: pointer; font-family: inherit; padding: 0.2rem 0; display: flex; align-items: center; gap: 0.3rem; }
+  .updates-toggle:hover { color: var(--text); }
+  .updates-list { list-style: none; padding: 0; margin: 0.3rem 0 0; }
+  .updates-list li { font-size: 0.73rem; color: var(--text-dim); padding: 0.2rem 0; display: flex; gap: 0.5rem; align-items: baseline; }
+  .updates-list li::before { content: '✓'; color: var(--green); font-size: 0.65rem; }
+  .update-date { font-size: 0.65rem; color: var(--text-dim); opacity: 0.6; white-space: nowrap; }
   .suggest-btn-add { background: var(--accent); border-color: var(--accent); color: white; }
   .suggest-btn-prompt { background: none; color: var(--text); }
 
@@ -624,6 +635,7 @@ const builtinProjects = [
 // STORAGE KEYS
 // ============================================================
 const TODOS_KEY = 'project-todos-v2';
+const UPDATES_KEY = 'project-updates';
 const CUSTOM_KEY = 'custom-projects';
 const NOTES_KEY = 'project-notes';
 const PINS_KEY = 'pinned-projects';
@@ -652,6 +664,44 @@ function loadAllTodos() {
 let todoData = loadAllTodos();
 function getTodos(name) { if (!todoData[name]) { const p = projects.find(pr=>pr.name===name); todoData[name] = p?.defaultTodos ? p.defaultTodos.map(t=>({...t})) : []; } return todoData[name]; }
 function saveTodos() { localStorage.setItem(TODOS_KEY, JSON.stringify(todoData)); }
+// Updates history — completed tasks move here on reload
+function loadUpdates() { return JSON.parse(localStorage.getItem(UPDATES_KEY) || '{}'); }
+function saveUpdates() { localStorage.setItem(UPDATES_KEY, JSON.stringify(updatesData)); }
+let updatesData = loadUpdates();
+function getUpdates(name) { if (!updatesData[name]) updatesData[name] = []; return updatesData[name]; }
+
+function renderUpdatesSection(name, sn) {
+  const updates = getUpdates(name);
+  if (updates.length === 0) return '';
+  // Group by date
+  const grouped = {};
+  updates.forEach(u => { if (!grouped[u.date]) grouped[u.date] = []; grouped[u.date].push(u.text); });
+  const dates = Object.keys(grouped).sort().reverse();
+  const items = dates.map(d =>
+    grouped[d].map(t => `<li><span>${esc(t)}</span><span class="update-date">${d}</span></li>`).join('')
+  ).join('');
+  return `<div class="notes-section" onclick="event.stopPropagation()">
+    <button class="updates-toggle" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
+      ▸ Updates (${updates.length})
+    </button>
+    <div style="display:none"><ul class="updates-list">${items}</ul></div>
+  </div>`;
+}
+
+// Purge completed tasks on load → move to updates history
+Object.keys(todoData).forEach(k => {
+  const done = todoData[k].filter(t => t.done);
+  if (done.length > 0) {
+    const hist = getUpdates(k);
+    const today = new Date().toISOString().slice(0, 10);
+    done.forEach(t => hist.unshift({ text: t.text, date: today }));
+    // Keep max 50 updates per project
+    if (hist.length > 50) updatesData[k] = hist.slice(0, 50);
+    todoData[k] = todoData[k].filter(t => !t.done);
+  }
+});
+saveTodos();
+saveUpdates();
 function getProgress(name) { const t=getTodos(name), total=t.length; if(!total) return {done:0,total:0,pct:100}; const done=t.filter(x=>x.done).length; return {done,total,pct:Math.round(done/total*100)}; }
 
 // ============================================================
@@ -700,6 +750,37 @@ function showToast(msg) { clearTimeout(toastTimer); toastEl.textContent=msg; toa
 // ============================================================
 // TODO ACTIONS
 // ============================================================
+// Batch select for Prompt Builder
+function updateBatchBar(sn) {
+  const checks = document.querySelectorAll(`.todo-select[data-project="${sn}"]:checked`);
+  const bar = document.getElementById('batch-bar-' + sn);
+  const count = document.getElementById('batch-count-' + sn);
+  if (!bar) return;
+  const n = checks.length;
+  bar.style.display = n > 0 ? 'flex' : 'none';
+  if (count) count.textContent = `${n} tarea${n>1?'s':''} seleccionada${n>1?'s':''}`;
+}
+
+function clearBatchSelect(sn) {
+  document.querySelectorAll(`.todo-select[data-project="${sn}"]`).forEach(c => c.checked = false);
+  updateBatchBar(sn);
+}
+
+function batchToPromptBuilder(sn) {
+  const checks = document.querySelectorAll(`.todo-select[data-project="${sn}"]:checked`);
+  if (checks.length === 0) return;
+  const p = projects.find(pr => pr.name === sn);
+  if (!p) return;
+  const todos = getTodos(sn);
+  const selected = Array.from(checks).map(c => todos[parseInt(c.dataset.index)]).filter(Boolean);
+  const combined = {
+    text: selected.map(s => s.text).join(' + '),
+    priority: selected.some(s => s.priority === 'high') ? 'high' : 'med'
+  };
+  clearBatchSelect(sn);
+  openPromptBuilder(p, combined);
+}
+
 function copyTodoToClaude(e,n,i) {
   e.stopPropagation();
   const p = projects.find(pr => pr.name === n);
@@ -728,8 +809,10 @@ function openPromptBuilder(project, todo) {
   const textarea = document.getElementById('prompt-textarea');
   const loading = document.getElementById('prompt-loading');
 
-  titleEl.textContent = `Preparar: ${todo.text}`;
-  infoEl.innerHTML = `<strong>${esc(project.name)}</strong> (${project.stack.join(', ')})<br>Tarea: ${esc(todo.text)} | Prioridad: ${todo.priority}${todo.due ? ' | Deadline: ' + todo.due : ''}`;
+  const tasks = todo.text.split(' + ');
+  const isMulti = tasks.length > 1;
+  titleEl.textContent = isMulti ? `Preparar ${tasks.length} tareas` : `Preparar: ${todo.text}`;
+  infoEl.innerHTML = `<strong>${esc(project.name)}</strong> (${project.stack.join(', ')})<br>${isMulti ? tasks.map(t => `• ${esc(t)}`).join('<br>') : `Tarea: ${esc(todo.text)}`} | Prioridad: ${todo.priority}${todo.due ? ' | Deadline: ' + todo.due : ''}`;
   textarea.value = '';
   loading.style.display = 'block';
   overlay.classList.add('open');
@@ -769,7 +852,9 @@ Descripcion: ${project.desc}
 ${pending ? 'Otras tareas pendientes:\n' + pending : ''}
 ${notes ? 'Notas: ' + notes : ''}
 
-Tarea a convertir en prompt: "${todo.text}"
+${todo.text.includes(' + ')
+    ? 'Tareas a convertir en un prompt unificado:\n' + todo.text.split(' + ').map((t,i) => `${i+1}. ${t}`).join('\n')
+    : `Tarea a convertir en prompt: "${todo.text}"`}
 Prioridad: ${todo.priority}${todo.due ? '\nDeadline: ' + todo.due : ''}`;
 
   try {
@@ -1149,6 +1234,11 @@ function renderCards() {
 
         ${getViewMode(p.name)==='kanban' ? renderKanban(p.name, sn) : ''}
         ${getViewMode(p.name)==='list' ? `
+        <div class="todo-batch-bar" id="batch-bar-${sn}" style="display:none">
+          <span class="todo-batch-count" id="batch-count-${sn}">0 seleccionadas</span>
+          <button class="todo-batch-prompt" onclick="batchToPromptBuilder('${sn}')">Prompt Builder</button>
+          <button style="background:var(--bg);color:var(--text-dim)" onclick="clearBatchSelect('${sn}')">Cancelar</button>
+        </div>
         ${todos.length===0?'<div class="todo-empty">Sin tareas pendientes</div>':''}
         <ul class="todo-list">
           ${todos.map((t,ti) => {
@@ -1159,6 +1249,7 @@ function renderCards() {
             <li class="todo-item ${t.done?'done':''}" draggable="true" onclick="event.stopPropagation()"
                 ondragstart="onDragStart(event,'${sn}',${ti})" ondragover="onDragOver(event,'${sn}',${ti})"
                 ondragleave="onDragLeave(event)" ondrop="onDrop(event,'${sn}',${ti})" ondragend="onDragEnd(event)">
+              <input type="checkbox" class="todo-select" data-project="${sn}" data-index="${ti}" onclick="event.stopPropagation();updateBatchBar('${sn}')" title="Seleccionar para Prompt Builder">
               <span class="todo-grip" title="Arrastrar">⠿</span>
               <div class="todo-check ${t.done?'done':''}" onclick="toggleTodo(event,'${sn}',${ti})"></div>
               ${isEdit
@@ -1186,6 +1277,8 @@ function renderCards() {
           <h3>Notas</h3>
           <textarea class="notes-textarea" placeholder="Ideas, links, decisiones..." onclick="event.stopPropagation()" oninput="saveNote(event,'${sn}')">${esc(noteText)}</textarea>
         </div>
+
+        ${renderUpdatesSection(p.name, sn)}
 
         ${renderCostSection(p.name)}
 
