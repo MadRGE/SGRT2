@@ -6,6 +6,7 @@ import { checkSoftDelete, checkSeguimientoUserCol } from './lib/supabase';
 import Login from './pages/Auth/Login';
 import SignUp from './pages/Auth/SignUp';
 import ResetPassword from './pages/Auth/ResetPassword';
+import ForgotPassword from './pages/Auth/ForgotPassword';
 import Layout, { type Page } from './components/Layout/Layout';
 import DashboardV2 from './pages/DashboardV2';
 import ClientesV2 from './pages/ClientesV2';
@@ -111,18 +112,11 @@ function AppContent() {
   );
 }
 
-function AuthenticatedApp() {
-  const { user, loading, userRole } = useAuth();
-  const [showSignUp, setShowSignUp] = useState(false);
-  const [isResetPassword, setIsResetPassword] = useState(false);
+type AuthView = 'login' | 'signup' | 'forgot-password';
 
-  useEffect(() => {
-    const hash = window.location.hash;
-    const path = window.location.pathname;
-    if (hash.includes('type=recovery') || path === '/reset-password') {
-      setIsResetPassword(true);
-    }
-  }, []);
+function AuthenticatedApp() {
+  const { user, loading, userRole, isRecovery } = useAuth();
+  const [authView, setAuthView] = useState<AuthView>('login');
 
   // Public cotizacion view - no auth required
   const path = window.location.pathname;
@@ -139,15 +133,32 @@ function AuthenticatedApp() {
     );
   }
 
-  if (isResetPassword && user) {
+  if (isRecovery && user) {
     return <ResetPassword />;
   }
 
   if (!user) {
-    return showSignUp ? (
-      <SignUp onSwitchToLogin={() => setShowSignUp(false)} />
-    ) : (
-      <Login onSwitchToSignUp={() => setShowSignUp(true)} />
+    if (authView === 'signup') {
+      return <SignUp onSwitchToLogin={() => setAuthView('login')} />;
+    }
+    if (authView === 'forgot-password') {
+      return <ForgotPassword onBack={() => setAuthView('login')} />;
+    }
+    return (
+      <Login
+        onSwitchToSignUp={() => setAuthView('signup')}
+        onSwitchToForgotPassword={() => setAuthView('forgot-password')}
+      />
+    );
+  }
+
+  // User is authenticated but role hasn't loaded yet
+  if (userRole === null) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-3">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <p className="text-sm text-slate-500">Configurando tu cuenta...</p>
+      </div>
     );
   }
 

@@ -8,11 +8,13 @@ interface AuthContextType {
   loading: boolean;
   userRole: string | null;
   clienteId: string | null;
+  isRecovery: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, nombre: string, rol?: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
   updatePassword: (newPassword: string) => Promise<{ error: Error | null }>;
+  clearRecovery: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -23,8 +25,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [clienteId, setClienteId] = useState<string | null>(null);
+  const [isRecovery, setIsRecovery] = useState(false);
 
   useEffect(() => {
+    // Detect recovery token in URL hash on mount
+    const hash = window.location.hash;
+    if (hash.includes('type=recovery')) {
+      setIsRecovery(true);
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -39,9 +48,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
+
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsRecovery(true);
+      }
+
+      if (event === 'SIGNED_OUT') {
+        setUserRole(null);
+        setClienteId(null);
+        setIsRecovery(false);
+        setLoading(false);
+        return;
+      }
+
       if (session?.user) {
         loadUserData(session.user.id);
       } else {
@@ -54,7 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const loadUserData = async (userId: string) => {
+  const loadUserData = async (userId: string, retry = true) => {
     try {
       const { data, error } = await supabase
         .from('usuarios')
@@ -62,27 +84,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', userId)
         .maybeSingle();
 
-      if (error || !data) {
-        // Fallback: if no record in usuarios table, default to admin (backward compat)
-        setUserRole('admin');
+      if (error) {
+        setUserRole(null);
         setClienteId(null);
-      } else {
-        setUserRole(data.rol || 'admin');
+      } else if (!data && retry) {
+        // The handle_new_user trigger may not have finished yet — retry once after 1s
+        setTimeout(() => loadUserData(userId, false), 1000);
+        return;
+      } else if (data) {
+        setUserRole(data.rol);
         setClienteId(data.cliente_id || null);
+      } else {
+        // No data after retry — role stays null (handled in App.tsx as loading)
+        setUserRole(null);
+        setClienteId(null);
       }
     } catch {
-      setUserRole('admin');
+      setUserRole(null);
       setClienteId(null);
     }
     setLoading(false);
   };
 
+  const clearRecovery = () => setIsRecovery(false);
+
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
       return { error };
     } catch (error) {
       return { error: error as Error };
@@ -94,14 +122,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { error } = await supabase.auth.signUp({
         email,
         password,
-        options: {
-          data: {
-            nombre,
-            rol,
-          },
-        },
+        options: { data: { nombre, rol } },
       });
-
       if (error) return { error };
       return { error: null };
     } catch (error) {
@@ -126,9 +148,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updatePassword = async (newPassword: string) => {
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword,
-      });
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
       return { error };
     } catch (error) {
       return { error: error as Error };
@@ -136,16 +156,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const value = {
-    user,
-    session,
-    loading,
-    userRole,
-    clienteId,
-    signIn,
-    signUp,
-    signOut,
-    resetPassword,
-    updatePassword,
+    user, session, loading, userRole, clienteId, isRecovery,
+    signIn, signUp, signOut, resetPassword, updatePassword, clearRecovery,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
