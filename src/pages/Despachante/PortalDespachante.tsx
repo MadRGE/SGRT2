@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, Ship, Users, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Ship, Users, BarChart3, LogOut, Menu, X } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import DespachanteDashboard from './DespachanteDashboard';
 import DespachosListPage from './DespachosListPage';
@@ -7,6 +7,7 @@ import DespachoDetailPage from './DespachoDetailPage';
 import DespachoFormModal from './DespachoFormModal';
 import DespachanteClientesPage from './DespachanteClientesPage';
 import DespachanteClienteDetail from './DespachanteClienteDetail';
+import DespachanteReportsPage from './DespachanteReportsPage';
 
 type DespachanteView =
   | { type: 'dashboard' }
@@ -14,13 +15,30 @@ type DespachanteView =
   | { type: 'despacho'; id: string }
   | { type: 'clientes' }
   | { type: 'cliente'; id: string }
+  | { type: 'reportes' }
   | { type: 'nuevo-despacho'; clienteId?: string };
 
-const NAV_ITEMS = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'despachos', label: 'Despachos', icon: Ship },
-  { id: 'clientes', label: 'Mis Clientes', icon: Users },
-] as const;
+type NavSection = {
+  section: string;
+  items: { id: string; label: string; icon: typeof LayoutDashboard }[];
+};
+
+const NAV_SECTIONS: NavSection[] = [
+  {
+    section: 'Operaciones',
+    items: [
+      { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { id: 'despachos', label: 'Despachos', icon: Ship },
+    ],
+  },
+  {
+    section: 'Gestión',
+    items: [
+      { id: 'clientes', label: 'Mis Clientes', icon: Users },
+      { id: 'reportes', label: 'Reportes', icon: BarChart3 },
+    ],
+  },
+];
 
 export default function PortalDespachanteApp() {
   const { user, signOut } = useAuth();
@@ -57,6 +75,7 @@ export default function PortalDespachanteApp() {
       case 'dashboard': return 'dashboard';
       case 'despachos': case 'despacho': case 'nuevo-despacho': return 'despachos';
       case 'clientes': case 'cliente': return 'clientes';
+      case 'reportes': return 'reportes';
       default: return 'dashboard';
     }
   };
@@ -104,29 +123,33 @@ export default function PortalDespachanteApp() {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-3 mt-1">
-          <p className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-            Operaciones
-          </p>
-          <div className="space-y-0.5">
-            {NAV_ITEMS.map(({ id, label, icon: Icon }) => {
-              const active = currentNav() === id;
-              return (
-                <button
-                  key={id}
-                  onClick={() => navigate({ type: id as DespachanteView['type'] })}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] font-medium transition-all duration-200 ${
-                    active
-                      ? 'bg-white/10 text-white shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-                  }`}
-                >
-                  <Icon className={`w-[18px] h-[18px] ${active ? 'text-amber-400' : ''}`} />
-                  {label}
-                </button>
-              );
-            })}
-          </div>
+        <nav className="flex-1 px-3 mt-1 space-y-4">
+          {NAV_SECTIONS.map((section) => (
+            <div key={section.section}>
+              <p className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                {section.section}
+              </p>
+              <div className="space-y-0.5">
+                {section.items.map(({ id, label, icon: Icon }) => {
+                  const active = currentNav() === id;
+                  return (
+                    <button
+                      key={id}
+                      onClick={() => navigate({ type: id as DespachanteView['type'] })}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] font-medium transition-all duration-200 ${
+                        active
+                          ? 'bg-white/10 text-white shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                      }`}
+                    >
+                      <Icon className={`w-[18px] h-[18px] ${active ? 'text-amber-400' : ''}`} />
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
         {/* User */}
@@ -176,6 +199,9 @@ export default function PortalDespachanteApp() {
             <DespachanteClientesPage
               onNavigate={navigate}
             />
+          )}
+          {view.type === 'reportes' && (
+            <DespachanteReportsPage />
           )}
           {view.type === 'cliente' && (
             <DespachanteClienteDetail
