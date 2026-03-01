@@ -1,24 +1,46 @@
-logs
+# ================================================
+# Ignore everything in home dir by default
+# Only allow Projects/ and repo root files
+# ================================================
+
+# Ignore all top-level dirs
+/*
+
+# Allow git and repo essentials
+!.gitignore
+!Projects/
+
+# Allow root config files tracked by repo
+!package.json
+!package-lock.json
+
+# ---- Inside Projects/ ----
+# Ignore build artifacts, caches, and local-only files
+Projects/**/__pycache__/
+Projects/**/node_modules/
+Projects/**/.next/
+Projects/**/dist/
+Projects/**/.vercel/
+Projects/**/*.pyc
+Projects/**/=*
+
+# Ignore project-server.cjs (auto-generated copy)
+Projects/project-server.cjs
+
+# Logs and temp
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+*.tmp
 
-node_modules
-dist
-dist-ssr
-*.local
-
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+# Environment / secrets
 .env
-.vercel
+.env.*
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+*.lnk
+
+# Windows registry
+NTUSER.DAT*
+ntuser.*
