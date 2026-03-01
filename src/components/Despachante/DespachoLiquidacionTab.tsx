@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { Calculator, Plus, Trash2 } from 'lucide-react';
+import { Calculator, Plus, Trash2, Printer } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { DespachoService, type Liquidacion, type Despacho } from '../../services/DespachoService';
 import { LIQUIDACION_ESTADO_LABELS, LIQUIDACION_ESTADO_COLORS } from '../../lib/constants/despacho';
 import LiquidacionCalculator from './LiquidacionCalculator';
+import ConfirmDialog, { useConfirmDialog } from '../UI/ConfirmDialog';
+import LiquidacionPrintView from './LiquidacionPrintView';
 
 interface Props {
   despachoId: string;
@@ -14,10 +16,13 @@ interface Props {
 }
 
 export default function DespachoLiquidacionTab({ despachoId, liquidaciones, despacho, onReload }: Props) {
+  const { confirm, dialogProps } = useConfirmDialog();
   const [showCalculator, setShowCalculator] = useState(false);
+  const [printLiq, setPrintLiq] = useState<Liquidacion | null>(null);
 
   const handleDeleteLiq = async (id: string) => {
-    if (!confirm('¿Eliminar esta liquidación?')) return;
+    const ok = await confirm({ message: '¿Eliminar esta liquidación? Esta acción no se puede deshacer.', title: 'Eliminar liquidación' });
+    if (!ok) return;
     const { error } = await supabase.from('despacho_liquidaciones').delete().eq('id', id);
     if (!error) {
       toast.success('Liquidación eliminada');
@@ -70,6 +75,10 @@ export default function DespachoLiquidacionTab({ despachoId, liquidaciones, desp
                 <button onClick={() => handleEstadoChange(liq.id, 'pagado')}
                   className="text-xs text-green-600 hover:underline px-2 py-1">Marcar Pagado</button>
               )}
+              <button onClick={() => setPrintLiq(liq)} title="Exportar PDF"
+                className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg">
+                <Printer className="w-3.5 h-3.5" />
+              </button>
               <button onClick={() => handleDeleteLiq(liq.id)}
                 className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg">
                 <Trash2 className="w-3.5 h-3.5" />
@@ -136,6 +145,14 @@ export default function DespachoLiquidacionTab({ despachoId, liquidaciones, desp
           despacho={despacho}
           onSuccess={() => { setShowCalculator(false); onReload(); }}
           onCancel={() => setShowCalculator(false)}
+        />
+      )}
+      <ConfirmDialog {...dialogProps} />
+      {printLiq && (
+        <LiquidacionPrintView
+          liquidacion={printLiq}
+          despacho={despacho}
+          onClose={() => setPrintLiq(null)}
         />
       )}
     </div>

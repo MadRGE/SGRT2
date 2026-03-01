@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Loader2, ArrowLeft, Ship, Edit3, Save, X, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase, buildSeguimientoData } from '../../lib/supabase';
-import { DespachoService, type Despacho, type DespachoDoc, type Liquidacion, type Carga } from '../../services/DespachoService';
+import { DespachoService, type Despacho, type DespachoDoc, type Liquidacion, type Carga, todayLocal } from '../../services/DespachoService';
 import {
   DESPACHO_ESTADO_LABELS,
   DESPACHO_ESTADO_COLORS_BORDER,
@@ -22,7 +22,7 @@ type Tab = 'general' | 'documentos' | 'liquidacion' | 'carga' | 'seguimiento';
 interface Props {
   despachoId: string;
   onBack: () => void;
-  onNavigate: (view: any) => void;
+  onNavigate?: (view: any) => void;
 }
 
 interface Seguimiento {
@@ -32,7 +32,7 @@ interface Seguimiento {
   usuario_nombre?: string | null;
 }
 
-export default function DespachoDetailPage({ despachoId, onBack }: Props) {
+export default function DespachoDetailPage({ despachoId, onBack, onNavigate }: Props) {
   const { user } = useAuth();
   const [despacho, setDespacho] = useState<Despacho | null>(null);
   const [docs, setDocs] = useState<DespachoDoc[]>([]);
@@ -45,6 +45,10 @@ export default function DespachoDetailPage({ despachoId, onBack }: Props) {
   const [editForm, setEditForm] = useState<Partial<Despacho>>({});
   const [saving, setSaving] = useState(false);
 
+  // Estado dropdown (click-toggle for touch/keyboard accessibility)
+  const [estadoDropdownOpen, setEstadoDropdownOpen] = useState(false);
+  const estadoDropdownRef = useRef<HTMLDivElement>(null);
+
   // Seguimiento state
   const [nuevoSeguimiento, setNuevoSeguimiento] = useState('');
   const [savingSeg, setSavingSeg] = useState(false);
@@ -52,6 +56,19 @@ export default function DespachoDetailPage({ despachoId, onBack }: Props) {
   useEffect(() => {
     loadData();
   }, [despachoId]);
+
+  // Close estado dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (estadoDropdownRef.current && !estadoDropdownRef.current.contains(e.target as Node)) {
+        setEstadoDropdownOpen(false);
+      }
+    };
+    if (estadoDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [estadoDropdownOpen]);
 
   const loadData = async () => {
     setLoading(true);
@@ -77,11 +94,12 @@ export default function DespachoDetailPage({ despachoId, onBack }: Props) {
 
   const handleEstadoChange = async (nuevoEstado: string) => {
     if (!despacho) return;
+    const today = todayLocal();
     const { success, error } = await DespachoService.updateDespacho(despachoId, {
       estado: nuevoEstado,
-      ...(nuevoEstado === 'presentado' && { fecha_presentacion: new Date().toISOString().split('T')[0] }),
-      ...(nuevoEstado.startsWith('canal_') && { fecha_canal: new Date().toISOString().split('T')[0] }),
-      ...(nuevoEstado === 'liberado' && { fecha_liberacion: new Date().toISOString().split('T')[0] }),
+      ...(nuevoEstado === 'presentado' && { fecha_presentacion: today }),
+      ...(nuevoEstado.startsWith('canal_') && { fecha_canal: today }),
+      ...(nuevoEstado === 'liberado' && { fecha_liberacion: today }),
     } as Partial<Despacho>);
 
     if (success) {
@@ -178,7 +196,16 @@ export default function DespachoDetailPage({ despachoId, onBack }: Props) {
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${DESPACHO_TIPO_COLORS[despacho.tipo]}`}>
                   {DESPACHO_TIPO_LABELS[despacho.tipo]}
                 </span>
-                <span className="text-xs text-slate-500">{despacho.clientes?.razon_social}</span>
+                {despacho.cliente_id && onNavigate ? (
+                  <button
+                    onClick={() => onNavigate({ type: 'cliente', id: despacho.cliente_id })}
+                    className="text-xs text-amber-600 hover:text-amber-700 hover:underline font-medium"
+                  >
+                    {despacho.clientes?.razon_social}
+                  </button>
+                ) : (
+                  <span className="text-xs text-slate-500">{despacho.clientes?.razon_social}</span>
+                )}
               </div>
             </div>
           </div>
@@ -191,21 +218,26 @@ export default function DespachoDetailPage({ despachoId, onBack }: Props) {
 
             {/* Estado transitions */}
             {allowedTransitions.length > 0 && (
-              <div className="relative group">
-                <button className="flex items-center gap-1 px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-full text-xs font-medium hover:bg-amber-100 transition-colors">
-                  Cambiar Estado <ChevronDown className="w-3 h-3" />
+              <div className="relative" ref={estadoDropdownRef}>
+                <button
+                  onClick={() => setEstadoDropdownOpen(!estadoDropdownOpen)}
+                  className="flex items-center gap-1 px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-full text-xs font-medium hover:bg-amber-100 transition-colors"
+                >
+                  Cambiar Estado <ChevronDown className={`w-3 h-3 transition-transform ${estadoDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
-                <div className="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-slate-200 py-1 z-10 min-w-[160px] hidden group-hover:block">
-                  {allowedTransitions.map((est) => (
-                    <button
-                      key={est}
-                      onClick={() => handleEstadoChange(est)}
-                      className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50 transition-colors"
-                    >
-                      {DESPACHO_ESTADO_LABELS[est]}
-                    </button>
-                  ))}
-                </div>
+                {estadoDropdownOpen && (
+                  <div className="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-slate-200 py-1 z-10 min-w-[160px]">
+                    {allowedTransitions.map((est) => (
+                      <button
+                        key={est}
+                        onClick={() => { handleEstadoChange(est); setEstadoDropdownOpen(false); }}
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50 transition-colors"
+                      >
+                        {DESPACHO_ESTADO_LABELS[est]}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Loader2, Ship, Clock, CheckCircle2, DollarSign, Plus, ArrowRight } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { Loader2, Ship, Clock, CheckCircle2, DollarSign, Plus, ArrowRight, AlertTriangle } from 'lucide-react';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { useAuth } from '../../contexts/AuthContext';
 import { DespachoService, type DashboardStats } from '../../services/DespachoService';
 import { supabase, filterActive } from '../../lib/supabase';
@@ -19,6 +19,8 @@ export default function DespachanteDashboard({ onNavigate, onNewDespacho }: Prop
   const { user } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({ activos: 0, pendientesCanal: 0, liberadosMes: 0, montoUsd: 0 });
   const [chartData, setChartData] = useState<{ name: string; value: number; color: string }[]>([]);
+  const [monthlyData, setMonthlyData] = useState<{ month: string; count: number }[]>([]);
+  const [stalledDespachos, setStalledDespachos] = useState<any[]>([]);
   const [recentDespachos, setRecentDespachos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -29,7 +31,7 @@ export default function DespachanteDashboard({ onNavigate, onNewDespacho }: Prop
   const loadData = async () => {
     setLoading(true);
     try {
-      const [kpis, despachos] = await Promise.all([
+      const [kpis, despachos, allDespachos, monthly, stalled] = await Promise.all([
         DespachoService.getDashboardStats(user!.id),
         filterActive(
           supabase
@@ -37,18 +39,20 @@ export default function DespachanteDashboard({ onNavigate, onNewDespacho }: Prop
             .select('id, numero_despacho, tipo, estado, descripcion, valor_fob, created_at, clientes(razon_social)')
             .eq('despachante_id', user!.id)
         ).order('created_at', { ascending: false }).limit(5),
+        filterActive(
+          supabase
+            .from('despachos')
+            .select('estado')
+            .eq('despachante_id', user!.id)
+        ),
+        DespachoService.getMonthlyDespachos(user!.id),
+        DespachoService.getStalledDespachos(user!.id),
       ]);
 
       setStats(kpis);
       setRecentDespachos(despachos.data || []);
-
-      // Chart: distribution by estado
-      const allDespachos = await filterActive(
-        supabase
-          .from('despachos')
-          .select('estado')
-          .eq('despachante_id', user!.id)
-      );
+      setMonthlyData(monthly);
+      setStalledDespachos(stalled);
 
       const counts: Record<string, number> = {};
       (allDespachos.data || []).forEach((d: { estado: string }) => {
@@ -199,6 +203,60 @@ export default function DespachanteDashboard({ onNavigate, onNewDespacho }: Prop
                       {DespachoService.formatMonto(d.valor_fob, 'USD')}
                     </span>
                   )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Monthly trend + Stalled */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Monthly bar chart */}
+        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200/60 shadow-sm p-6">
+          <h2 className="font-semibold text-slate-800 mb-4">Despachos por Mes</h2>
+          {monthlyData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={monthlyData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                <Tooltip />
+                <Bar dataKey="count" name="Despachos" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-sm text-slate-400 text-center py-10">Sin datos aún</p>
+          )}
+        </div>
+
+        {/* Stalled despachos */}
+        <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm">
+          <div className="p-4 border-b border-slate-100 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-500" />
+            <h2 className="font-semibold text-slate-800 text-sm">Despachos Estancados</h2>
+          </div>
+          {stalledDespachos.length === 0 ? (
+            <div className="p-6 text-center text-sm text-slate-400">
+              Todo al día
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {stalledDespachos.map((d) => (
+                <button
+                  key={d.id}
+                  onClick={() => onNavigate({ type: 'despacho', id: d.id })}
+                  className="w-full p-3 hover:bg-slate-50 transition-colors text-left"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs font-medium text-slate-800">{d.numero_despacho}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-medium ${DESPACHO_ESTADO_COLORS[d.estado] || 'bg-slate-100 text-slate-600'}`}>
+                      {DESPACHO_ESTADO_LABELS[d.estado]}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    Sin cambios hace {Math.round((Date.now() - new Date(d.updated_at).getTime()) / 86400000)} días
+                  </p>
                 </button>
               ))}
             </div>

@@ -7,6 +7,7 @@ import { type DespachoDoc } from '../../services/DespachoService';
 import { DESPACHO_DOC_TIPO_LABELS, DESPACHO_DOC_TIPOS } from '../../lib/constants/despacho';
 import { DOC_ESTADO_LABELS, DOC_ESTADO_COLORS, DOC_ESTADO_NEXT } from '../../lib/constants/estados';
 import NuevoDespachoDocModal from './NuevoDespachoDocModal';
+import ConfirmDialog, { useConfirmDialog } from '../UI/ConfirmDialog';
 
 interface Props {
   despachoId: string;
@@ -15,6 +16,7 @@ interface Props {
 }
 
 export default function DespachoDocumentosTab({ despachoId, docs, onReload }: Props) {
+  const { confirm, dialogProps } = useConfirmDialog();
   const [showAddModal, setShowAddModal] = useState(false);
 
   const { uploadingDocId, uploadError, fileInputRef, triggerUpload, handleFileSelected, handleDownloadFile, handleRemoveFile } =
@@ -37,7 +39,8 @@ export default function DespachoDocumentosTab({ despachoId, docs, onReload }: Pr
   };
 
   const handleDeleteDoc = async (docId: string) => {
-    if (!confirm('¿Eliminar este documento?')) return;
+    const ok = await confirm({ message: '¿Eliminar este documento? Esta acción no se puede deshacer.', title: 'Eliminar documento' });
+    if (!ok) return;
     const { error } = await supabase.from('despacho_documentos').delete().eq('id', docId);
     if (!error) {
       toast.success('Documento eliminado');
@@ -141,6 +144,7 @@ export default function DespachoDocumentosTab({ despachoId, docs, onReload }: Pr
         despachoId={despachoId}
         onSuccess={() => { setShowAddModal(false); onReload(); }}
       />
+      <ConfirmDialog {...dialogProps} />
     </div>
   );
 }

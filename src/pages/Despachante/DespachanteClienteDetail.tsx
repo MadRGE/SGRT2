@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Loader2, ArrowLeft, Building2, Plus, Ship } from 'lucide-react';
+import { Loader2, ArrowLeft, Building2, Plus, Ship, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { DespachoService, type Despacho } from '../../services/DespachoService';
@@ -65,8 +65,12 @@ export default function DespachanteClienteDetail({ clienteId, onBack, onNavigate
     );
   }
 
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 20;
   const activos = despachos.filter((d) => !['liberado', 'rechazado'].includes(d.estado));
   const finalizados = despachos.filter((d) => ['liberado', 'rechazado'].includes(d.estado));
+  const totalPages = Math.ceil(despachos.length / PAGE_SIZE);
+  const paginated = despachos.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <div className="space-y-6">
@@ -131,7 +135,7 @@ export default function DespachanteClienteDetail({ clienteId, onBack, onNavigate
             <h2 className="font-semibold text-slate-800">Despachos ({despachos.length})</h2>
           </div>
           <div className="divide-y divide-slate-100">
-            {despachos.map((d) => (
+            {paginated.map((d) => (
               <button
                 key={d.id}
                 onClick={() => onNavigate({ type: 'despacho', id: d.id })}
@@ -156,6 +160,24 @@ export default function DespachanteClienteDetail({ clienteId, onBack, onNavigate
               </button>
             ))}
           </div>
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-5 py-3 border-t border-slate-100 bg-slate-50/50">
+              <p className="text-xs text-slate-500">
+                {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, despachos.length)} de {despachos.length}
+              </p>
+              <div className="flex items-center gap-1">
+                <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}
+                  className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-200 disabled:opacity-30">
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="text-xs text-slate-600 px-2">{page} / {totalPages}</span>
+                <button onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page === totalPages}
+                  className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-200 disabled:opacity-30">
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

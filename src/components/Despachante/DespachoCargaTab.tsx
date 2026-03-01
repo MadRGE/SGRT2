@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { Package, Plus, Trash2, Edit3, Save, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
-import { type Carga } from '../../services/DespachoService';
+import { type Carga, todayLocal } from '../../services/DespachoService';
 import { CARGA_ESTADO_LABELS, CARGA_ESTADO_COLORS, CARGA_TRANSITIONS, TRANSPORTE_TIPO_LABELS, TRANSPORTE_TIPOS } from '../../lib/constants/despacho';
 import CargaTimeline from './CargaTimeline';
+import ConfirmDialog, { useConfirmDialog } from '../UI/ConfirmDialog';
 
 interface Props {
   despachoId: string;
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export default function DespachoCargaTab({ despachoId, cargas, onReload }: Props) {
+  const { confirm, dialogProps } = useConfirmDialog();
   const [showAdd, setShowAdd] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({
@@ -109,7 +111,7 @@ export default function DespachoCargaTab({ despachoId, cargas, onReload }: Props
       : null;
 
     const update: Record<string, any> = { estado: nuevoEstado };
-    if (dateField) update[dateField] = new Date().toISOString().split('T')[0];
+    if (dateField) update[dateField] = todayLocal();
 
     const { error } = await supabase.from('cargas').update(update).eq('id', cargaId);
     if (!error) {
@@ -119,7 +121,8 @@ export default function DespachoCargaTab({ despachoId, cargas, onReload }: Props
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Eliminar esta carga?')) return;
+    const ok = await confirm({ message: '¿Eliminar esta carga? Esta acción no se puede deshacer.', title: 'Eliminar carga' });
+    if (!ok) return;
     const { error } = await supabase.from('cargas').delete().eq('id', id);
     if (!error) {
       toast.success('Carga eliminada');
@@ -270,6 +273,12 @@ export default function DespachoCargaTab({ despachoId, cargas, onReload }: Props
                 <input type="number" value={form.peso_kg} onChange={(e) => setForm({ ...form, peso_kg: e.target.value })} className={inputClass} />
               </div>
               <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Volumen (m³)</label>
+                <input type="number" step="0.01" value={form.volumen_m3} onChange={(e) => setForm({ ...form, volumen_m3: e.target.value })} className={inputClass} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
                 <label className="block text-xs font-medium text-slate-600 mb-1">Bultos</label>
                 <input type="number" value={form.cantidad_bultos} onChange={(e) => setForm({ ...form, cantidad_bultos: e.target.value })} className={inputClass} />
               </div>
@@ -284,6 +293,7 @@ export default function DespachoCargaTab({ despachoId, cargas, onReload }: Props
           </div>
         </div>
       )}
+      <ConfirmDialog {...dialogProps} />
     </div>
   );
 }
