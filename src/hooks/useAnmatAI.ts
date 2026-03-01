@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
-import { getApiKey } from '../lib/apiKeys';
+import { getApiKey, type ChatProvider } from '../lib/apiKeys';
+import { sendChat as ollamaSendChat } from '../lib/ollama';
 
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 const MODEL = 'claude-sonnet-4-6';
@@ -88,7 +89,7 @@ interface UseAnmatAIReturn {
   output: string;
   loading: boolean;
   error: string | null;
-  generate: (tool: string, userMessage: string) => Promise<void>;
+  generate: (tool: string, userMessage: string, provider?: ChatProvider) => Promise<void>;
   cancel: () => void;
   reset: () => void;
 }
@@ -111,7 +112,7 @@ export function useAnmatAI(): UseAnmatAIReturn {
     setLoading(false);
   }, []);
 
-  const generate = useCallback(async (tool: string, userMessage: string) => {
+  const generate = useCallback(async (tool: string, userMessage: string, provider?: ChatProvider) => {
     cancel();
     setOutput('');
     setError(null);
@@ -120,14 +121,33 @@ export function useAnmatAI(): UseAnmatAIReturn {
     const controller = new AbortController();
     abortRef.current = controller;
 
+    const systemPrompt = SYSTEM_PROMPTS[tool] || DEFAULT_SYSTEM;
+
+    // Ollama provider
+    if (provider === 'ollama') {
+      try {
+        await ollamaSendChat(
+          [{ role: 'user', content: userMessage }],
+          (partial) => setOutput(partial),
+          { systemPrompt, signal: controller.signal, temperature: 0.7 },
+        );
+      } catch (err: any) {
+        if (err.name === 'AbortError') return;
+        setError(err.message || 'Error al generar documento con Ollama');
+      } finally {
+        setLoading(false);
+        abortRef.current = null;
+      }
+      return;
+    }
+
+    // Default: Anthropic
     const apiKey = getApiKey('ANTHROPIC');
     if (!apiKey) {
       setError('La clave de Anthropic no está configurada. Andá a Configuración > API Keys.');
       setLoading(false);
       return;
     }
-
-    const systemPrompt = SYSTEM_PROMPTS[tool] || DEFAULT_SYSTEM;
 
     try {
       const response = await fetch(ANTHROPIC_API_URL, {

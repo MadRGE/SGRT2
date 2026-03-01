@@ -4,6 +4,9 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useAnmatAI } from '../../hooks/useAnmatAI';
 import { downloadDocx } from '../../lib/markdownToDocx';
+import { isOllamaConfigured } from '../../lib/ollama';
+import { isAnthropicAvailable } from '../../lib/anthropic';
+import type { ChatProvider } from '../../lib/apiKeys';
 
 const TIPOS_ESTABLECIMIENTO = [
   'Fábrica de alimentos',
@@ -36,6 +39,9 @@ const DOCUMENTOS_BPM = [
 export function HerramientaBPM() {
   const { output, loading, error, generate, cancel, reset } = useAnmatAI();
   const [copied, setCopied] = useState(false);
+  const [provider, setProvider] = useState<ChatProvider>('anthropic');
+  const ollamaOk = isOllamaConfigured();
+  const anthropicOk = isAnthropicAvailable();
 
   const [form, setForm] = useState({
     tipoEstablecimiento: '',
@@ -86,7 +92,7 @@ export function HerramientaBPM() {
       ? `Generá la documentación BPM para RNE con los siguientes datos:\n\n${parts.join('\n\n')}`
       : 'Generá un template completo de Manual BPM para un establecimiento alimentario genérico.';
 
-    generate('bpm-rne', userMessage);
+    generate('bpm-rne', userMessage, provider);
   };
 
   const handleCopy = async () => {
@@ -194,14 +200,45 @@ export function HerramientaBPM() {
             </div>
           </div>
 
-          {/* Generate button */}
-          <button
-            onClick={handleGenerate}
-            className="w-full py-3 bg-gradient-to-r from-emerald-600 to-green-600 text-white rounded-lg font-semibold text-sm hover:from-emerald-700 hover:to-green-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
-          >
-            <Sparkles className="w-4 h-4" />
-            Generar Documentación BPM
-          </button>
+          {/* Provider toggle + Generate button */}
+          <div className="flex items-center gap-3">
+            <div className="flex bg-slate-100 rounded-lg p-0.5 text-xs font-medium">
+              <button
+                onClick={() => setProvider('anthropic')}
+                disabled={!anthropicOk}
+                className={`px-3 py-1.5 rounded-md transition-all ${
+                  provider === 'anthropic'
+                    ? 'bg-white text-indigo-700 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed'
+                }`}
+              >
+                Claude
+              </button>
+              <button
+                onClick={() => setProvider('ollama')}
+                disabled={!ollamaOk}
+                className={`px-3 py-1.5 rounded-md transition-all ${
+                  provider === 'ollama'
+                    ? 'bg-white text-green-700 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed'
+                }`}
+              >
+                Ollama
+              </button>
+            </div>
+            <button
+              onClick={handleGenerate}
+              className="flex-1 py-3 bg-gradient-to-r from-emerald-600 to-green-600 text-white rounded-lg font-semibold text-sm hover:from-emerald-700 hover:to-green-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
+            >
+              <Sparkles className="w-4 h-4" />
+              Generar Documentación BPM
+            </button>
+          </div>
+          {provider === 'ollama' && (
+            <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              Los modelos locales pueden generar resultados de menor calidad que Claude.
+            </p>
+          )}
         </>
       ) : (
         <>

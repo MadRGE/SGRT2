@@ -1,6 +1,15 @@
 const STORAGE_KEY = 'sgrt_api_keys';
+const OLLAMA_STORAGE_KEY = 'sgrt_ollama_config';
+const PROVIDER_STORAGE_KEY = 'sgrt_chat_provider';
 
 type ApiKeyName = 'GEMINI' | 'ANTHROPIC';
+
+export type ChatProvider = 'anthropic' | 'ollama';
+
+export interface OllamaConfig {
+  baseUrl: string;
+  model: string;
+}
 
 function getStoredKeys(): Record<string, string> {
   try {
@@ -35,4 +44,35 @@ export function getAllApiKeys(): Record<ApiKeyName, string> {
     GEMINI: getApiKey('GEMINI'),
     ANTHROPIC: getApiKey('ANTHROPIC'),
   };
+}
+
+const DEFAULT_OLLAMA_CONFIG: OllamaConfig = {
+  baseUrl: 'http://localhost:11434',
+  model: 'llama3.2:latest',
+};
+
+export function getOllamaConfig(): OllamaConfig {
+  try {
+    const raw = localStorage.getItem(OLLAMA_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return { ...DEFAULT_OLLAMA_CONFIG, ...parsed };
+    }
+  } catch {}
+  return { ...DEFAULT_OLLAMA_CONFIG };
+}
+
+export function setOllamaConfig(config: Partial<OllamaConfig>): void {
+  const current = getOllamaConfig();
+  localStorage.setItem(OLLAMA_STORAGE_KEY, JSON.stringify({ ...current, ...config }));
+}
+
+export function getChatProvider(): ChatProvider {
+  const stored = localStorage.getItem(PROVIDER_STORAGE_KEY);
+  if (stored === 'ollama') return 'ollama';
+  return 'anthropic';
+}
+
+export function setChatProvider(provider: ChatProvider): void {
+  localStorage.setItem(PROVIDER_STORAGE_KEY, provider);
 }

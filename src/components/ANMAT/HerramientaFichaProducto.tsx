@@ -5,6 +5,9 @@ import remarkGfm from 'remark-gfm';
 import { useAnmatAI } from '../../hooks/useAnmatAI';
 import { analyzeProductImages, chatWithImages, isGeminiAvailable } from '../../lib/geminiVision';
 import { downloadDocx } from '../../lib/markdownToDocx';
+import { isOllamaConfigured } from '../../lib/ollama';
+import { isAnthropicAvailable } from '../../lib/anthropic';
+import type { ChatProvider } from '../../lib/apiKeys';
 
 const CLASIFICACIONES = [
   'Alimento',
@@ -19,6 +22,9 @@ const CLASIFICACIONES = [
 export function HerramientaFichaProducto() {
   const { output, loading, error, generate, cancel, reset } = useAnmatAI();
   const [copied, setCopied] = useState(false);
+  const [provider, setProvider] = useState<ChatProvider>('anthropic');
+  const ollamaOk = isOllamaConfigured();
+  const anthropicOk = isAnthropicAvailable();
 
   const [form, setForm] = useState({
     nombre: '',
@@ -133,13 +139,13 @@ export function HerramientaFichaProducto() {
       userMessage += `\n\n--- ANÁLISIS PREVIO DE LAS IMÁGENES DEL PRODUCTO (generado por IA de visión) ---\n${chatResponse}`;
     }
 
-    generate('ficha-producto', userMessage);
+    generate('ficha-producto', userMessage, provider);
   };
 
   const handleGenerateFromChat = () => {
     if (!chatResponse) return;
     const userMessage = `Generá una ficha técnica de producto completa basándote en el siguiente análisis de las imágenes del producto:\n\n${chatResponse}`;
-    generate('ficha-producto', userMessage);
+    generate('ficha-producto', userMessage, provider);
   };
 
   const handleCopy = async () => {
@@ -414,14 +420,45 @@ export function HerramientaFichaProducto() {
             </div>
           </div>
 
-          {/* Generate button */}
-          <button
-            onClick={handleGenerate}
-            className="w-full py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg font-semibold text-sm hover:from-blue-700 hover:to-cyan-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20"
-          >
-            <Sparkles className="w-4 h-4" />
-            Generar Ficha de Producto
-          </button>
+          {/* Provider toggle + Generate button */}
+          <div className="flex items-center gap-3">
+            <div className="flex bg-slate-100 rounded-lg p-0.5 text-xs font-medium">
+              <button
+                onClick={() => setProvider('anthropic')}
+                disabled={!anthropicOk}
+                className={`px-3 py-1.5 rounded-md transition-all ${
+                  provider === 'anthropic'
+                    ? 'bg-white text-indigo-700 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed'
+                }`}
+              >
+                Claude
+              </button>
+              <button
+                onClick={() => setProvider('ollama')}
+                disabled={!ollamaOk}
+                className={`px-3 py-1.5 rounded-md transition-all ${
+                  provider === 'ollama'
+                    ? 'bg-white text-green-700 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed'
+                }`}
+              >
+                Ollama
+              </button>
+            </div>
+            <button
+              onClick={handleGenerate}
+              className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg font-semibold text-sm hover:from-blue-700 hover:to-cyan-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20"
+            >
+              <Sparkles className="w-4 h-4" />
+              Generar Ficha de Producto
+            </button>
+          </div>
+          {provider === 'ollama' && (
+            <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              Los modelos locales pueden generar resultados de menor calidad que Claude.
+            </p>
+          )}
         </>
       ) : (
         <>

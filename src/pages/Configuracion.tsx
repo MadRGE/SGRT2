@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
-import { getApiKey, setApiKey } from '../lib/apiKeys';
+import { getApiKey, setApiKey, getOllamaConfig, setOllamaConfig } from '../lib/apiKeys';
+import { checkOllamaAvailable, type OllamaModel } from '../lib/ollama';
 import {
   Plus,
   Trash2,
@@ -831,11 +832,33 @@ function ApiKeysSection() {
   const [saved, setSaved] = useState(false);
   const [testResults, setTestResults] = useState<Record<string, 'loading' | 'ok' | 'error'>>({});
 
+  // Ollama state
+  const [ollamaUrl, setOllamaUrl] = useState(() => getOllamaConfig().baseUrl);
+  const [ollamaModel, setOllamaModel] = useState(() => getOllamaConfig().model);
+  const [ollamaModels, setOllamaModels] = useState<OllamaModel[]>([]);
+  const [ollamaStatus, setOllamaStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
+
   const handleSave = () => {
     setApiKey('GEMINI', geminiKey);
     setApiKey('ANTHROPIC', anthropicKey);
+    setOllamaConfig({ baseUrl: ollamaUrl, model: ollamaModel });
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
+  };
+
+  const testOllama = async () => {
+    setOllamaStatus('loading');
+    setOllamaModels([]);
+    const result = await checkOllamaAvailable();
+    if (result.available) {
+      setOllamaStatus('ok');
+      setOllamaModels(result.models);
+      if (result.models.length > 0 && !result.models.find(m => m.name === ollamaModel)) {
+        setOllamaModel(result.models[0].name);
+      }
+    } else {
+      setOllamaStatus('error');
+    }
   };
 
   const testGemini = async () => {
@@ -977,6 +1000,62 @@ function ApiKeysSection() {
             <p className="text-red-600 text-xs mt-1">{anthropicError || 'Key inválida o sin permisos'}</p>
           )}
         </div>
+        {/* Ollama section */}
+        <div className="border-t border-slate-200 pt-6">
+          <label className="text-sm font-medium text-slate-700 block mb-2">
+            Ollama (IA local — gratuita)
+          </label>
+          <p className="text-xs text-slate-500 mb-3">
+            Conectá con un modelo local de Ollama. No requiere API key ni conexión a internet.
+          </p>
+          <div className="flex gap-2 mb-3">
+            <div className="flex-1">
+              <input
+                type="text"
+                value={ollamaUrl}
+                onChange={(e) => setOllamaUrl(e.target.value)}
+                placeholder="http://localhost:11434"
+                className="w-full p-2 border border-slate-300 rounded-md font-mono text-sm"
+              />
+            </div>
+            <button
+              onClick={testOllama}
+              disabled={ollamaStatus === 'loading'}
+              className="px-3 py-2 text-sm border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50 flex items-center gap-2"
+            >
+              {ollamaStatus === 'loading' ? 'Probando...' : 'Probar'}
+              {ollamaStatus === 'loading' && <Loader2 className="w-4 h-4 animate-spin text-blue-500" />}
+              {ollamaStatus === 'ok' && <CheckCircle className="w-4 h-4 text-green-500" />}
+              {ollamaStatus === 'error' && <XCircle className="w-4 h-4 text-red-500" />}
+            </button>
+          </div>
+
+          {ollamaStatus === 'ok' && ollamaModels.length > 0 && (
+            <div className="mb-2">
+              <label className="text-xs font-medium text-slate-600 block mb-1">Modelo</label>
+              <select
+                value={ollamaModel}
+                onChange={(e) => setOllamaModel(e.target.value)}
+                className="w-full p-2 border border-slate-300 rounded-md text-sm"
+              >
+                {ollamaModels.map((m) => (
+                  <option key={m.name} value={m.name}>
+                    {m.name} ({(m.size / 1e9).toFixed(1)} GB)
+                  </option>
+                ))}
+              </select>
+              <p className="text-green-600 text-xs mt-1">
+                Conectado — {ollamaModels.length} modelo{ollamaModels.length !== 1 ? 's' : ''} disponible{ollamaModels.length !== 1 ? 's' : ''}
+              </p>
+            </div>
+          )}
+
+          {ollamaStatus === 'error' && (
+            <p className="text-red-600 text-xs">
+              No se pudo conectar. Verificá que Ollama esté corriendo (`ollama serve`).
+            </p>
+          )}
+        </div>
       </div>
 
       <div className="mt-8 flex items-center gap-4">
@@ -990,7 +1069,7 @@ function ApiKeysSection() {
         {saved && (
           <span className="text-green-600 text-sm flex items-center gap-1">
             <CheckCircle className="w-4 h-4" />
-            Claves guardadas
+            Configuración guardada
           </span>
         )}
       </div>

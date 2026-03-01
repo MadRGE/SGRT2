@@ -1,6 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, Bot, User, Loader2, Trash2, AlertCircle, Settings, Sparkles } from 'lucide-react';
-import { sendChat, isAnthropicAvailable, type ChatMessage } from '../lib/anthropic';
+import { isAnthropicAvailable } from '../lib/anthropic';
+import { sendChatWithProvider, type ChatMessage } from '../lib/chatProvider';
+import { isOllamaConfigured } from '../lib/ollama';
+import { getChatProvider, setChatProvider, type ChatProvider } from '../lib/apiKeys';
 
 interface Props {
   onNavigate: (page: any) => void;
@@ -12,6 +15,20 @@ interface UIMessage {
   content: string;
   timestamp: Date;
 }
+
+const OLLAMA_SYSTEM_PROMPT = `Sos un asistente experto en regulación sanitaria argentina, especializado en trámites ante ANMAT (Administración Nacional de Medicamentos, Alimentos y Tecnología Médica).
+
+Tu conocimiento abarca:
+- Registro de productos médicos, alimentos, cosméticos, suplementos dietarios y domisanitarios
+- Normativas y disposiciones de ANMAT vigentes
+- Procesos de habilitación de establecimientos
+- Certificaciones de libre venta y exportación
+- Buenas prácticas de manufactura (BPM/GMP)
+- Rotulado y etiquetado según normativa argentina
+- Clasificación de productos según riesgo
+- Plazos y requisitos para cada tipo de trámite
+
+Respondé siempre en español argentino, de forma clara, concisa y profesional. Si no estás seguro de algo, indicalo claramente. Cuando sea relevante, citá la normativa aplicable (disposiciones, resoluciones, leyes).`;
 
 const SUGGESTED_QUESTIONS = [
   '¿Qué requisitos necesito para registrar un alimento importado ante ANMAT?',
@@ -28,7 +45,16 @@ export default function AsistenteIA({ onNavigate }: Props) {
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const available = isAnthropicAvailable();
+  const [provider, setProvider] = useState<ChatProvider>(() => getChatProvider());
+
+  const anthropicOk = isAnthropicAvailable();
+  const ollamaOk = isOllamaConfigured();
+  const available = anthropicOk || ollamaOk;
+
+  const handleProviderChange = (p: ChatProvider) => {
+    setProvider(p);
+    setChatProvider(p);
+  };
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -72,9 +98,14 @@ export default function AsistenteIA({ onNavigate }: Props) {
     }));
 
     try {
-      const fullResponse = await sendChat(chatHistory, (partial) => {
-        setStreamingText(partial);
-      });
+      const fullResponse = await sendChatWithProvider(
+        chatHistory,
+        (partial) => setStreamingText(partial),
+        {
+          provider,
+          systemPrompt: provider === 'ollama' ? OLLAMA_SYSTEM_PROMPT : undefined,
+        },
+      );
 
       const assistantMsg: UIMessage = {
         id: crypto.randomUUID(),
@@ -86,7 +117,8 @@ export default function AsistenteIA({ onNavigate }: Props) {
       setMessages((prev) => [...prev, assistantMsg]);
       setStreamingText('');
     } catch (err: any) {
-      setError(err.message || 'Error al comunicarse con Claude.');
+      const providerName = provider === 'ollama' ? 'Ollama' : 'Claude';
+      setError(err.message || `Error al comunicarse con ${providerName}.`);
     } finally {
       setIsLoading(false);
     }
@@ -149,9 +181,9 @@ export default function AsistenteIA({ onNavigate }: Props) {
           <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <AlertCircle className="w-8 h-8 text-amber-500" />
           </div>
-          <h2 className="text-lg font-semibold text-slate-800 mb-2">API Key no configurada</h2>
+          <h2 className="text-lg font-semibold text-slate-800 mb-2">IA no configurada</h2>
           <p className="text-sm text-slate-500 mb-6 max-w-md mx-auto">
-            Para usar el Asistente IA necesitás configurar tu clave de API de Anthropic (Claude) en la sección de configuración.
+            Para usar el Asistente IA necesitás configurar Anthropic (Claude) o Ollama (local) en la sección de configuración.
           </p>
           <button
             onClick={() => onNavigate({ type: 'configuracion' })}
@@ -175,18 +207,46 @@ export default function AsistenteIA({ onNavigate }: Props) {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Asistente IA</h1>
-            <p className="text-xs text-slate-500">Regulación sanitaria ANMAT &middot; Claude</p>
+            <p className="text-xs text-slate-500">
+              Regulación sanitaria ANMAT &middot; {provider === 'ollama' ? 'Ollama' : 'Claude'}
+            </p>
           </div>
         </div>
-        {messages.length > 0 && (
-          <button
-            onClick={clearChat}
-            className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            Limpiar chat
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          <div className="flex bg-slate-100 rounded-lg p-0.5 text-xs font-medium">
+            <button
+              onClick={() => handleProviderChange('anthropic')}
+              disabled={!anthropicOk}
+              className={`px-3 py-1.5 rounded-md transition-all ${
+                provider === 'anthropic'
+                  ? 'bg-white text-indigo-700 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed'
+              }`}
+            >
+              Claude
+            </button>
+            <button
+              onClick={() => handleProviderChange('ollama')}
+              disabled={!ollamaOk}
+              className={`px-3 py-1.5 rounded-md transition-all ${
+                provider === 'ollama'
+                  ? 'bg-white text-green-700 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed'
+              }`}
+            >
+              Ollama
+            </button>
+          </div>
+          {messages.length > 0 && (
+            <button
+              onClick={clearChat}
+              className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Limpiar chat
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Chat area */}
@@ -316,7 +376,9 @@ export default function AsistenteIA({ onNavigate }: Props) {
             </button>
           </div>
           <p className="text-[10px] text-slate-400 mt-2 text-center">
-            Claude puede cometer errores. Verificá siempre la normativa vigente en fuentes oficiales.
+            {provider === 'ollama'
+              ? 'Ollama (modelo local) puede cometer errores. Verificá siempre la normativa vigente en fuentes oficiales.'
+              : 'Claude puede cometer errores. Verificá siempre la normativa vigente en fuentes oficiales.'}
           </p>
         </div>
       </div>
