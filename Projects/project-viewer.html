@@ -237,12 +237,17 @@
   .suggest-modal-header { padding: 1rem 1.2rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 0.8rem; }
   .suggest-modal-header h3 { flex: 1; font-size: 1rem; }
   .suggest-body { flex: 1; overflow-y: auto; padding: 1rem 1.2rem; }
-  .suggest-item { display: flex; align-items: flex-start; gap: 0.6rem; padding: 0.6rem; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 0.5rem; transition: all 0.15s; }
+  .suggest-item { display: flex; align-items: flex-start; gap: 0.6rem; padding: 0.6rem; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 0.5rem; transition: all 0.15s; cursor: pointer; }
   .suggest-item:hover { border-color: var(--accent); }
+  .suggest-item.selected { border-color: var(--accent); background: var(--accent-glow); }
+  .suggest-item input[type="checkbox"] { margin-top: 0.15rem; accent-color: var(--accent); cursor: pointer; }
   .suggest-item-text { flex: 1; font-size: 0.82rem; line-height: 1.5; }
   .suggest-item-priority { font-size: 0.68rem; padding: 0.15rem 0.4rem; border-radius: 6px; }
-  .suggest-add { background: var(--accent); border: none; color: white; padding: 0.3rem 0.6rem; border-radius: 6px; cursor: pointer; font-size: 0.73rem; white-space: nowrap; }
-  .suggest-add.added { background: var(--green); cursor: default; }
+  .suggest-footer { padding: 0.8rem 1.2rem; border-top: 1px solid var(--border); display: flex; gap: 0.5rem; justify-content: flex-end; }
+  .suggest-footer button { padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-family: inherit; border: 1px solid var(--border); transition: all 0.15s; }
+  .suggest-footer button:disabled { opacity: 0.4; cursor: default; }
+  .suggest-btn-add { background: var(--accent); border-color: var(--accent); color: white; }
+  .suggest-btn-prompt { background: none; color: var(--text); }
 
   /* Kanban */
   .kanban-toggle { display: flex; gap: 0.3rem; margin-bottom: 0.5rem; }
@@ -534,6 +539,10 @@
     </div>
     <div class="suggest-body" id="suggest-body">
       <div class="analysis-loading">Analizando proyecto</div>
+    </div>
+    <div class="suggest-footer" id="suggest-footer" style="display:none">
+      <button class="suggest-btn-prompt" onclick="suggestToPromptBuilder()" id="suggest-prompt-btn" disabled>Prompt Builder</button>
+      <button class="suggest-btn-add" onclick="addSelectedSuggestions()" id="suggest-add-btn" disabled>Agregar seleccionadas</button>
     </div>
   </div>
 </div>
@@ -2184,8 +2193,9 @@ function timerReset(name) {
 // AI TASK SUGGESTER
 // ============================================================
 let suggestCtx = null;
+let suggestData = null;
 
-function closeSuggest() { document.getElementById('suggest-overlay').classList.remove('open'); suggestCtx = null; }
+function closeSuggest() { document.getElementById('suggest-overlay').classList.remove('open'); document.getElementById('suggest-footer').style.display = 'none'; suggestCtx = null; suggestData = null; }
 
 async function suggestTasks(e, name) {
   e.stopPropagation();
@@ -2262,34 +2272,79 @@ Sugeri 5 tareas nuevas que NO esten ya en la lista y que sean el proximo paso lo
     // Parse JSON from response (find array in text)
     const match = text.match(/\[[\s\S]*\]/);
     if (!match) throw new Error('No se pudo parsear la respuesta');
-    const suggestions = JSON.parse(match[0]).map(s => ({
+    // Sanitize LLM output: single quotes → double, trailing commas, unquoted keys
+    let raw = match[0]
+      .replace(/'/g, '"')
+      .replace(/,\s*([}\]])/g, '$1')
+      .replace(/(\{)\s*([a-zA-Z_]\w*)\s*:/g, '$1"$2":')
+      .replace(/,\s*([a-zA-Z_]\w*)\s*:/g, ',"$1":');
+    const suggestions = JSON.parse(raw).map(s => ({
       text: s.text || s.task || s.description || s.name || 'Tarea sugerida',
       priority: ['high','med','low'].includes(s.priority) ? s.priority : 'med'
     }));
 
+    suggestData = suggestions;
     body.innerHTML = suggestions.map((s, i) => {
       const prioClass = s.priority === 'high' ? 'background:rgba(248,113,113,0.15);color:var(--red)' : s.priority === 'med' ? 'background:rgba(251,191,36,0.15);color:var(--amber)' : 'background:rgba(136,136,160,0.1);color:var(--text-dim)';
-      return `<div class="suggest-item">
+      return `<div class="suggest-item" onclick="toggleSuggestCheck(${i})">
+        <input type="checkbox" id="suggest-chk-${i}" onclick="event.stopPropagation();updateSuggestFooter()">
         <div class="suggest-item-text">${esc(s.text)}</div>
         <span class="suggest-item-priority" style="${prioClass}">${priorityLabels[s.priority] || s.priority}</span>
-        <button class="suggest-add" id="suggest-add-${i}" onclick="addSuggestion(${i},'${esc(s.text).replace(/'/g,"\\'")}','${s.priority}')">Agregar</button>
       </div>`;
     }).join('');
+    document.getElementById('suggest-footer').style.display = 'flex';
 
   } catch (err) {
     body.innerHTML = `<div style="color:var(--red);padding:1rem">Error: ${esc(err.message)}<br><small>Asegurate de que Ollama este corriendo con llama3.2</small></div>`;
   }
 }
 
-function addSuggestion(idx, text, priority) {
+function toggleSuggestCheck(i) {
+  const chk = document.getElementById('suggest-chk-' + i);
+  if (chk) chk.checked = !chk.checked;
+  chk?.closest('.suggest-item')?.classList.toggle('selected', chk?.checked);
+  updateSuggestFooter();
+}
+
+function updateSuggestFooter() {
+  const selected = getSelectedSuggestions();
+  const n = selected.length;
+  document.getElementById('suggest-add-btn').disabled = n === 0;
+  document.getElementById('suggest-prompt-btn').disabled = n === 0;
+  document.getElementById('suggest-add-btn').textContent = n > 0 ? `Agregar ${n} tarea${n>1?'s':''}` : 'Agregar seleccionadas';
+}
+
+function getSelectedSuggestions() {
+  if (!suggestData) return [];
+  return suggestData.filter((_, i) => document.getElementById('suggest-chk-' + i)?.checked);
+}
+
+function addSelectedSuggestions() {
   if (!suggestCtx) return;
-  getTodos(suggestCtx).push({ text, priority: priority || 'med', done: false });
+  const selected = getSelectedSuggestions();
+  if (selected.length === 0) return;
+  const todos = getTodos(suggestCtx);
+  selected.forEach(s => todos.push({ text: s.text, priority: s.priority, done: false }));
   saveTodos();
-  const btn = document.getElementById('suggest-add-' + idx);
-  if (btn) { btn.textContent = 'Agregada'; btn.classList.add('added'); btn.disabled = true; }
-  showToast('Tarea agregada');
+  showToast(`${selected.length} tarea${selected.length>1?'s':''} agregada${selected.length>1?'s':''}`);
   renderCards();
   updateStats();
+  closeSuggest();
+}
+
+function suggestToPromptBuilder() {
+  if (!suggestCtx) return;
+  const selected = getSelectedSuggestions();
+  if (selected.length === 0) return;
+  const p = projects.find(pr => pr.name === suggestCtx);
+  if (!p) return;
+  closeSuggest();
+  // Build a combined todo for the prompt builder
+  const combined = {
+    text: selected.map(s => s.text).join(' + '),
+    priority: selected.some(s => s.priority === 'high') ? 'high' : 'med'
+  };
+  openPromptBuilder(p, combined);
 }
 
 // ============================================================
