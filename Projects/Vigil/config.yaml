@@ -40,6 +40,16 @@ trusted_processes:
   - ollama.exe
   - chrome.exe
   - claude.exe
+  - msedge.exe
+  - msedgewebview2.exe
+  - Discord.exe
+  - NVIDIA Overlay.exe
+  - steamwebhelper.exe
+  - node.exe
+  - python.exe
+  - SearchHost.exe
+  - RuntimeBroker.exe
+  - cowork-svc.exe
 
 # Ollama (enriquecimiento LLM)
 ollama:

@@ -18,7 +18,7 @@ class PortScanDetector(BaseMonitor):
     `window` segundos, genera una alerta SCAN001.
     """
 
-    def __init__(self, interval: int = 10, threshold: int = 10, window: int = 120):
+    def __init__(self, interval: int = 10, threshold: int = 20, window: int = 120):
         super().__init__("portscan", interval)
         self.threshold = threshold
         self.window = window
@@ -39,10 +39,13 @@ class PortScanDetector(BaseMonitor):
 
         connections = await self._get_established()
 
-        # Registrar nuevas conexiones
+        # Registrar nuevas conexiones (solo puertos de servicio, no efímeros)
         for conn in connections:
             ip = conn["remote_addr"]
             port = conn["local_port"]
+            # Ignorar puertos efímeros — conexiones outbound normales
+            if port >= 49152:
+                continue
             self._connections[ip].append((now, port))
 
         # Evaluar cada IP

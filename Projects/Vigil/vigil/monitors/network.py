@@ -15,12 +15,17 @@ class NetworkMonitor(BaseMonitor):
     Mantiene un set de listeners conocidos y alerta cuando aparecen nuevos.
     """
 
+    # Puertos efímeros (49152-65535) son asignados dinámicamente por el OS.
+    # No alertar por ellos — son conexiones temporales normales.
+    EPHEMERAL_PORT_START = 49152
+
     def __init__(self, interval: int = 15, trusted_processes: list[str] | None = None,
-                 ignored_ports: set[int] | None = None):
+                 ignored_ports: set[int] | None = None, ignore_ephemeral: bool = True):
         super().__init__("network", interval)
         self._known_listeners: set[tuple[str, int, int]] = set()  # (proto, port, pid)
         self._trusted = set(p.lower() for p in (trusted_processes or []))
         self._ignored_ports = ignored_ports or set()
+        self._ignore_ephemeral = ignore_ephemeral
         self._pid_cache: dict[int, str] = {}
 
     async def setup(self) -> None:
@@ -43,6 +48,10 @@ class NetworkMonitor(BaseMonitor):
 
             if key not in self._known_listeners:
                 if l["local_port"] in self._ignored_ports:
+                    self._known_listeners.add(key)
+                    continue
+                # Saltar puertos efímeros (asignados por el OS, no son servicios reales)
+                if self._ignore_ephemeral and l["local_port"] >= self.EPHEMERAL_PORT_START:
                     self._known_listeners.add(key)
                     continue
                 process = self._pid_cache.get(l["pid"], "unknown")

@@ -35,7 +35,7 @@ rules:
   - id: NET003
     name: "Proceso no confiable con listener"
     description: "Un proceso fuera de la lista de confianza abrió un listener"
-    severity: MEDIUM
+    severity: LOW
     source: network
     event_type: new_listener
     conditions:
@@ -48,14 +48,14 @@ rules:
   # ── Port Scan ────────────────────────────────────────
   - id: SCAN001
     name: "Port scan detectado"
-    description: "Más de 10 conexiones a puertos distintos desde la misma IP en ventana de 2 minutos"
+    description: "Más de 20 conexiones a puertos distintos desde la misma IP en ventana de 2 minutos"
     severity: HIGH
     source: portscan
     event_type: port_scan_detected
     conditions:
       - field: unique_ports
         op: gt
-        value: 10
+        value: 20
     alert_title: "Port scan desde {remote_ip}"
     alert_description: "{remote_ip} contactó {unique_ports} puertos distintos en {window_seconds}s"
 
