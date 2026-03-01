@@ -342,6 +342,24 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // URL ping / monitor
+  if (req.method === 'POST' && req.url === '/api/ping') {
+    const { url } = await parseBody(req);
+    if (!url) return json(res, 400, { error: 'url required' });
+
+    const target = url.startsWith('http') ? url : `https://${url}`;
+    const start = Date.now();
+    const httpMod = target.startsWith('https') ? https : http;
+
+    const pingReq = httpMod.get(target, { timeout: 8000 }, (pingRes) => {
+      pingRes.resume();
+      json(res, 200, { up: pingRes.statusCode < 500, status: pingRes.statusCode, ms: Date.now() - start });
+    });
+    pingReq.on('error', () => json(res, 200, { up: false, status: 0, ms: Date.now() - start }));
+    pingReq.on('timeout', () => { pingReq.destroy(); json(res, 200, { up: false, status: 0, ms: Date.now() - start }); });
+    return;
+  }
+
   // Chat proxy (streaming)
   if (req.method === 'POST' && req.url === '/api/chat') {
     const body = await parseBody(req);
