@@ -1,0 +1,1956 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mis Proyectos</title>
+<style>
+  :root {
+    --bg: #0e0e12;
+    --surface: #16161d;
+    --surface-hover: #1e1e28;
+    --border: #2a2a35;
+    --text: #e0e0e6;
+    --text-dim: #8888a0;
+    --accent: #7c6ff7;
+    --accent-glow: rgba(124, 111, 247, 0.15);
+    --green: #34d399;
+    --amber: #fbbf24;
+    --red: #f87171;
+    --blue: #60a5fa;
+    --cyan: #22d3ee;
+    --pink: #f472b6;
+    --radius: 12px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 2rem; }
+
+  /* Header */
+  header { max-width: 1200px; margin: 0 auto 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
+  header h1 { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.5px; }
+  header h1 span { color: var(--accent); }
+  .header-right { display: flex; align-items: center; gap: 1.2rem; }
+  .stats { display: flex; gap: 1.5rem; }
+  .stat { text-align: center; }
+  .stat-value { font-size: 1.4rem; font-weight: 700; color: var(--accent); }
+  .stat-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); }
+
+  /* Data buttons */
+  .data-btns { display: flex; gap: 0.4rem; }
+  .data-btn { background: var(--surface); border: 1px solid var(--border); color: var(--text-dim); padding: 0.35rem 0.7rem; border-radius: 8px; cursor: pointer; font-size: 0.7rem; transition: all 0.2s; font-family: inherit; }
+  .data-btn:hover { border-color: var(--accent); color: var(--text); background: var(--accent-glow); }
+
+  /* Toolbar: search + sort + filters */
+  .toolbar { max-width: 1200px; margin: 0 auto 1.5rem; display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; }
+  .search-box { position: relative; flex: 1; min-width: 200px; }
+  .search-input { width: 100%; background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 0.5rem 0.75rem 0.5rem 2.2rem; border-radius: 10px; font-size: 0.85rem; font-family: inherit; outline: none; transition: border-color 0.2s; }
+  .search-input:focus { border-color: var(--accent); }
+  .search-input::placeholder { color: var(--text-dim); opacity: 0.5; }
+  .search-icon { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--text-dim); font-size: 0.8rem; pointer-events: none; }
+  .search-kbd { position: absolute; right: 0.6rem; top: 50%; transform: translateY(-50%); background: var(--border); color: var(--text-dim); padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.6rem; font-family: 'Cascadia Code', monospace; pointer-events: none; opacity: 0.6; }
+  .search-input:focus ~ .search-kbd { display: none; }
+  .sort-select { background: var(--surface); border: 1px solid var(--border); color: var(--text-dim); padding: 0.5rem 0.75rem; border-radius: 10px; font-size: 0.8rem; font-family: inherit; cursor: pointer; outline: none; }
+  .sort-select option { background: var(--bg); }
+
+  .filters { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+  .filter-btn { background: var(--surface); border: 1px solid var(--border); color: var(--text-dim); padding: 0.4rem 0.85rem; border-radius: 20px; cursor: pointer; font-size: 0.78rem; transition: all 0.2s; font-family: inherit; }
+  .filter-btn:hover, .filter-btn.active { background: var(--accent-glow); border-color: var(--accent); color: var(--text); }
+
+  /* Grid */
+  .grid { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.2rem; }
+
+  /* Card */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; transition: all 0.25s ease; position: relative; overflow: hidden; animation: fadeUp 0.4s ease both; }
+  .card-toggle { cursor: pointer; }
+  .card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--card-accent, var(--accent)); opacity: 0.7; transition: opacity 0.25s; }
+  .card:hover { border-color: var(--card-accent, var(--accent)); transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,0,0,0.3); }
+  .card:hover::before { opacity: 1; }
+  .card.expanded { grid-column: 1 / -1; max-width: 720px; }
+  .card-header { display: flex; align-items: flex-start; gap: 0.8rem; margin-bottom: 0.8rem; }
+  .card-icon { font-size: 1.8rem; line-height: 1; flex-shrink: 0; }
+  .card-title { font-size: 1.1rem; font-weight: 600; line-height: 1.3; }
+  .card-desc { color: var(--text-dim); font-size: 0.85rem; line-height: 1.5; margin-bottom: 1rem; }
+  .tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1rem; }
+  .tag { font-size: 0.7rem; padding: 0.2rem 0.6rem; border-radius: 10px; background: rgba(255,255,255,0.05); color: var(--text-dim); border: 1px solid rgba(255,255,255,0.08); }
+  .tag.stack { color: var(--cyan); border-color: rgba(34,211,238,0.2); }
+  .tag.platform { color: var(--pink); border-color: rgba(244,114,182,0.2); }
+  .card-footer { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding-top: 0.8rem; border-top: 1px solid var(--border); }
+  .status { display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; font-weight: 500; }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; }
+  .status-dot.active { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .status-dot.wip { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+  .status-dot.paused { background: var(--text-dim); }
+  .card-path { font-size: 0.65rem; color: var(--text-dim); font-family: 'Cascadia Code','Consolas',monospace; opacity: 0.7; text-align: right; word-break: break-all; }
+  .category-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-dim); margin-bottom: 0.3rem; }
+
+  /* Pin */
+  .pin-btn { position: absolute; top: 1rem; right: 2.8rem; font-size: 0.85rem; cursor: pointer; opacity: 0; transition: opacity 0.2s; background: none; border: none; color: var(--text-dim); }
+  .card:hover .pin-btn { opacity: 0.6; }
+  .pin-btn:hover { opacity: 1 !important; }
+  .pin-btn.pinned { opacity: 1 !important; color: var(--amber); }
+  .card.is-pinned { border-color: rgba(251,191,36,0.3); }
+
+  /* Progress bar */
+  .progress-bar { width: 100%; height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; margin-top: 0.6rem; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
+  .progress-label { font-size: 0.65rem; color: var(--text-dim); margin-top: 0.3rem; text-align: right; }
+
+  /* Expanded panel */
+  .expand-panel { display: none; margin-top: 1.2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+  .card.expanded .expand-panel { display: block; }
+  .expand-panel h3 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); margin-bottom: 0.8rem; }
+  .expand-hint { font-size: 0.6rem; color: var(--text-dim); opacity: 0; transition: opacity 0.2s; position: absolute; top: 1rem; right: 1rem; }
+  .card:hover .expand-hint { opacity: 1; }
+  .card.expanded .expand-hint { opacity: 1; }
+
+  /* Todo items */
+  .todo-list { list-style: none; display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1rem; }
+  .todo-item { display: flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; padding: 0.45rem 0.6rem; border-radius: 8px; transition: background 0.15s, opacity 0.2s, transform 0.15s; position: relative; }
+  .todo-item:hover { background: rgba(255,255,255,0.03); }
+  .todo-grip { cursor: grab; color: var(--text-dim); opacity: 0; font-size: 0.85rem; flex-shrink: 0; user-select: none; transition: opacity 0.15s; line-height: 1; letter-spacing: -1px; }
+  .todo-item:hover .todo-grip { opacity: 0.5; }
+  .todo-grip:hover { opacity: 1 !important; color: var(--accent); }
+  .todo-grip:active { cursor: grabbing; }
+  .todo-item.dragging { opacity: 0.3; transform: scale(0.98); }
+  .todo-item.drop-above { box-shadow: 0 -2px 0 0 var(--accent); }
+  .todo-item.drop-below { box-shadow: 0 2px 0 0 var(--accent); }
+  .todo-check { width: 18px; height: 18px; border-radius: 4px; border: 2px solid var(--border); cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s; }
+  .todo-check:hover { border-color: var(--accent); }
+  .todo-check.done { background: var(--green); border-color: var(--green); }
+  .todo-check.done::after { content: '✓'; color: #0e0e12; font-size: 0.7rem; font-weight: 700; }
+  .todo-text { color: var(--text); flex: 1; min-width: 0; cursor: default; }
+  .todo-item.done .todo-text { text-decoration: line-through; color: var(--text-dim); opacity: 0.6; }
+  .todo-text-edit { flex: 1; min-width: 0; background: var(--bg); border: 1px solid var(--accent); color: var(--text); padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.85rem; font-family: inherit; outline: none; }
+  .todo-priority { font-size: 0.6rem; padding: 0.15rem 0.45rem; border-radius: 6px; font-weight: 600; flex-shrink: 0; cursor: pointer; transition: all 0.15s; user-select: none; }
+  .todo-priority:hover { filter: brightness(1.3); }
+  .todo-priority.high { background: rgba(248,113,113,0.15); color: var(--red); }
+  .todo-priority.med { background: rgba(251,191,36,0.15); color: var(--amber); }
+  .todo-priority.low { background: rgba(136,136,160,0.1); color: var(--text-dim); }
+  .todo-delete { width: 20px; height: 20px; border-radius: 4px; border: none; background: transparent; color: var(--text-dim); cursor: pointer; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; opacity: 0; transition: all 0.15s; flex-shrink: 0; }
+  .todo-item:hover .todo-delete { opacity: 1; }
+  .todo-delete:hover { background: rgba(248,113,113,0.2); color: var(--red); }
+  .todo-launch { width: 20px; height: 20px; border-radius: 4px; border: none; background: transparent; color: var(--text-dim); cursor: pointer; font-size: 0.65rem; display: flex; align-items: center; justify-content: center; opacity: 0; transition: all 0.15s; flex-shrink: 0; }
+  .todo-item:hover .todo-launch { opacity: 1; }
+  .todo-launch:hover { background: var(--accent-glow); color: var(--accent); }
+
+  /* Due date */
+  .todo-due { font-size: 0.6rem; padding: 0.15rem 0.45rem; border-radius: 6px; flex-shrink: 0; cursor: pointer; font-family: 'Cascadia Code',monospace; transition: all 0.15s; border: none; background: rgba(255,255,255,0.05); color: var(--text-dim); }
+  .todo-due.overdue { background: rgba(248,113,113,0.15); color: var(--red); }
+  .todo-due.soon { background: rgba(251,191,36,0.15); color: var(--amber); }
+  .todo-due.later { background: rgba(96,165,250,0.1); color: var(--blue); }
+  .todo-due-input { width: 110px; background: var(--bg); border: 1px solid var(--accent); color: var(--text); padding: 0.15rem 0.35rem; border-radius: 6px; font-size: 0.65rem; font-family: inherit; outline: none; flex-shrink: 0; }
+
+  /* Add todo */
+  .todo-add-row { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1.2rem; }
+  .todo-add-input { flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 0.5rem 0.75rem; border-radius: 8px; font-size: 0.8rem; font-family: inherit; outline: none; transition: border-color 0.2s; }
+  .todo-add-input:focus { border-color: var(--accent); }
+  .todo-add-input::placeholder { color: var(--text-dim); opacity: 0.5; }
+  .todo-add-priority { background: var(--bg); border: 1px solid var(--border); color: var(--text-dim); padding: 0.4rem 0.5rem; border-radius: 8px; font-size: 0.7rem; cursor: pointer; outline: none; font-family: inherit; }
+  .todo-add-priority option { background: var(--bg); }
+  .todo-add-btn { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--accent); background: var(--accent); color: white; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; }
+  .todo-add-btn:hover { background: #6b5ce7; box-shadow: 0 4px 12px rgba(124,111,247,0.3); }
+  .todo-empty { color: var(--text-dim); font-size: 0.8rem; font-style: italic; padding: 0.5rem 0; }
+
+  /* Notes */
+  .notes-section { margin-top: 1rem; }
+  .notes-textarea { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 0.6rem 0.75rem; border-radius: 8px; font-size: 0.8rem; font-family: inherit; outline: none; resize: vertical; min-height: 60px; transition: border-color 0.2s; }
+  .notes-textarea:focus { border-color: var(--accent); }
+  .notes-textarea::placeholder { color: var(--text-dim); opacity: 0.4; }
+
+  /* Action buttons */
+  .card-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+  .action-btn { display: flex; align-items: center; gap: 0.4rem; padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 0.8rem; cursor: pointer; transition: all 0.2s; font-family: inherit; }
+  .action-btn:hover { border-color: var(--accent); background: var(--accent-glow); }
+  .action-btn.primary { background: var(--accent); border-color: var(--accent); color: white; font-weight: 600; }
+  .action-btn.primary:hover { background: #6b5ce7; box-shadow: 0 4px 15px rgba(124,111,247,0.3); }
+  .analysis-btns { border-top: 1px solid var(--border); padding-top: 0.6rem; }
+  .action-btn.analysis-type { font-size: 0.73rem; padding: 0.4rem 0.8rem; border-style: dashed; }
+
+  /* Git status */
+  .git-status { display: flex; gap: 0.8rem; align-items: center; flex-wrap: wrap; font-size: 0.73rem; padding: 0.5rem 0.7rem; background: var(--bg); border-radius: 8px; margin-bottom: 0.8rem; }
+  .git-branch { color: var(--cyan); font-weight: 600; }
+  .git-changes { color: var(--amber); }
+  .git-clean { color: var(--green); }
+  .git-commit { color: var(--text-dim); flex: 1; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .git-no { color: var(--text-dim); font-style: italic; }
+
+  /* Health Dashboard */
+  .health-bar { max-width: 1200px; margin: 0 auto 1.2rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.2rem; display: none; }
+  .health-bar.open { display: block; }
+  .health-toggle { background: none; border: 1px solid var(--border); color: var(--text-dim); padding: 0.3rem 0.7rem; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.72rem; transition: all 0.2s; }
+  .health-toggle:hover { border-color: var(--accent); color: var(--text); }
+  .health-toggle.active { border-color: var(--accent); color: var(--accent); }
+  .health-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 0.8rem; }
+  .health-card { text-align: center; padding: 0.6rem; }
+  .health-card .h-value { font-size: 1.5rem; font-weight: 700; color: var(--accent); }
+  .health-card .h-label { font-size: 0.68rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+  .health-deadlines { font-size: 0.78rem; }
+  .health-deadlines .deadline-item { display: flex; justify-content: space-between; padding: 0.25rem 0; border-bottom: 1px solid var(--border); }
+  .health-deadlines .deadline-item:last-child { border: none; }
+  .deadline-soon { color: var(--amber); }
+  .deadline-overdue { color: var(--red); font-weight: 600; }
+
+  /* Activity log */
+  .activity-log { max-height: 200px; overflow-y: auto; font-size: 0.75rem; }
+  .activity-item { display: flex; gap: 0.6rem; padding: 0.3rem 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
+  .activity-time { color: var(--text-dim); min-width: 70px; font-size: 0.68rem; }
+  .activity-text { color: var(--text); }
+
+  /* Cost tracker */
+  .cost-section { margin-top: 0.8rem; }
+  .cost-row { display: flex; gap: 0.5rem; align-items: center; font-size: 0.78rem; padding: 0.25rem 0; }
+  .cost-name { flex: 1; }
+  .cost-amount { color: var(--green); font-weight: 600; min-width: 70px; text-align: right; }
+  .cost-del { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 0.7rem; opacity: 0; transition: opacity 0.15s; }
+  .cost-row:hover .cost-del { opacity: 1; }
+  .cost-total { display: flex; justify-content: space-between; padding-top: 0.4rem; border-top: 1px solid var(--border); margin-top: 0.4rem; font-weight: 700; font-size: 0.82rem; }
+  .cost-total .cost-amount { color: var(--accent); }
+  .cost-add { display: flex; gap: 0.4rem; margin-top: 0.5rem; }
+  .cost-add input { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 0.3rem 0.5rem; border-radius: 6px; font-size: 0.73rem; font-family: inherit; outline: none; }
+  .cost-add input:focus { border-color: var(--accent); }
+  .cost-add input[type="text"] { flex: 1; }
+  .cost-add input[type="number"] { width: 70px; }
+  .cost-add button { background: var(--accent); border: none; color: white; padding: 0.3rem 0.6rem; border-radius: 6px; cursor: pointer; font-size: 0.73rem; }
+
+  /* Add project card */
+  .card-add { background: transparent; border: 2px dashed var(--border); border-radius: var(--radius); display: flex; align-items: center; justify-content: center; min-height: 220px; cursor: pointer; transition: all 0.25s; animation: fadeUp 0.4s ease both; }
+  .card-add:hover { border-color: var(--accent); background: var(--accent-glow); }
+  .card-add-inner { text-align: center; color: var(--text-dim); }
+  .card-add-icon { font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5; transition: opacity 0.2s; }
+  .card-add:hover .card-add-icon { opacity: 1; color: var(--accent); }
+  .card-add-label { font-size: 0.85rem; }
+
+  /* Toast */
+  .toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--accent); color: white; padding: 0.8rem 1.5rem; border-radius: 10px; font-size: 0.85rem; font-weight: 500; opacity: 0; transition: all 0.35s ease; pointer-events: none; z-index: 100; box-shadow: 0 8px 30px rgba(124,111,247,0.4); }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* Modal */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 200; display: none; align-items: center; justify-content: center; padding: 1rem; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; padding: 2rem; animation: fadeUp 0.25s ease; }
+  .modal h2 { font-size: 1.2rem; margin-bottom: 1.5rem; }
+  .modal h2 span { color: var(--accent); }
+  .form-group { margin-bottom: 1rem; }
+  .form-label { display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); margin-bottom: 0.35rem; }
+  .form-input, .form-select, .form-textarea { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 0.55rem 0.75rem; border-radius: 8px; font-size: 0.85rem; font-family: inherit; outline: none; transition: border-color 0.2s; }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--accent); }
+  .form-textarea { resize: vertical; min-height: 60px; }
+  .form-select option { background: var(--bg); }
+  .form-row { display: flex; gap: 0.75rem; }
+  .form-row .form-group { flex: 1; }
+  .form-hint { font-size: 0.7rem; color: var(--text-dim); margin-top: 0.25rem; opacity: 0.7; }
+  .color-options { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  .color-swatch { width: 28px; height: 28px; border-radius: 6px; border: 2px solid transparent; cursor: pointer; transition: all 0.15s; }
+  .color-swatch:hover { transform: scale(1.15); }
+  .color-swatch.selected { border-color: white; box-shadow: 0 0 8px rgba(255,255,255,0.3); }
+  .modal-actions { display: flex; gap: 0.6rem; justify-content: flex-end; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+  .modal-btn { padding: 0.55rem 1.2rem; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 0.85rem; cursor: pointer; font-family: inherit; transition: all 0.2s; }
+  .modal-btn:hover { border-color: var(--accent); background: var(--accent-glow); }
+  .modal-btn.primary { background: var(--accent); border-color: var(--accent); color: white; font-weight: 600; }
+  .modal-btn.primary:hover { background: #6b5ce7; }
+  .modal-btn.danger { color: var(--red); }
+  .modal-btn.danger:hover { background: rgba(248,113,113,0.1); border-color: var(--red); }
+
+  /* No results */
+  .no-results { text-align: center; color: var(--text-dim); padding: 3rem 1rem; font-size: 0.9rem; grid-column: 1 / -1; }
+
+  /* Chat panel */
+  .chat-fab { position: fixed; bottom: 2rem; right: 2rem; width: 52px; height: 52px; border-radius: 50%; background: var(--accent); border: none; color: white; font-size: 1.4rem; cursor: pointer; z-index: 150; box-shadow: 0 4px 20px rgba(124,111,247,0.4); transition: all 0.25s; display: flex; align-items: center; justify-content: center; }
+  .chat-fab:hover { transform: scale(1.1); box-shadow: 0 6px 25px rgba(124,111,247,0.5); }
+  .chat-fab.has-context { background: linear-gradient(135deg, var(--accent), #a78bfa); }
+
+  .chat-panel { position: fixed; top: 0; right: -440px; width: 440px; height: 100vh; background: var(--surface); border-left: 1px solid var(--border); z-index: 300; display: flex; flex-direction: column; transition: right 0.3s ease; box-shadow: -8px 0 30px rgba(0,0,0,0.3); }
+  .chat-panel.open { right: 0; }
+
+  .chat-header { padding: 0.7rem 1rem; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 0.5rem; flex-shrink: 0; }
+  .chat-header-row { display: flex; align-items: center; gap: 0.5rem; }
+  .chat-provider { background: var(--bg); color: var(--text); border: 1px solid var(--border); padding: 0.3rem 0.5rem; border-radius: 8px; font-size: 0.75rem; font-family: inherit; cursor: pointer; outline: none; flex: 1; }
+  .chat-provider:focus { border-color: var(--accent); }
+  .chat-model-select { background: var(--bg); color: var(--text-dim); border: 1px solid var(--border); padding: 0.3rem 0.5rem; border-radius: 8px; font-size: 0.7rem; font-family: inherit; cursor: pointer; outline: none; max-width: 160px; }
+  .chat-model-select:focus { border-color: var(--accent); }
+  .chat-provider-status { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .chat-provider-status.online { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .chat-provider-status.offline { background: var(--red); box-shadow: 0 0 6px var(--red); }
+  .chat-provider-status.unknown { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+  .chat-keys-btn { background: none; border: 1px solid var(--border); color: var(--text-dim); font-size: 0.85rem; cursor: pointer; padding: 0.2rem 0.45rem; border-radius: 6px; transition: all 0.15s; }
+  .chat-keys-btn:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+  .chat-header-context { font-size: 0.7rem; color: var(--accent); background: var(--accent-glow); padding: 0.15rem 0.5rem; border-radius: 10px; text-align: center; display: none; }
+  .chat-close { background: none; border: none; color: var(--text-dim); font-size: 1.2rem; cursor: pointer; padding: 0.3rem; border-radius: 6px; transition: all 0.15s; }
+  .chat-close:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+
+  /* API Keys modal */
+  .keys-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 400; display: none; align-items: center; justify-content: center; }
+  .keys-overlay.open { display: flex; }
+  .keys-modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; width: 380px; max-width: 90vw; }
+  .keys-modal h3 { font-size: 1rem; margin-bottom: 1rem; }
+  .keys-modal label { display: block; font-size: 0.75rem; color: var(--text-dim); margin: 0.8rem 0 0.3rem; text-transform: uppercase; letter-spacing: 0.5px; }
+  .keys-modal input { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 0.5rem 0.7rem; border-radius: 8px; font-size: 0.82rem; font-family: inherit; outline: none; }
+  .keys-modal input:focus { border-color: var(--accent); }
+  .keys-modal .keys-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.2rem; }
+  .keys-modal .keys-actions button { padding: 0.4rem 1rem; border-radius: 8px; border: none; cursor: pointer; font-family: inherit; font-size: 0.8rem; }
+  .keys-save { background: var(--accent); color: white; }
+  .keys-cancel { background: var(--bg); color: var(--text-dim); border: 1px solid var(--border) !important; }
+
+  .chat-messages { flex: 1; overflow-y: auto; padding: 1rem 1.2rem; display: flex; flex-direction: column; gap: 0.8rem; }
+  .chat-messages::-webkit-scrollbar { width: 4px; }
+  .chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .chat-msg { max-width: 90%; padding: 0.7rem 1rem; border-radius: 12px; font-size: 0.85rem; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+  .chat-msg.user { align-self: flex-end; background: var(--accent); color: white; border-bottom-right-radius: 4px; }
+  .chat-msg.assistant { align-self: flex-start; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+  .chat-msg.system { align-self: center; background: transparent; color: var(--text-dim); font-size: 0.75rem; font-style: italic; text-align: center; padding: 0.3rem; }
+  .chat-msg.error { align-self: center; background: rgba(248,113,113,0.1); color: var(--red); font-size: 0.8rem; border: 1px solid rgba(248,113,113,0.2); }
+
+  .chat-typing { align-self: flex-start; color: var(--text-dim); font-size: 0.8rem; padding: 0.5rem 0; }
+  .chat-typing::after { content: '...'; animation: dots 1.2s infinite; }
+  @keyframes dots { 0%,20% { content: '.'; } 40% { content: '..'; } 60%,100% { content: '...'; } }
+
+  .chat-input-area { padding: 0.8rem 1rem; border-top: 1px solid var(--border); display: flex; gap: 0.5rem; align-items: flex-end; flex-shrink: 0; }
+  .chat-input { flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 0.6rem 0.8rem; border-radius: 10px; font-size: 0.85rem; font-family: inherit; outline: none; resize: none; max-height: 120px; min-height: 38px; transition: border-color 0.2s; }
+  .chat-input:focus { border-color: var(--accent); }
+  .chat-input::placeholder { color: var(--text-dim); opacity: 0.5; }
+  .chat-send { width: 38px; height: 38px; border-radius: 10px; background: var(--accent); border: none; color: white; font-size: 1rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .chat-send:hover { background: #6b5ce7; }
+  .chat-send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .chat-welcome { text-align: center; color: var(--text-dim); padding: 2rem 1rem; }
+  .chat-welcome-icon { font-size: 2.5rem; margin-bottom: 0.8rem; }
+  .chat-welcome-text { font-size: 0.85rem; line-height: 1.6; }
+
+  body.chat-open { padding-right: calc(2rem + 440px); }
+
+  @media (max-width: 768px) {
+    body { padding: 1rem; }
+    .grid { grid-template-columns: 1fr; }
+    header { flex-direction: column; align-items: flex-start; }
+    .card.expanded { max-width: 100%; }
+    .toolbar { flex-direction: column; }
+    .search-box { min-width: 100%; }
+    .form-row { flex-direction: column; gap: 0; }
+    .chat-panel { width: 100%; right: -100%; }
+    body.chat-open { padding-right: 1rem; }
+    .prompt-overlay { padding: 0.5rem; }
+    .prompt-modal { width: 100%; max-height: 95vh; }
+    .prompt-textarea { min-height: 120px; }
+    .prompt-refine-row { flex-direction: column; }
+    .prompt-actions { flex-wrap: wrap; }
+    .analysis-overlay { padding: 0.5rem; }
+    .analysis-modal { width: 100%; max-height: 95vh; }
+    .keys-modal { width: 100%; }
+    .health-grid { grid-template-columns: repeat(2, 1fr); }
+    .analysis-btns { gap: 0.4rem; }
+    .action-btn.analysis-type { font-size: 0.68rem; padding: 0.35rem 0.6rem; }
+    .git-status { flex-wrap: wrap; font-size: 0.68rem; }
+    .cost-add { flex-wrap: wrap; }
+  }
+
+  /* Prompt Builder modal */
+  .prompt-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 400; display: none; align-items: center; justify-content: center; padding: 2rem; }
+  .prompt-overlay.open { display: flex; }
+  .prompt-modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); width: 600px; max-width: 95vw; max-height: 85vh; display: flex; flex-direction: column; }
+  .prompt-modal-header { padding: 1rem 1.2rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 0.8rem; }
+  .prompt-modal-header h3 { flex: 1; font-size: 1rem; }
+  .prompt-task-info { padding: 0.8rem 1.2rem; background: var(--bg); font-size: 0.78rem; color: var(--text-dim); border-bottom: 1px solid var(--border); }
+  .prompt-body { flex: 1; padding: 1rem 1.2rem; display: flex; flex-direction: column; gap: 0.8rem; overflow-y: auto; }
+  .prompt-textarea { width: 100%; min-height: 180px; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 0.8rem; border-radius: 8px; font-size: 0.82rem; font-family: inherit; line-height: 1.6; outline: none; resize: vertical; }
+  .prompt-textarea:focus { border-color: var(--accent); }
+  .prompt-refine-row { display: flex; gap: 0.5rem; }
+  .prompt-refine-input { flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 0.5rem 0.7rem; border-radius: 8px; font-size: 0.8rem; font-family: inherit; outline: none; }
+  .prompt-refine-input:focus { border-color: var(--accent); }
+  .prompt-actions { padding: 0.8rem 1.2rem; border-top: 1px solid var(--border); display: flex; gap: 0.5rem; justify-content: flex-end; }
+  .prompt-actions button { padding: 0.5rem 1rem; border-radius: 8px; border: none; cursor: pointer; font-family: inherit; font-size: 0.82rem; transition: all 0.2s; }
+  .prompt-btn-cancel { background: var(--bg); color: var(--text-dim); border: 1px solid var(--border) !important; }
+  .prompt-btn-refine { background: var(--surface); color: var(--amber); border: 1px solid var(--amber) !important; }
+  .prompt-btn-refine:disabled { opacity: 0.4; cursor: not-allowed; }
+  .prompt-btn-launch { background: var(--accent); color: white; font-weight: 600; }
+  .prompt-btn-launch:hover { background: #6b5ce7; }
+  .prompt-generating { color: var(--text-dim); font-size: 0.78rem; font-style: italic; }
+  .prompt-generating::after { content: '...'; animation: dots 1.2s infinite; }
+
+  /* Analysis modal */
+  .analysis-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 400; display: none; align-items: center; justify-content: center; padding: 2rem; }
+  .analysis-overlay.open { display: flex; }
+  .analysis-modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); width: 720px; max-width: 95vw; max-height: 85vh; display: flex; flex-direction: column; }
+  .analysis-modal-header { padding: 1rem 1.2rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 0.8rem; }
+  .analysis-modal-header h3 { flex: 1; font-size: 1rem; }
+  .analysis-modal-body { flex: 1; overflow-y: auto; padding: 1.2rem; font-size: 0.85rem; line-height: 1.7; white-space: pre-wrap; color: var(--text); }
+  .analysis-modal-body .section-title { color: var(--accent); font-weight: 700; font-size: 0.9rem; margin: 1rem 0 0.4rem; }
+  .analysis-modal-body .section-title:first-child { margin-top: 0; }
+  .analysis-loading { text-align: center; padding: 3rem; color: var(--text-dim); }
+  .analysis-loading::after { content: '...'; animation: dots 1.2s infinite; }
+
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span>//</span> Mis Proyectos</h1>
+  <div class="header-right">
+    <div class="stats">
+      <div class="stat"><div class="stat-value" id="total-count">0</div><div class="stat-label">Proyectos</div></div>
+      <div class="stat"><div class="stat-value" id="active-count">0</div><div class="stat-label">Activos</div></div>
+      <div class="stat"><div class="stat-value" id="pending-count">0</div><div class="stat-label">Pendientes</div></div>
+    </div>
+    <div class="data-btns">
+      <button class="data-btn health-toggle" id="health-toggle" onclick="toggleHealth()">Dashboard</button>
+      <button class="data-btn" onclick="exportData()" title="Exportar datos como JSON">Exportar</button>
+      <button class="data-btn" onclick="document.getElementById('import-file').click()" title="Importar datos desde JSON">Importar</button>
+      <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+    </div>
+  </div>
+</header>
+
+<div class="toolbar">
+  <div class="search-box">
+    <span class="search-icon">&#x1F50D;</span>
+    <input class="search-input" id="search" placeholder="Buscar proyectos..." oninput="onSearch()">
+    <span class="search-kbd">/</span>
+  </div>
+  <select class="sort-select" id="sort-select" onchange="onSortChange()">
+    <option value="pinned">Pineados primero</option>
+    <option value="name">Nombre A-Z</option>
+    <option value="status">Estado</option>
+    <option value="progress">Progreso</option>
+    <option value="pending">Mas pendientes</option>
+  </select>
+  <div class="filters" id="filters"></div>
+</div>
+
+<!-- Health Dashboard -->
+<div class="health-bar" id="health-bar">
+  <div class="health-grid" id="health-grid"></div>
+  <div class="health-deadlines" id="health-deadlines"></div>
+</div>
+
+<div class="grid" id="grid"></div>
+<div class="toast" id="toast"></div>
+
+<!-- Chat FAB -->
+<button class="chat-fab" id="chat-fab" onclick="toggleChat()" title="Chat con Claude">💬</button>
+
+<!-- Chat Panel -->
+<div class="chat-panel" id="chat-panel">
+  <div class="chat-header">
+    <div class="chat-header-row">
+      <select class="chat-provider" id="chat-provider" onchange="onProviderChange(this.value)" title="Proveedor de IA"></select>
+      <select class="chat-model-select" id="chat-model" title="Modelo"></select>
+      <span class="chat-provider-status" id="chat-provider-status"></span>
+      <button class="chat-keys-btn" onclick="openKeysModal()" title="Configurar API Keys">&#9881;</button>
+      <button class="chat-close" onclick="toggleChat()">&#10005;</button>
+    </div>
+    <span class="chat-header-context" id="chat-context-label"></span>
+  </div>
+  <div class="chat-messages" id="chat-messages">
+    <div class="chat-welcome">
+      <div class="chat-welcome-icon">💬</div>
+      <div class="chat-welcome-text">Chatea sobre tus proyectos.<br>Usa Ollama (local) o OpenClaw (Claude) desde el selector.</div>
+    </div>
+  </div>
+  <div class="chat-input-area">
+    <textarea class="chat-input" id="chat-input" placeholder="Escribe un mensaje..." rows="1" onkeydown="handleChatKey(event)" oninput="autoResize(this)"></textarea>
+    <button class="chat-send" id="chat-send" onclick="sendChat()">▶</button>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModalOverlay(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h2 id="modal-title"><span>+</span> Nuevo Proyecto</h2>
+    <input type="hidden" id="modal-edit-name">
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Nombre</label><input class="form-input" id="fp-name" placeholder="Mi Proyecto"></div>
+      <div class="form-group" style="max-width:80px"><label class="form-label">Icono</label><input class="form-input" id="fp-icon" placeholder="🚀" style="text-align:center;font-size:1.3rem"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Descripcion</label><textarea class="form-textarea" id="fp-desc" placeholder="De que se trata?"></textarea></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Stack</label><input class="form-input" id="fp-stack" placeholder="React, Node.js, ..."><div class="form-hint">Separar con comas</div></div>
+      <div class="form-group"><label class="form-label">Plataforma</label><input class="form-input" id="fp-platform" placeholder="Web, Windows, ..."><div class="form-hint">Separar con comas</div></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Categoria</label><select class="form-select" id="fp-category"><option value="app">App</option><option value="web">Web</option><option value="game">Juego</option><option value="agent">Agente</option><option value="security">Seguridad</option></select></div>
+      <div class="form-group"><label class="form-label">Estado</label><select class="form-select" id="fp-status"><option value="active">Activo</option><option value="wip">En desarrollo</option><option value="paused">Pausado</option></select></div>
+    </div>
+    <div class="form-group"><label class="form-label">Ruta del proyecto</label><input class="form-input" id="fp-path" placeholder="C:\Users\maxir\Projects\mi-proyecto"><div class="form-hint">Ruta completa en Windows</div></div>
+    <div class="form-group"><label class="form-label">Color</label><div class="color-options" id="fp-colors"></div></div>
+    <div class="modal-actions">
+      <button class="modal-btn danger" id="modal-delete-btn" style="display:none;margin-right:auto" onclick="deleteProject()">Eliminar</button>
+      <button class="modal-btn" onclick="closeModal()">Cancelar</button>
+      <button class="modal-btn primary" onclick="saveProject()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Prompt Builder Modal -->
+<div class="prompt-overlay" id="prompt-overlay" onclick="if(event.target===this)closePromptBuilder()">
+  <div class="prompt-modal">
+    <div class="prompt-modal-header">
+      <h3 id="prompt-title">Preparar tarea</h3>
+      <button class="chat-close" onclick="closePromptBuilder()">&#10005;</button>
+    </div>
+    <div class="prompt-task-info" id="prompt-task-info"></div>
+    <div class="prompt-body">
+      <div class="prompt-generating" id="prompt-loading" style="display:none">El agente esta armando el prompt</div>
+      <textarea class="prompt-textarea" id="prompt-textarea" placeholder="El prompt aparecera aqui..."></textarea>
+      <div class="prompt-refine-row">
+        <input class="prompt-refine-input" id="prompt-refine-input" placeholder="Sugerencia para mejorar el prompt..." onkeydown="if(event.key==='Enter'){event.preventDefault();refinePrompt();}">
+        <button class="prompt-btn-refine" id="prompt-refine-btn" onclick="refinePrompt()">Mejorar</button>
+      </div>
+    </div>
+    <div class="prompt-actions">
+      <button class="prompt-btn-cancel" onclick="closePromptBuilder()">Cancelar</button>
+      <button class="prompt-btn-launch" id="prompt-launch-btn" onclick="launchWithBuiltPrompt()">Aceptar y abrir Claude</button>
+    </div>
+  </div>
+</div>
+
+<!-- Analysis Modal -->
+<div class="analysis-overlay" id="analysis-overlay" onclick="if(event.target===this)closeAnalysis()">
+  <div class="analysis-modal">
+    <div class="analysis-modal-header">
+      <h3 id="analysis-title">Analisis</h3>
+      <button class="chat-close" onclick="closeAnalysis()">&#10005;</button>
+    </div>
+    <div class="analysis-modal-body" id="analysis-body">
+      <div class="analysis-loading">Analizando</div>
+    </div>
+  </div>
+</div>
+
+<!-- API Keys Modal -->
+<div class="keys-overlay" id="keys-overlay" onclick="if(event.target===this)closeKeysModal()">
+  <div class="keys-modal">
+    <h3>API Keys</h3>
+    <p style="font-size:0.75rem;color:var(--text-dim);margin-bottom:0.5rem">Las keys se guardan en tu navegador (localStorage). No se envian a ningun servidor externo — solo se usan como proxy local.</p>
+    <label>Groq <span style="opacity:0.6">(gratis en groq.com)</span></label>
+    <input type="password" id="key-groq" placeholder="gsk_...">
+    <label>Google Gemini <span style="opacity:0.6">(aistudio.google.com)</span></label>
+    <input type="password" id="key-gemini" placeholder="AIza...">
+    <label>OpenRouter <span style="opacity:0.6">(openrouter.ai)</span></label>
+    <input type="password" id="key-openrouter" placeholder="sk-or-...">
+    <div class="keys-actions">
+      <button class="keys-cancel" onclick="closeKeysModal()">Cancelar</button>
+      <button class="keys-save" onclick="saveKeys()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// BUILT-IN PROJECTS
+// ============================================================
+const builtinProjects = [
+  { name:"Chipi Desktop", icon:"🐍", desc:"Asistente IA de escritorio con chat, TTS, voz y compartido LAN. Gateway OpenClaw + fallback Ollama local.", stack:["Electron 28","Vanilla JS"], platform:["Windows","LAN"], category:"app", status:"active", accent:"#7c6ff7", path:"~/.openclaw/workspace/chipi-desktop", winPath:"C:\\Users\\maxir\\.openclaw\\workspace\\chipi-desktop", defaultTodos:[{text:"Voice Input: instalar ffmpeg + whisper local",priority:"high",done:false},{text:"Mejorar panel de memoria",priority:"med",done:false},{text:"Notificaciones nativas de Windows",priority:"low",done:false},{text:"Auto-update del ejecutable portable",priority:"low",done:false}] },
+  { name:"Chipi Mobile", icon:"📱", desc:"PWA movil para comunicarse con Chipi.", stack:["Vite","PWA"], platform:["Mobile","Web"], category:"app", status:"wip", accent:"#60a5fa", path:"~/Projects/chipi-mobile", winPath:"C:\\Users\\maxir\\Projects\\chipi-mobile", defaultTodos:[{text:"Service Worker para modo offline",priority:"high",done:false},{text:"Push notifications",priority:"med",done:false},{text:"Conectar con gateway LAN",priority:"high",done:false},{text:"Diseño responsive completo",priority:"med",done:false}] },
+  { name:"Chipi Chat", icon:"💬", desc:"Servidor de chat web con Chipi via navegador.", stack:["Node.js","Express"], platform:["Web"], category:"app", status:"paused", accent:"#34d399", path:"~/.openclaw/workspace/chipi-chat", winPath:"C:\\Users\\maxir\\.openclaw\\workspace\\chipi-chat", defaultTodos:[{text:"Evaluar si mantener o unificar con Desktop",priority:"high",done:false},{text:"WebSocket streaming de respuestas",priority:"med",done:false}] },
+  { name:"Dune RTS", icon:"🏜️", desc:"Juego de estrategia en tiempo real ambientado en Dune. 3 facciones, especia, gusanos.", stack:["Unity 6","C#","2D Sprites"], platform:["Windows"], category:"game", status:"active", accent:"#fbbf24", path:"~/Projects/Dune", winPath:"C:\\Users\\maxir\\Projects\\Dune", defaultTodos:[{text:"Sonidos y musica ambiental",priority:"med",done:false},{text:"Menu principal y victoria/derrota",priority:"high",done:false},{text:"Balanceo de facciones",priority:"med",done:false},{text:"Tutorial o mision de introduccion",priority:"low",done:false},{text:"Guardar/cargar partida",priority:"med",done:false}] },
+  { name:"PERUCER", icon:"⚡", desc:"Plataforma de certificacion de eficiencia energetica.", stack:["Next.js 16","Prisma 7","Neon Postgres"], platform:["Web","Vercel"], category:"web", status:"active", accent:"#34d399", path:"~/Projects/PERUCER", winPath:"C:\\Users\\maxir\\Projects\\PERUCER", defaultTodos:[{text:"Generacion de certificados PDF",priority:"high",done:false},{text:"Dashboard con metricas",priority:"med",done:false},{text:"Roles y permisos granulares",priority:"med",done:false},{text:"Email transaccional",priority:"low",done:false}] },
+  { name:"Hammer Desktop", icon:"🔨", desc:"Herramienta administrativa con IA para automatizacion de tramites.", stack:["Electron","JS"], platform:["Windows"], category:"app", status:"wip", accent:"#f87171", path:"~/.openclaw/workspace/hammer-desktop", winPath:"C:\\Users\\maxir\\.openclaw\\workspace\\hammer-desktop", defaultTodos:[{text:"Integrar visor de procedimientos",priority:"high",done:false},{text:"Panel de historial de ejecuciones",priority:"med",done:false},{text:"UI para crear/editar procedures JSON",priority:"med",done:false}] },
+  { name:"Hammer Agent", icon:"🤖", desc:"Agente autonomo para tramites AFIP/ARCA, bancarios y facturacion.", stack:["Browser CDP","AI Agent"], platform:["Windows"], category:"agent", status:"active", accent:"#f87171", path:"~/.openclaw/workspace/agents/hammer", winPath:"C:\\Users\\maxir\\.openclaw\\workspace\\agents\\hammer", defaultTodos:[{text:"Mas procedures: transferencias bancarias",priority:"high",done:false},{text:"Manejo de errores y reintentos",priority:"high",done:false},{text:"Logging estructurado",priority:"med",done:false},{text:"Validacion de resultados",priority:"med",done:false}] },
+  { name:"Vigil IDS", icon:"🛡️", desc:"Sistema de deteccion de intrusos con alertas enriquecidas por LLM.", stack:["Python","Ollama"], platform:["Windows"], category:"security", status:"wip", accent:"#22d3ee", path:"~/Projects/Vigil", winPath:"C:\\Users\\maxir\\Projects\\Vigil", defaultTodos:[{text:"Dashboard web de alertas",priority:"high",done:false},{text:"Mas reglas de deteccion",priority:"med",done:false},{text:"Notificaciones Telegram/email",priority:"med",done:false},{text:"Auto-start como servicio",priority:"low",done:false}] },
+  { name:"Arwi Weather", icon:"🌦️", desc:"Agente personal del clima con personalidad.", stack:["Electron","JS"], platform:["Windows"], category:"app", status:"paused", accent:"#60a5fa", path:"~/.openclaw/workspace/arwi-weather", winPath:"C:\\Users\\maxir\\.openclaw\\workspace\\arwi-weather", defaultTodos:[{text:"Definir si reactivar o archivar",priority:"high",done:false},{text:"API del clima",priority:"med",done:false}] },
+  { name:"SGRT2", icon:"📋", desc:"Sistema de gestion de tramites regulatorios ANMAT.", stack:["React","Vite","TypeScript"], platform:["Web"], category:"web", status:"wip", accent:"#a78bfa", path:"~/SGRT2", winPath:"C:\\Users\\maxir\\SGRT2", defaultTodos:[{text:"Autenticacion de usuarios",priority:"high",done:false},{text:"CRUD de cotizaciones",priority:"high",done:false},{text:"Conectar con ANMAT",priority:"med",done:false},{text:"Seguimiento de tramites",priority:"med",done:false}] },
+  { name:"GestioPro", icon:"📊", desc:"Sistema de gestion empresarial.", stack:["Next.js","Prisma","Vitest"], platform:["Web"], category:"web", status:"wip", accent:"#f472b6", path:"~/gestiopro", winPath:"C:\\Users\\maxir\\gestiopro", defaultTodos:[{text:"Modulo de facturacion",priority:"high",done:false},{text:"Reportes exportables",priority:"med",done:false},{text:"Multi-tenancy",priority:"low",done:false}] },
+  { name:"Chipi Tauri", icon:"⚙️", desc:"Version experimental de Chipi usando Tauri.", stack:["Tauri","JS"], platform:["Windows"], category:"app", status:"paused", accent:"#7c6ff7", path:"~/.openclaw/workspace/chipi-tauri", winPath:"C:\\Users\\maxir\\.openclaw\\workspace\\chipi-tauri", defaultTodos:[{text:"Evaluar migracion desde Electron",priority:"med",done:false},{text:"Benchmark tamaño vs Electron",priority:"low",done:false}] }
+];
+
+// ============================================================
+// STORAGE KEYS
+// ============================================================
+const TODOS_KEY = 'project-todos-v2';
+const CUSTOM_KEY = 'custom-projects';
+const NOTES_KEY = 'project-notes';
+const PINS_KEY = 'pinned-projects';
+const SORT_KEY = 'viewer-sort';
+
+// ============================================================
+// CUSTOM PROJECTS
+// ============================================================
+function loadCustom() { return JSON.parse(localStorage.getItem(CUSTOM_KEY) || '[]'); }
+function saveCustom(list) { localStorage.setItem(CUSTOM_KEY, JSON.stringify(list)); }
+let projects = [...builtinProjects, ...loadCustom()];
+function refreshProjects() { projects = [...builtinProjects, ...loadCustom()]; }
+
+// ============================================================
+// TODOS
+// ============================================================
+function loadAllTodos() {
+  const raw = localStorage.getItem(TODOS_KEY);
+  if (raw) return JSON.parse(raw);
+  const v1 = JSON.parse(localStorage.getItem('project-todos') || '{}');
+  const data = {};
+  builtinProjects.forEach(p => { data[p.name] = p.defaultTodos.map((t,i) => ({ text:t.text, priority:t.priority, done:v1[p.name]?.[i]||false })); });
+  localStorage.setItem(TODOS_KEY, JSON.stringify(data));
+  return data;
+}
+let todoData = loadAllTodos();
+function getTodos(name) { if (!todoData[name]) { const p = projects.find(pr=>pr.name===name); todoData[name] = p?.defaultTodos ? p.defaultTodos.map(t=>({...t})) : []; } return todoData[name]; }
+function saveTodos() { localStorage.setItem(TODOS_KEY, JSON.stringify(todoData)); }
+function getProgress(name) { const t=getTodos(name), total=t.length; if(!total) return {done:0,total:0,pct:100}; const done=t.filter(x=>x.done).length; return {done,total,pct:Math.round(done/total*100)}; }
+
+// ============================================================
+// NOTES
+// ============================================================
+function loadNotes() { return JSON.parse(localStorage.getItem(NOTES_KEY) || '{}'); }
+function saveNotes(data) { localStorage.setItem(NOTES_KEY, JSON.stringify(data)); }
+let notesData = loadNotes();
+
+// ============================================================
+// PINS
+// ============================================================
+function loadPins() { return JSON.parse(localStorage.getItem(PINS_KEY) || '[]'); }
+function savePins(list) { localStorage.setItem(PINS_KEY, JSON.stringify(list)); }
+let pinnedList = loadPins();
+
+function togglePin(e, name) {
+  e.stopPropagation();
+  const idx = pinnedList.indexOf(name);
+  if (idx !== -1) pinnedList.splice(idx,1); else pinnedList.push(name);
+  savePins(pinnedList);
+  renderCards();
+}
+
+// ============================================================
+// UI STATE
+// ============================================================
+let expandedCard = null, editingTodo = null, dragState = null;
+let searchQuery = '';
+let currentSort = localStorage.getItem(SORT_KEY) || 'pinned';
+
+const grid = document.getElementById('grid');
+const filtersEl = document.getElementById('filters');
+const toastEl = document.getElementById('toast');
+const modalOverlay = document.getElementById('modal-overlay');
+const searchInput = document.getElementById('search');
+const sortSelect = document.getElementById('sort-select');
+sortSelect.value = currentSort;
+
+// ============================================================
+// TOAST
+// ============================================================
+let toastTimer;
+function showToast(msg) { clearTimeout(toastTimer); toastEl.textContent=msg; toastEl.classList.add('show'); toastTimer=setTimeout(()=>toastEl.classList.remove('show'),2500); }
+
+// ============================================================
+// TODO ACTIONS
+// ============================================================
+function copyTodoToClaude(e,n,i) {
+  e.stopPropagation();
+  const p = projects.find(pr => pr.name === n);
+  const t = getTodos(n)[i];
+  if (!t || !p) return;
+  const text = `Proyecto: ${p.name} (${p.stack.join(', ')})\nRuta: ${p.winPath}\nTarea: ${t.text}\nPrioridad: ${t.priority}${t.due ? '\nDeadline: ' + t.due : ''}`;
+  navigator.clipboard.writeText(text).then(() => showToast('Tarea copiada — pegala en Claude'));
+}
+
+// ── Prompt Builder ──
+let promptBuilderCtx = null; // { project, todo }
+
+function launchTodoWithClaude(e,n,i) {
+  e.stopPropagation();
+  const p = projects.find(pr => pr.name === n);
+  const t = getTodos(n)[i];
+  if (!t || !p) return;
+  openPromptBuilder(p, t);
+}
+
+function openPromptBuilder(project, todo) {
+  promptBuilderCtx = { project, todo };
+  const overlay = document.getElementById('prompt-overlay');
+  const titleEl = document.getElementById('prompt-title');
+  const infoEl = document.getElementById('prompt-task-info');
+  const textarea = document.getElementById('prompt-textarea');
+  const loading = document.getElementById('prompt-loading');
+
+  titleEl.textContent = `Preparar: ${todo.text}`;
+  infoEl.innerHTML = `<strong>${esc(project.name)}</strong> (${project.stack.join(', ')})<br>Tarea: ${esc(todo.text)} | Prioridad: ${todo.priority}${todo.due ? ' | Deadline: ' + todo.due : ''}`;
+  textarea.value = '';
+  loading.style.display = 'block';
+  overlay.classList.add('open');
+
+  // Ask local LLM to build a good prompt
+  generatePrompt(project, todo);
+}
+
+function closePromptBuilder() {
+  document.getElementById('prompt-overlay').classList.remove('open');
+  promptBuilderCtx = null;
+}
+
+async function generatePrompt(project, todo) {
+  const textarea = document.getElementById('prompt-textarea');
+  const loading = document.getElementById('prompt-loading');
+
+  const todos = getTodos(project.name);
+  const pending = todos.filter(t => !t.done).map(t => `- [${t.priority}] ${t.text}`).join('\n');
+  const notes = notesData[project.name] || '';
+
+  const sysMsg = `Sos un prompt engineer experto. Tu trabajo es transformar una tarea simple en un prompt detallado y accionable para un asistente de programacion (Claude Code).
+
+El prompt debe:
+- Ser claro y especifico sobre que hacer
+- Incluir contexto del proyecto (stack, estructura)
+- Definir criterios de aceptacion (como saber que esta terminado)
+- Mencionar consideraciones tecnicas relevantes
+- Ser conciso pero completo (no mas de 15 lineas)
+
+Responde SOLO con el prompt, sin explicaciones ni encabezados.`;
+
+  const userMsg = `Proyecto: ${project.name}
+Stack: ${project.stack.join(', ')}
+Ruta: ${project.winPath}
+Descripcion: ${project.desc}
+${pending ? 'Otras tareas pendientes:\n' + pending : ''}
+${notes ? 'Notas: ' + notes : ''}
+
+Tarea a convertir en prompt: "${todo.text}"
+Prioridad: ${todo.priority}${todo.due ? '\nDeadline: ' + todo.due : ''}`;
+
+  try {
+    const res = await fetch(`${SERVER_BASE}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        provider: 'ollama',
+        model: 'llama3.2:latest',
+        messages: [{ role: 'system', content: sysMsg }, { role: 'user', content: userMsg }]
+      })
+    });
+
+    if (!res.ok) throw new Error('LLM no disponible');
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let text = '';
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6).trim();
+        if (data === '[DONE]') continue;
+        try {
+          const event = JSON.parse(data);
+          const content = event.choices?.[0]?.delta?.content;
+          if (content) { text += content; textarea.value = text; }
+        } catch {}
+      }
+    }
+
+    if (!text) textarea.value = `Tarea: ${todo.text}\nProyecto: ${project.name} (${project.stack.join(', ')})\n\nAyudame a completar esta tarea.`;
+
+  } catch {
+    textarea.value = `Tarea: ${todo.text}\nProyecto: ${project.name} (${project.stack.join(', ')})\n\nAyudame a completar esta tarea.`;
+  }
+
+  loading.style.display = 'none';
+}
+
+async function refinePrompt() {
+  if (!promptBuilderCtx) return;
+  const textarea = document.getElementById('prompt-textarea');
+  const refineInput = document.getElementById('prompt-refine-input');
+  const refineBtn = document.getElementById('prompt-refine-btn');
+  const suggestion = refineInput.value.trim();
+  if (!suggestion) { refineInput.focus(); return; }
+
+  refineBtn.disabled = true;
+  const currentPrompt = textarea.value;
+
+  try {
+    const res = await fetch(`${SERVER_BASE}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        provider: 'ollama',
+        model: 'llama3.2:latest',
+        messages: [
+          { role: 'system', content: 'Sos un prompt engineer. Mejora el siguiente prompt segun la sugerencia del usuario. Responde SOLO con el prompt mejorado, sin explicaciones.' },
+          { role: 'user', content: `Prompt actual:\n${currentPrompt}\n\nSugerencia de mejora: ${suggestion}` }
+        ]
+      })
+    });
+
+    if (!res.ok) throw new Error('error');
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let text = '';
+    let buffer = '';
+    textarea.value = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6).trim();
+        if (data === '[DONE]') continue;
+        try {
+          const event = JSON.parse(data);
+          const content = event.choices?.[0]?.delta?.content;
+          if (content) { text += content; textarea.value = text; }
+        } catch {}
+      }
+    }
+
+    if (!text) textarea.value = currentPrompt;
+    refineInput.value = '';
+  } catch {
+    showToast('Error al mejorar el prompt');
+  }
+
+  refineBtn.disabled = false;
+}
+
+function launchWithBuiltPrompt() {
+  if (!promptBuilderCtx) return;
+  const { project, todo } = promptBuilderCtx;
+  const prompt = document.getElementById('prompt-textarea').value.trim();
+  if (!prompt) { showToast('El prompt esta vacio'); return; }
+
+  fetch(`${SERVER_BASE}/api/launch`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ projectPath: project.winPath, prompt })
+  }).then(r => r.json()).then(d => {
+    if (d.ok) {
+      showToast('Claude abierto con el prompt');
+      logActivity(project.name, 'Claude + prompt: ' + todo.text);
+      closePromptBuilder();
+    } else {
+      showToast('Error: ' + (d.error || 'no se pudo abrir'));
+    }
+  }).catch(() => showToast('Error: server no disponible'));
+}
+function toggleTodo(e,n,i) { e.stopPropagation(); const t=getTodos(n)[i]; t.done=!t.done; saveTodos(); if(t.done) logActivity(n,'Completada: '+t.text); renderCards(); updateStats(); }
+function deleteTodo(e,n,i) { e.stopPropagation(); getTodos(n).splice(i,1); saveTodos(); showToast('Tarea eliminada'); renderCards(); updateStats(); }
+function cyclePriority(e,n,i) { e.stopPropagation(); const c={high:'med',med:'low',low:'high'}; getTodos(n)[i].priority=c[getTodos(n)[i].priority]||'med'; saveTodos(); renderCards(); }
+function startEdit(e,n,i) { e.stopPropagation(); editingTodo={project:n,index:i}; renderCards(); setTimeout(()=>{const el=document.querySelector('.todo-text-edit');if(el){el.focus();el.select();}},10); }
+function saveEdit(n,i,v) { const t=getTodos(n),s=v.trim(); if(s&&s!==t[i].text){t[i].text=s;saveTodos();showToast('Actualizado');} editingTodo=null; renderCards(); }
+function handleEditKey(e,n,i) { if(e.key==='Enter'){e.preventDefault();saveEdit(n,i,e.target.value);}else if(e.key==='Escape'){editingTodo=null;renderCards();} }
+function addTodo(e,n) { e.stopPropagation(); const card=e.target.closest('.card'),inp=card.querySelector('.todo-add-input'),sel=card.querySelector('.todo-add-priority'),t=inp.value.trim(); if(!t){inp.focus();return;} getTodos(n).push({text:t,priority:sel.value,done:false}); saveTodos(); logActivity(n,'Tarea: '+t); showToast('Tarea agregada'); renderCards(); updateStats(); setTimeout(()=>{const el=document.querySelector('.card.expanded .todo-add-input');if(el)el.focus();},20); }
+function handleAddKey(e,n) { if(e.key==='Enter'){e.preventDefault();addTodo(e,n);} }
+
+// Due dates
+function setDueDate(e,n,i) { e.stopPropagation(); getTodos(n)[i]._editDue=true; renderCards(); setTimeout(()=>{const el=document.querySelector('.todo-due-input');if(el)el.focus();},10); }
+function saveDueDate(n,i,val) { const t=getTodos(n)[i]; t.due=val||undefined; delete t._editDue; saveTodos(); renderCards(); }
+function handleDueKey(e,n,i) { if(e.key==='Enter'){e.preventDefault();saveDueDate(n,i,e.target.value);}else if(e.key==='Escape'){delete getTodos(n)[i]._editDue;renderCards();} }
+function getDueClass(due) { if(!due) return ''; const d=new Date(due+'T00:00:00'), now=new Date(); now.setHours(0,0,0,0); const diff=(d-now)/(1000*60*60*24); if(diff<0) return 'overdue'; if(diff<=7) return 'soon'; return 'later'; }
+function formatDue(due) { if(!due) return ''; const d=new Date(due+'T00:00:00'), now=new Date(); now.setHours(0,0,0,0); const diff=Math.ceil((d-now)/(1000*60*60*24)); if(diff<0) return `hace ${-diff}d`; if(diff===0) return 'hoy'; if(diff===1) return 'mañana'; if(diff<=7) return `${diff}d`; return due.slice(5); }
+
+// Notes
+function saveNote(e,n) { e.stopPropagation(); notesData[n]=e.target.value; saveNotes(notesData); }
+
+// ============================================================
+// DRAG & DROP
+// ============================================================
+function onDragStart(e,n,i) { e.stopPropagation(); dragState={project:n,fromIndex:i}; e.dataTransfer.effectAllowed='move'; e.dataTransfer.setData('text/plain',i.toString()); requestAnimationFrame(()=>{const el=e.target.closest('.todo-item');if(el)el.classList.add('dragging');}); }
+function onDragOver(e,n,i) { e.preventDefault();e.stopPropagation(); if(!dragState||dragState.project!==n)return; e.dataTransfer.dropEffect='move'; const list=e.target.closest('.todo-list'); if(list)list.querySelectorAll('.todo-item').forEach(el=>el.classList.remove('drop-above','drop-below')); const item=e.target.closest('.todo-item'); if(!item)return; const rect=item.getBoundingClientRect(); item.classList.add(e.clientY<rect.top+rect.height/2?'drop-above':'drop-below'); }
+function onDragLeave(e) { const item=e.target.closest('.todo-item'); if(item)item.classList.remove('drop-above','drop-below'); }
+function onDrop(e,n,i) { e.preventDefault();e.stopPropagation(); if(!dragState||dragState.project!==n)return; const f=dragState.fromIndex; const item=e.target.closest('.todo-item'); let to=i; if(item){const r=item.getBoundingClientRect();if(e.clientY>=r.top+r.height/2)to=i+1;} if(f<to)to--; if(f!==to){const t=getTodos(n);const[m]=t.splice(f,1);t.splice(to,0,m);saveTodos();} dragState=null;renderCards(); }
+function onDragEnd(e) { e.stopPropagation();dragState=null; document.querySelectorAll('.todo-item').forEach(el=>el.classList.remove('dragging','drop-above','drop-below')); }
+
+// ============================================================
+// LAUNCH & CLIPBOARD
+// ============================================================
+const SERVER_BASE = 'http://localhost:3333';
+
+function launchClaude(e, n) {
+  e.stopPropagation();
+  const p = projects.find(pr => pr.name === n);
+  // Try server first, fallback to clipboard
+  fetch(`${SERVER_BASE}/api/launch`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ projectPath: p.winPath })
+  })
+  .then(r => { if (r.ok) showToast(`Terminal abierta: ${p.name}`); else throw new Error(); })
+  .catch(() => {
+    navigator.clipboard.writeText(`cd "${p.winPath}" && claude`).then(() =>
+      showToast('Server no activo. Comando copiado al portapapeles'));
+  });
+}
+
+function copyPath(e,n) { e.stopPropagation(); const p=projects.find(pr=>pr.name===n); navigator.clipboard.writeText(p.winPath).then(()=>showToast('Ruta copiada')); }
+
+// ============================================================
+// EXPORT / IMPORT
+// ============================================================
+function exportData() {
+  const data = { version: 2, exportedAt: new Date().toISOString(), customProjects: loadCustom(), todos: todoData, notes: notesData, pins: pinnedList };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = `proyectos-backup-${new Date().toISOString().slice(0,10)}.json`; a.click();
+  URL.revokeObjectURL(url);
+  showToast('Backup exportado');
+}
+
+function importData(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (data.customProjects) { saveCustom(data.customProjects); }
+      if (data.todos) { todoData = data.todos; saveTodos(); }
+      if (data.notes) { notesData = data.notes; saveNotes(notesData); }
+      if (data.pins) { pinnedList = data.pins; savePins(pinnedList); }
+      refreshProjects();
+      showToast('Datos importados correctamente');
+      renderAll();
+    } catch (err) { showToast('Error al importar: archivo invalido'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+// ============================================================
+// MODAL
+// ============================================================
+const accentColors = ['#7c6ff7','#60a5fa','#34d399','#fbbf24','#f87171','#22d3ee','#f472b6','#a78bfa','#fb923c','#a3e635'];
+let selectedAccent = accentColors[0];
+
+function initColorPicker() { document.getElementById('fp-colors').innerHTML = accentColors.map(c => `<div class="color-swatch ${selectedAccent===c?'selected':''}" style="background:${c}" onclick="pickColor('${c}')"></div>`).join(''); }
+function pickColor(c) { selectedAccent=c; initColorPicker(); }
+
+function openModal(editName) {
+  const titleEl=document.getElementById('modal-title'), editField=document.getElementById('modal-edit-name'), deleteBtn=document.getElementById('modal-delete-btn');
+  if (editName) {
+    const p=projects.find(pr=>pr.name===editName); if(!p)return;
+    titleEl.innerHTML='<span>✎</span> Editar Proyecto'; editField.value=editName;
+    document.getElementById('fp-name').value=p.name; document.getElementById('fp-icon').value=p.icon; document.getElementById('fp-desc').value=p.desc; document.getElementById('fp-stack').value=p.stack.join(', '); document.getElementById('fp-platform').value=p.platform.join(', '); document.getElementById('fp-category').value=p.category; document.getElementById('fp-status').value=p.status; document.getElementById('fp-path').value=p.winPath; selectedAccent=p.accent; deleteBtn.style.display='inline-flex';
+  } else {
+    titleEl.innerHTML='<span>+</span> Nuevo Proyecto'; editField.value='';
+    document.getElementById('fp-name').value=''; document.getElementById('fp-icon').value='🚀'; document.getElementById('fp-desc').value=''; document.getElementById('fp-stack').value=''; document.getElementById('fp-platform').value=''; document.getElementById('fp-category').value='app'; document.getElementById('fp-status').value='wip'; document.getElementById('fp-path').value='C:\\Users\\maxir\\Projects\\'; selectedAccent=accentColors[Math.floor(Math.random()*accentColors.length)]; deleteBtn.style.display='none';
+  }
+  initColorPicker(); modalOverlay.classList.add('open'); setTimeout(()=>document.getElementById('fp-name').focus(),100);
+}
+function closeModal() { modalOverlay.classList.remove('open'); }
+function closeModalOverlay(e) { if(e.target===modalOverlay) closeModal(); }
+
+function saveProject() {
+  const name=document.getElementById('fp-name').value.trim(); if(!name){document.getElementById('fp-name').focus();showToast('Nombre obligatorio');return;}
+  const proj = { name, icon:document.getElementById('fp-icon').value.trim()||'📁', desc:document.getElementById('fp-desc').value.trim(), stack:document.getElementById('fp-stack').value.split(',').map(s=>s.trim()).filter(Boolean), platform:document.getElementById('fp-platform').value.split(',').map(s=>s.trim()).filter(Boolean), category:document.getElementById('fp-category').value, status:document.getElementById('fp-status').value, accent:selectedAccent, winPath:document.getElementById('fp-path').value.trim(), path:document.getElementById('fp-path').value.trim().replace(/\\/g,'/').replace('C:/Users/maxir','~'), defaultTodos:[], custom:true };
+  const editName=document.getElementById('modal-edit-name').value, customList=loadCustom();
+  if (editName) { const idx=customList.findIndex(p=>p.name===editName); if(idx!==-1)customList[idx]=proj; if(editName!==name&&todoData[editName]){todoData[name]=todoData[editName];delete todoData[editName];saveTodos();} }
+  else { if(projects.some(p=>p.name===name)){showToast('Ya existe');return;} customList.push(proj); todoData[name]=[]; saveTodos(); }
+  saveCustom(customList); refreshProjects(); closeModal(); showToast(editName?'Proyecto actualizado':'Proyecto creado'); renderAll();
+}
+
+function deleteProject() {
+  const editName=document.getElementById('modal-edit-name').value; if(!editName||!confirm(`Eliminar "${editName}"?`))return;
+  saveCustom(loadCustom().filter(p=>p.name!==editName)); delete todoData[editName]; saveTodos(); delete notesData[editName]; saveNotes(notesData); pinnedList=pinnedList.filter(n=>n!==editName); savePins(pinnedList);
+  refreshProjects(); closeModal(); expandedCard=null; showToast('Proyecto eliminado'); renderAll();
+}
+function editProject(e,n) { e.stopPropagation(); openModal(n); }
+
+document.addEventListener('keydown', e => { if(e.key==='Escape'&&modalOverlay.classList.contains('open'))closeModal(); });
+
+// ============================================================
+// SEARCH & SORT
+// ============================================================
+function onSearch() { searchQuery = searchInput.value.toLowerCase().trim(); renderCards(); }
+function onSortChange() { currentSort = sortSelect.value; localStorage.setItem(SORT_KEY, currentSort); renderCards(); }
+
+function getFiltered() {
+  let list = activeFilter === 'all' ? [...projects] : projects.filter(p => p.category === activeFilter);
+  if (searchQuery) {
+    list = list.filter(p => p.name.toLowerCase().includes(searchQuery) || p.desc.toLowerCase().includes(searchQuery) || p.stack.some(s => s.toLowerCase().includes(searchQuery)) || p.platform.some(s => s.toLowerCase().includes(searchQuery)));
+  }
+  // Sort
+  const statusOrder = { active: 0, wip: 1, paused: 2 };
+  list.sort((a, b) => {
+    // Pinned always first if sort mode is 'pinned'
+    if (currentSort === 'pinned') { const pa = pinnedList.includes(a.name)?0:1, pb = pinnedList.includes(b.name)?0:1; if(pa!==pb) return pa-pb; }
+    if (currentSort === 'name') return a.name.localeCompare(b.name);
+    if (currentSort === 'status') return (statusOrder[a.status]||9)-(statusOrder[b.status]||9);
+    if (currentSort === 'progress') return getProgress(a.name).pct - getProgress(b.name).pct;
+    if (currentSort === 'pending') { const pa=getProgress(a.name), pb=getProgress(b.name); return (pb.total-pb.done)-(pa.total-pa.done); }
+    return 0;
+  });
+  return list;
+}
+
+// Keyboard: / to search
+document.addEventListener('keydown', e => {
+  if (e.key === '/' && !modalOverlay.classList.contains('open') && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA' && document.activeElement.tagName !== 'SELECT') {
+    e.preventDefault(); searchInput.focus();
+  }
+});
+
+// ============================================================
+// STATS
+// ============================================================
+function updateStats() {
+  const totalPending = projects.reduce((s,p) => { const pg=getProgress(p.name); return s+(pg.total-pg.done); }, 0);
+  document.getElementById('total-count').textContent = projects.length;
+  document.getElementById('active-count').textContent = projects.filter(p=>p.status==='active').length;
+  document.getElementById('pending-count').textContent = totalPending;
+}
+
+// ============================================================
+// FILTERS
+// ============================================================
+const categoryLabels = { app:"Apps", web:"Web", game:"Juegos", agent:"Agentes", security:"Seguridad" };
+let activeFilter = 'all';
+
+function renderFilters() {
+  const cats = [...new Set(projects.map(p=>p.category))];
+  filtersEl.innerHTML = `<button class="filter-btn ${activeFilter==='all'?'active':''}" data-filter="all">Todos</button>` + cats.map(c => `<button class="filter-btn ${activeFilter===c?'active':''}" data-filter="${c}">${categoryLabels[c]||c}</button>`).join('');
+  filtersEl.querySelectorAll('.filter-btn').forEach(btn => btn.addEventListener('click', () => { activeFilter=btn.dataset.filter; expandedCard=null; editingTodo=null; renderFilters(); renderCards(); }));
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+const statusLabels = { active:"Activo", wip:"En desarrollo", paused:"Pausado" };
+const priorityLabels = { high:"Alta", med:"Media", low:"Baja" };
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+function renderCards() {
+  const filtered = getFiltered();
+
+  if (filtered.length === 0 && searchQuery) {
+    grid.innerHTML = `<div class="no-results">No se encontraron proyectos para "<strong>${esc(searchQuery)}</strong>"</div>`;
+    return;
+  }
+
+  const cards = filtered.map((p, i) => {
+    const todos = getTodos(p.name);
+    const prog = getProgress(p.name);
+    const isExpanded = expandedCard === p.name;
+    const progressColor = prog.pct===100?'var(--green)':(prog.pct>50?'var(--amber)':'var(--card-accent,var(--accent))');
+    const sn = esc(p.name);
+    const isCustom = p.custom === true;
+    const isPinned = pinnedList.includes(p.name);
+    const noteText = notesData[p.name] || '';
+
+    return `
+    <div class="card ${isExpanded?'expanded':''} ${isPinned?'is-pinned':''}"
+         style="--card-accent:${p.accent};animation-delay:${i*0.06}s">
+      <button class="pin-btn ${isPinned?'pinned':''}" onclick="togglePin(event,'${sn}')" title="${isPinned?'Desanclar':'Anclar'}">${isPinned?'★':'☆'}</button>
+      <div class="card-toggle" onclick="toggleCard('${sn}')">
+        <div class="expand-hint">${isExpanded?'▲ cerrar':'▼ ver mas'}</div>
+        <div class="card-header">
+          <div class="card-icon">${p.icon}</div>
+          <div>
+            <div class="category-label">${categoryLabels[p.category]||p.category}</div>
+            <div class="card-title">${p.name}</div>
+          </div>
+        </div>
+        <div class="card-desc">${p.desc||'<em style="opacity:0.4">Sin descripcion</em>'}</div>
+        <div class="tags">
+          ${p.stack.map(s=>`<span class="tag stack">${s}</span>`).join('')}
+          ${p.platform.map(s=>`<span class="tag platform">${s}</span>`).join('')}
+        </div>
+        <div class="card-footer">
+          <div class="status"><div class="status-dot ${p.status}"></div>${statusLabels[p.status]}</div>
+          <div class="card-path">${p.path}</div>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${prog.pct}%;background:${progressColor}"></div></div>
+        <div class="progress-label">${prog.done}/${prog.total} completados</div>
+      </div>
+
+      <div class="expand-panel">
+        <div class="git-status" id="git-${sn}"><span class="git-no">Cargando git...</span></div>
+
+        <h3>Pendientes</h3>
+        ${todos.length===0?'<div class="todo-empty">Sin tareas pendientes</div>':''}
+        <ul class="todo-list">
+          ${todos.map((t,ti) => {
+            const isEdit = editingTodo&&editingTodo.project===p.name&&editingTodo.index===ti;
+            const dueClass = getDueClass(t.due);
+            const editingDue = t._editDue;
+            return `
+            <li class="todo-item ${t.done?'done':''}" draggable="true" onclick="event.stopPropagation()"
+                ondragstart="onDragStart(event,'${sn}',${ti})" ondragover="onDragOver(event,'${sn}',${ti})"
+                ondragleave="onDragLeave(event)" ondrop="onDrop(event,'${sn}',${ti})" ondragend="onDragEnd(event)">
+              <span class="todo-grip" title="Arrastrar">⠿</span>
+              <div class="todo-check ${t.done?'done':''}" onclick="toggleTodo(event,'${sn}',${ti})"></div>
+              ${isEdit
+                ? `<input class="todo-text-edit" value="${esc(t.text)}" onblur="saveEdit('${sn}',${ti},this.value)" onkeydown="handleEditKey(event,'${sn}',${ti})" onclick="event.stopPropagation()">`
+                : `<span class="todo-text" onclick="copyTodoToClaude(event,'${sn}',${ti})" ondblclick="startEdit(event,'${sn}',${ti})" title="Click: copiar | Doble-click: editar">${esc(t.text)}</span>
+                   <button class="todo-launch" onclick="launchTodoWithClaude(event,'${sn}',${ti})" title="Abrir Claude con esta tarea">▶</button>`}
+              ${editingDue
+                ? `<input type="date" class="todo-due-input" value="${t.due||''}" onblur="saveDueDate('${sn}',${ti},this.value)" onkeydown="handleDueKey(event,'${sn}',${ti})" onclick="event.stopPropagation()">`
+                : t.due
+                  ? `<span class="todo-due ${dueClass}" onclick="setDueDate(event,'${sn}',${ti})" title="${t.due}">${formatDue(t.due)}</span>`
+                  : `<span class="todo-due" onclick="setDueDate(event,'${sn}',${ti})" title="Agregar fecha">📅</span>`}
+              <span class="todo-priority ${t.priority}" onclick="cyclePriority(event,'${sn}',${ti})" title="Cambiar prioridad">${priorityLabels[t.priority]}</span>
+              <button class="todo-delete" onclick="deleteTodo(event,'${sn}',${ti})" title="Eliminar">✕</button>
+            </li>`;
+          }).join('')}
+        </ul>
+        <div class="todo-add-row" onclick="event.stopPropagation()">
+          <input class="todo-add-input" placeholder="Nueva tarea..." onkeydown="handleAddKey(event,'${sn}')">
+          <select class="todo-add-priority"><option value="high">Alta</option><option value="med" selected>Media</option><option value="low">Baja</option></select>
+          <button class="todo-add-btn" onclick="addTodo(event,'${sn}')" title="Agregar">+</button>
+        </div>
+
+        <div class="notes-section">
+          <h3>Notas</h3>
+          <textarea class="notes-textarea" placeholder="Ideas, links, decisiones..." onclick="event.stopPropagation()" oninput="saveNote(event,'${sn}')">${esc(noteText)}</textarea>
+        </div>
+
+        ${renderCostSection(p.name)}
+
+        <div style="margin-top:0.8rem">
+          <h3 style="font-size:0.85rem;margin-bottom:0.5rem">Actividad</h3>
+          ${renderActivityLog(p.name)}
+        </div>
+
+        <div class="card-actions" style="margin-top:1rem">
+          <button class="action-btn primary" onclick="launchClaude(event,'${sn}')">▶ Abrir con Claude</button>
+          <button class="action-btn" onclick="startChatAbout(event,'${sn}')">💬 Chat sobre esto</button>
+          <button class="action-btn" onclick="copyPath(event,'${sn}')">📋 Copiar ruta</button>
+          ${isCustom?`<button class="action-btn" onclick="editProject(event,'${sn}')">✎ Editar</button>`:''}
+        </div>
+        <div class="card-actions analysis-btns" style="margin-top:0.5rem">
+          <button class="action-btn analysis-type" onclick="analyzeProject(event,'${sn}','competidores')">🔍 Competidores</button>
+          <button class="action-btn analysis-type" onclick="analyzeProject(event,'${sn}','legal')">⚖ Es legal?</button>
+          <button class="action-btn analysis-type" onclick="analyzeProject(event,'${sn}','pricing')">💰 A cuanto vender</button>
+          <button class="action-btn analysis-type" onclick="analyzeProject(event,'${sn}','full')">📊 Análisis completo</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  grid.innerHTML = cards + `
+    <div class="card-add" onclick="openModal()" style="animation-delay:${filtered.length*0.06}s">
+      <div class="card-add-inner"><div class="card-add-icon">+</div><div class="card-add-label">Nuevo proyecto</div></div>
+    </div>`;
+}
+
+function toggleCard(name) {
+  if(editingTodo||dragState) return;
+  expandedCard = expandedCard===name ? null : name;
+  renderCards();
+  if(expandedCard) {
+    setTimeout(()=>document.querySelector('.card.expanded')?.scrollIntoView({behavior:'smooth',block:'nearest'}),100);
+    // Fetch git status async
+    const sn = esc(name).replace(/'/g, "\\'");
+    fetchGitStatus(name).then(data => {
+      const el = document.getElementById('git-' + sn);
+      if (el) renderGitStatus(el, data);
+    });
+    logActivity(name, 'Proyecto abierto');
+  }
+}
+
+function renderAll() { renderFilters(); renderCards(); updateStats(); renderHealth(); }
+
+// ============================================================
+// CHAT PANEL
+// ============================================================
+let chatOpen = false;
+let chatContext = null; // { name, desc, stack, path }
+let chatMessages = []; // [{ role, content }]
+let chatStreaming = false;
+let chatProvider = localStorage.getItem('chat-provider') || 'ollama';
+let chatModel = localStorage.getItem('chat-model') || '';
+let providersData = null; // cached from server
+
+const chatPanel = document.getElementById('chat-panel');
+const chatMsgsEl = document.getElementById('chat-messages');
+const chatInput = document.getElementById('chat-input');
+const chatSendBtn = document.getElementById('chat-send');
+const chatContextLabel = document.getElementById('chat-context-label');
+const chatFab = document.getElementById('chat-fab');
+const chatProviderSelect = document.getElementById('chat-provider');
+const chatModelSelect = document.getElementById('chat-model');
+const chatProviderStatus = document.getElementById('chat-provider-status');
+
+// API Keys (localStorage)
+const KEYS_KEY = 'chat-api-keys';
+function getApiKeys() { try { return JSON.parse(localStorage.getItem(KEYS_KEY)) || {}; } catch { return {}; } }
+function setApiKeys(keys) { localStorage.setItem(KEYS_KEY, JSON.stringify(keys)); }
+
+function openKeysModal() {
+  const keys = getApiKeys();
+  document.getElementById('key-groq').value = keys.groq || '';
+  document.getElementById('key-gemini').value = keys.gemini || '';
+  document.getElementById('key-openrouter').value = keys.openrouter || '';
+  document.getElementById('keys-overlay').classList.add('open');
+}
+function closeKeysModal() { document.getElementById('keys-overlay').classList.remove('open'); }
+function saveKeys() {
+  setApiKeys({
+    groq: document.getElementById('key-groq').value.trim(),
+    gemini: document.getElementById('key-gemini').value.trim(),
+    openrouter: document.getElementById('key-openrouter').value.trim()
+  });
+  closeKeysModal();
+  showToast('API Keys guardadas');
+  refreshProviders();
+}
+
+// Fetch provider data from server and populate selectors
+async function refreshProviders() {
+  try {
+    const res = await fetch(`${SERVER_BASE}/api/providers`);
+    providersData = await res.json();
+  } catch {
+    providersData = null;
+    chatProviderStatus.className = 'chat-provider-status offline';
+    chatProviderStatus.title = 'Server no disponible';
+    return;
+  }
+
+  const keys = getApiKeys();
+  const providerSelect = chatProviderSelect;
+  providerSelect.innerHTML = '';
+
+  // Smart auto option
+  const autoOpt = document.createElement('option');
+  autoOpt.value = 'auto';
+  autoOpt.textContent = 'Smart (auto)';
+  providerSelect.appendChild(autoOpt);
+
+  // Local group
+  const localGroup = document.createElement('optgroup');
+  localGroup.label = 'Local';
+  if (providersData.local.ollama.available) {
+    const opt = document.createElement('option');
+    opt.value = 'ollama';
+    opt.textContent = `Ollama`;
+    localGroup.appendChild(opt);
+  }
+  if (providersData.local.openclaw.available) {
+    const opt = document.createElement('option');
+    opt.value = 'openclaw';
+    opt.textContent = `OpenClaw (Claude)`;
+    localGroup.appendChild(opt);
+  }
+  if (localGroup.children.length) providerSelect.appendChild(localGroup);
+
+  // External group
+  const extGroup = document.createElement('optgroup');
+  extGroup.label = 'APIs externas';
+  for (const [key, info] of Object.entries(providersData.external)) {
+    if (keys[key]) {
+      const opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = info.name;
+      extGroup.appendChild(opt);
+    }
+  }
+  if (extGroup.children.length) providerSelect.appendChild(extGroup);
+
+  // Also show unconfigured as disabled hint
+  for (const [key, info] of Object.entries(providersData.external)) {
+    if (!keys[key]) {
+      const opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = `${info.name} (sin key)`;
+      opt.disabled = true;
+      if (!extGroup.parentNode) {
+        extGroup.label = 'APIs externas';
+        providerSelect.appendChild(extGroup);
+      }
+      extGroup.appendChild(opt);
+    }
+  }
+
+  // Restore selection
+  if (providerSelect.querySelector(`option[value="${chatProvider}"]:not([disabled])`)) {
+    providerSelect.value = chatProvider;
+  } else {
+    providerSelect.selectedIndex = 0;
+    chatProvider = providerSelect.value;
+  }
+
+  updateModelSelect();
+  updateProviderStatus();
+}
+
+function updateModelSelect() {
+  chatModelSelect.innerHTML = '';
+
+  if (chatProvider === 'auto') {
+    const opt = document.createElement('option');
+    opt.value = 'auto';
+    opt.textContent = 'automatico';
+    chatModelSelect.appendChild(opt);
+    chatModelSelect.disabled = true;
+    return;
+  }
+
+  chatModelSelect.disabled = false;
+  let models = [];
+
+  if (chatProvider === 'ollama' && providersData?.local.ollama.models) {
+    models = providersData.local.ollama.models;
+  } else if (chatProvider === 'openclaw') {
+    models = [providersData?.local.openclaw.defaultModel || 'claude-sonnet-4-20250514'];
+  } else if (providersData?.external[chatProvider]) {
+    models = providersData.external[chatProvider].models;
+  }
+
+  for (const m of models) {
+    const opt = document.createElement('option');
+    opt.value = m;
+    opt.textContent = m.length > 28 ? m.split('/').pop().split(':')[0] : m;
+    opt.title = m;
+    chatModelSelect.appendChild(opt);
+  }
+
+  if (chatModel && models.includes(chatModel)) {
+    chatModelSelect.value = chatModel;
+  } else {
+    chatModelSelect.selectedIndex = 0;
+    chatModel = chatModelSelect.value;
+  }
+}
+
+function updateProviderStatus() {
+  if (!providersData) {
+    chatProviderStatus.className = 'chat-provider-status offline';
+    return;
+  }
+  const keys = getApiKeys();
+  if (chatProvider === 'auto') {
+    const hasAny = providersData.local.ollama.available || keys.groq || keys.gemini || keys.openrouter;
+    chatProviderStatus.className = 'chat-provider-status ' + (hasAny ? 'online' : 'offline');
+    chatProviderStatus.title = 'Smart: elige el mejor modelo segun el tipo de consulta';
+  } else if (chatProvider === 'ollama') {
+    const up = providersData.local.ollama.available;
+    chatProviderStatus.className = 'chat-provider-status ' + (up ? 'online' : 'offline');
+    chatProviderStatus.title = up ? 'Ollama conectado' : 'Ollama no disponible — ejecuta: ollama serve';
+  } else if (chatProvider === 'openclaw') {
+    const up = providersData.local.openclaw.available;
+    chatProviderStatus.className = 'chat-provider-status ' + (up ? 'online' : 'offline');
+    chatProviderStatus.title = up ? 'OpenClaw conectado' : 'OpenClaw no disponible';
+  } else {
+    chatProviderStatus.className = 'chat-provider-status ' + (keys[chatProvider] ? 'unknown' : 'offline');
+    chatProviderStatus.title = keys[chatProvider] ? 'Key configurada (no verificada)' : 'Sin API key — click ⚙ para configurar';
+  }
+}
+
+function onProviderChange(val) {
+  chatProvider = val;
+  localStorage.setItem('chat-provider', val);
+  updateModelSelect();
+  updateProviderStatus();
+}
+
+chatModelSelect.addEventListener('change', () => {
+  chatModel = chatModelSelect.value;
+  localStorage.setItem('chat-model', chatModel);
+});
+
+// Init
+refreshProviders();
+
+function toggleChat() {
+  chatOpen = !chatOpen;
+  chatPanel.classList.toggle('open', chatOpen);
+  document.body.classList.toggle('chat-open', chatOpen);
+  if (chatOpen) setTimeout(() => chatInput.focus(), 300);
+}
+
+function startChatAbout(e, name) {
+  e.stopPropagation();
+  const p = projects.find(pr => pr.name === name);
+  if (!p) return;
+  chatContext = { name: p.name, desc: p.desc, stack: p.stack, path: p.winPath };
+  chatContextLabel.textContent = p.name;
+  chatContextLabel.style.display = 'block';
+  chatFab.classList.add('has-context');
+
+  // Reset chat with context
+  chatMessages = [];
+  renderChatMessages();
+
+  if (!chatOpen) toggleChat();
+  showToast(`Chat: contexto de ${p.name}`);
+}
+
+// ── Project Analysis ──
+function closeAnalysis() { document.getElementById('analysis-overlay').classList.remove('open'); }
+
+const ANALYSIS_TYPES = {
+  competidores: {
+    title: 'Competidores',
+    loading: 'Buscando competidores',
+    prompt: `Sos un analista de mercado. Investiga a fondo si existen productos similares al siguiente proyecto. Responde en español.
+
+Usa estas secciones (titulo en MAYUSCULA):
+
+COMPETIDORES DIRECTOS:
+Para cada uno (lista al menos 5):
+- Nombre y URL
+- Que hace exactamente
+- Pricing (gratis, freemium, pago — con precios reales)
+- Cantidad estimada de usuarios o market share
+- Fortaleza principal
+- Debilidad principal
+
+COMPETIDORES INDIRECTOS:
+Productos que resuelven el mismo problema de forma diferente (al menos 3).
+
+DIFERENCIACION:
+- Que tiene nuestro proyecto que los demas NO tienen
+- Que tienen ellos que nosotros NO tenemos
+- Oportunidad de mercado: hay un hueco que nadie esta cubriendo?
+
+CONCLUSION:
+- El mercado esta saturado o hay espacio?
+- Recomendacion concreta: competir, pivotar, o buscar nicho?`
+  },
+  legal: {
+    title: 'Legalidad',
+    loading: 'Analizando legalidad',
+    prompt: `Sos un abogado especializado en tecnologia y propiedad intelectual. Analiza si el siguiente proyecto tiene problemas legales. Responde en español.
+
+Usa estas secciones (titulo en MAYUSCULA):
+
+ES LEGAL?
+- Respuesta directa: SI/NO/DEPENDE, con explicacion clara
+
+PROPIEDAD INTELECTUAL:
+- El nombre del proyecto puede tener conflictos con marcas registradas?
+- Hay patentes que podrian afectar?
+- Se esta usando IP de terceros (nombres, personajes, marcas)?
+
+PROTECCION DE DATOS:
+- Maneja datos personales? Si es asi, que leyes aplican (GDPR, Ley 25.326 Argentina, LGPD Brasil, etc)
+- Necesita politica de privacidad?
+- Necesita consentimiento del usuario para algo?
+
+TERMINOS DE SERVICIO:
+- Que deberia incluir un ToS para este proyecto?
+- Hay limitaciones de responsabilidad importantes?
+
+REGULACIONES DEL SECTOR:
+- Hay regulaciones especificas de la industria?
+- Se necesita alguna habilitacion, matricula o permiso profesional?
+- Hay restricciones de edad, jurisdiccion o uso?
+
+RIESGOS LEGALES:
+- Cuales son los 3 mayores riesgos legales concretos?
+- Como mitigar cada uno?
+- Que pasa si no se mitigan (consecuencias reales)?
+
+PASOS INMEDIATOS:
+- Lista de 3-5 acciones legales prioritarias a tomar YA`
+  },
+  pricing: {
+    title: 'Monetizacion',
+    loading: 'Calculando pricing',
+    prompt: `Sos un consultor de negocios SaaS y monetizacion de software. Analiza como monetizar el siguiente proyecto. Responde en español.
+
+Usa estas secciones (titulo en MAYUSCULA):
+
+MERCADO Y DEMANDA:
+- TAM (Total Addressable Market) en USD estimado
+- SAM (Serviceable Available Market)
+- SOM (Serviceable Obtainable Market) realista en 1-2 años
+- Quien pagaria por esto? (perfil exacto del comprador)
+
+MODELOS DE NEGOCIO VIABLES:
+Para cada modelo (evalua al menos 3):
+- Nombre del modelo (freemium, SaaS, licencia perpetua, marketplace, etc)
+- Como funcionaria concretamente para este proyecto
+- Pricing sugerido con tiers (ej: Free / Pro $X/mes / Enterprise $Y/mes)
+- Revenue estimado mensual con 100, 1000 y 10000 usuarios
+- Pros y contras de este modelo
+
+MODELO RECOMENDADO:
+- Cual modelo elegir y por que
+- Pricing exacto sugerido (con justificacion vs competidores)
+- Que incluir en cada tier
+
+ESTRATEGIA DE LANZAMIENTO:
+- Lanzar gratis primero o con precio desde el dia 1?
+- Como convertir usuarios gratis a pagos
+- Canales de venta (web directa, marketplaces, partnerships)
+
+COSTOS VS INGRESOS:
+- Costos fijos mensuales estimados (hosting, APIs, dominio, etc)
+- Break-even: cuantos usuarios pagos necesita para cubrir costos
+- Margen de ganancia estimado
+
+PROYECCION A 12 MESES:
+- Escenario pesimista, realista y optimista
+- Revenue mensual estimado para cada escenario`
+  },
+  full: {
+    title: 'Analisis Completo',
+    loading: 'Generando analisis completo',
+    prompt: `Sos un consultor estrategico senior. Hace un analisis de mercado profesional completo del siguiente proyecto de software. Responde en español.
+
+Usa estas secciones exactas (titulo en MAYUSCULA):
+
+RESUMEN EJECUTIVO: En 2-3 oraciones, que es el producto, a quien le sirve, y cual es su propuesta de valor unica.
+
+MERCADO OBJETIVO:
+- TAM/SAM/SOM con estimaciones en USD
+- Perfil del usuario ideal
+
+ANALISIS COMPETITIVO:
+- 4-6 competidores con pricing, fortalezas y debilidades
+- Ventaja competitiva de nuestro proyecto
+
+ANALISIS FODA:
+- Fortalezas, Oportunidades, Debilidades, Amenazas
+
+CINCO FUERZAS DE PORTER:
+- Nuevos entrantes, proveedores, clientes, sustitutos, rivalidad
+
+MODELO DE NEGOCIO:
+- Monetizacion, pricing sugerido, canales
+
+ESTRATEGIA GO-TO-MARKET:
+- Pasos concretos, canales de adquisicion, KPIs
+
+INFRAESTRUCTURA Y COSTOS:
+- Componentes necesarios con costo mensual estimado
+
+LEGAL Y REGULATORIO:
+- Licencias, IP, datos, riesgos concretos
+
+HOJA DE RUTA:
+- Hitos a 30, 60 y 90 dias`
+  }
+};
+
+async function analyzeProject(e, name, type) {
+  e.stopPropagation();
+  const p = projects.find(pr => pr.name === name);
+  if (!p) return;
+
+  const analysis = ANALYSIS_TYPES[type || 'full'];
+  const overlay = document.getElementById('analysis-overlay');
+  const title = document.getElementById('analysis-title');
+  const body = document.getElementById('analysis-body');
+
+  title.textContent = `${analysis.title}: ${p.name}`;
+  body.innerHTML = `<div class="analysis-loading">${analysis.loading}</div>`;
+  overlay.classList.add('open');
+
+  const todos = getTodos(p.name);
+  const pending = todos.filter(t => !t.done).map(t => `- ${t.text}`).join('\n');
+  const notes = notesData[p.name] || '';
+
+  const projectInfo = `
+---
+Proyecto: ${p.name}
+Descripcion: ${p.desc}
+Stack tecnologico: ${p.stack.join(', ')}
+Plataforma: ${p.platform?.join(', ') || 'N/A'}
+Categoria: ${p.category || 'N/A'}
+Estado: ${p.status || 'N/A'}
+${pending ? 'Tareas pendientes:\n' + pending : ''}
+${notes ? 'Notas del desarrollador: ' + notes : ''}
+---
+
+Se especifico y practico. Da numeros y datos reales cuando sea posible. No uses markdown headers (#), solo los nombres de seccion en MAYUSCULA como se indico.`;
+
+  const prompt = analysis.prompt + projectInfo;
+
+  try {
+    const keys = getApiKeys();
+    const res = await fetch(`${SERVER_BASE}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        provider: 'auto',
+        apiKeys: keys,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let text = '';
+    let buffer = '';
+    let routeMsg = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6).trim();
+        if (data === '[DONE]') continue;
+        try {
+          const event = JSON.parse(data);
+          if (event.route) { routeMsg = event.route.reason; continue; }
+          const content = event.choices?.[0]?.delta?.content;
+          if (content) {
+            text += content;
+            body.innerHTML = (routeMsg ? `<div style="font-size:0.72rem;color:var(--text-dim);margin-bottom:0.8rem">⚡ ${esc(routeMsg)}</div>` : '') +
+              formatAnalysis(text);
+          }
+        } catch {}
+      }
+    }
+
+    if (!text) body.innerHTML = '<div style="color:var(--red)">Sin respuesta del modelo.</div>';
+
+  } catch (err) {
+    body.innerHTML = `<div style="color:var(--red)">Error: ${esc(err.message)}</div>`;
+  }
+}
+
+function formatAnalysis(text) {
+  return esc(text)
+    .replace(/^([A-ZÑÁÉÍÓÚ ]{4,}):?$/gm, '<div class="section-title">$1</div>')
+    .replace(/^- (TAM|SAM|SOM|Fortalezas|Oportunidades|Debilidades|Amenazas|Escenario pesimista|Escenario realista|Escenario optimista|Break-even|Modelo recomendado)/gm,
+      '- <strong>$1</strong>');
+}
+
+function getSystemPrompt() {
+  let sys = 'Sos Claude, un asistente de programacion. Responde en español, conciso y util.';
+  if (chatContext) {
+    const todos = getTodos(chatContext.name);
+    const pending = todos.filter(t => !t.done).map(t => `- [${t.priority}] ${t.text}`).join('\n');
+    const notes = notesData[chatContext.name] || '';
+    sys += `\n\nEstas ayudando con el proyecto "${chatContext.name}".\nDescripcion: ${chatContext.desc}\nStack: ${chatContext.stack.join(', ')}\nRuta: ${chatContext.path}`;
+    if (pending) sys += `\n\nTareas pendientes:\n${pending}`;
+    if (notes) sys += `\n\nNotas del usuario:\n${notes}`;
+  }
+  return sys;
+}
+
+function renderChatMessages() {
+  if (chatMessages.length === 0) {
+    const ctx = chatContext ? `<div class="chat-msg system">Contexto: <strong>${esc(chatContext.name)}</strong> (${chatContext.stack.join(', ')})</div>` : '';
+    chatMsgsEl.innerHTML = `
+      <div class="chat-welcome">
+        <div class="chat-welcome-icon">💬</div>
+        <div class="chat-welcome-text">Chatea sobre tus proyectos.<br>Usa Ollama (local) o OpenClaw (Claude) desde el selector.</div>
+      </div>${ctx}`;
+    return;
+  }
+
+  chatMsgsEl.innerHTML = chatMessages.map(m =>
+    `<div class="chat-msg ${m.role}">${esc(m.content)}</div>`
+  ).join('') + (chatStreaming ? `<div class="chat-typing">${chatProvider === 'openclaw' ? 'Claude' : (chatModelSelect.options[chatModelSelect.selectedIndex]?.textContent || chatProvider)} esta pensando</div>` : '');
+
+  chatMsgsEl.scrollTop = chatMsgsEl.scrollHeight;
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function handleChatKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+}
+
+async function sendChat() {
+  const text = chatInput.value.trim();
+  if (!text || chatStreaming) return;
+
+  chatMessages.push({ role: 'user', content: text });
+  chatInput.value = '';
+  chatInput.style.height = 'auto';
+  chatStreaming = true;
+  chatSendBtn.disabled = true;
+  renderChatMessages();
+
+  const apiMessages = chatMessages.filter(m => m.role !== 'error').map(m => ({ role: m.role, content: m.content }));
+  // Inject system prompt into first user message
+  const chatApiMessages = [
+    { role: 'system', content: getSystemPrompt() },
+    ...apiMessages
+  ];
+
+  try {
+    const keys = getApiKeys();
+    const isAuto = chatProvider === 'auto';
+    const res = await fetch(`${SERVER_BASE}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        provider: chatProvider,
+        model: isAuto ? undefined : (chatModel || undefined),
+        apiKey: isAuto ? undefined : (keys[chatProvider] || undefined),
+        apiKeys: isAuto ? keys : undefined,
+        messages: chatApiMessages
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
+
+    // Parse SSE stream (OpenAI format: choices[0].delta.content)
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let assistantText = '';
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6).trim();
+        if (data === '[DONE]') continue;
+        try {
+          const event = JSON.parse(data);
+          // Smart router info
+          if (event.route) {
+            chatMessages.push({ role: 'system', content: `⚡ ${event.route.reason}` });
+            renderChatMessages();
+            continue;
+          }
+          if (event.error) {
+            chatMessages.push({ role: 'error', content: event.error });
+            renderChatMessages();
+            continue;
+          }
+          const content = event.choices?.[0]?.delta?.content;
+          if (content) {
+            assistantText += content;
+            const existing = chatMessages[chatMessages.length - 1];
+            if (existing?.role === 'assistant') {
+              existing.content = assistantText;
+            } else {
+              chatMessages.push({ role: 'assistant', content: assistantText });
+            }
+            renderChatMessages();
+          }
+        } catch {}
+      }
+    }
+
+    if (!assistantText) {
+      chatMessages.push({ role: 'assistant', content: '(sin respuesta)' });
+    }
+
+  } catch (err) {
+    chatMessages.push({ role: 'error', content: `Error: ${err.message}. Asegurate de que project-server.js este corriendo.` });
+  }
+
+  chatStreaming = false;
+  chatSendBtn.disabled = false;
+  renderChatMessages();
+  chatInput.focus();
+}
+
+// ============================================================
+// GIT STATUS
+// ============================================================
+const gitCache = {}; // { projectName: { data, timestamp } }
+
+async function fetchGitStatus(projectName) {
+  const p = projects.find(pr => pr.name === projectName);
+  if (!p || !p.winPath) return null;
+
+  // Cache for 30 seconds
+  const cached = gitCache[projectName];
+  if (cached && Date.now() - cached.timestamp < 30000) return cached.data;
+
+  try {
+    const res = await fetch(`${SERVER_BASE}/api/git-status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ projectPath: p.winPath })
+    });
+    const data = await res.json();
+    gitCache[projectName] = { data, timestamp: Date.now() };
+    return data;
+  } catch { return null; }
+}
+
+function renderGitStatus(el, data) {
+  if (!data || !data.isGit) {
+    el.innerHTML = '<span class="git-no">No es un repo git</span>';
+    return;
+  }
+  const ch = data.changes;
+  const changesText = ch.total === 0
+    ? '<span class="git-clean">limpio</span>'
+    : `<span class="git-changes">${ch.modified}M ${ch.added}A ${ch.deleted}D</span>`;
+  const commitText = data.lastCommit
+    ? `<span class="git-commit" title="${esc(data.lastCommit.message)}">${data.lastCommit.hash} ${esc(data.lastCommit.message)} (${data.lastCommit.ago})</span>`
+    : '';
+  el.innerHTML = `<span class="git-branch">${esc(data.branch)}</span> ${changesText} ${commitText}`;
+}
+
+// ============================================================
+// ACTIVITY LOG
+// ============================================================
+const ACTIVITY_KEY = 'project-activity';
+function getActivity() { try { return JSON.parse(localStorage.getItem(ACTIVITY_KEY)) || []; } catch { return []; } }
+function logActivity(project, action) {
+  const log = getActivity();
+  log.unshift({ project, action, time: Date.now() });
+  // Keep last 200
+  if (log.length > 200) log.length = 200;
+  localStorage.setItem(ACTIVITY_KEY, JSON.stringify(log));
+}
+
+function renderActivityLog(projectName) {
+  const log = getActivity().filter(a => a.project === projectName).slice(0, 15);
+  if (!log.length) return '<div style="color:var(--text-dim);font-size:0.75rem;padding:0.5rem 0">Sin actividad registrada</div>';
+  return '<div class="activity-log">' + log.map(a => {
+    const d = new Date(a.time);
+    const time = d.toLocaleDateString('es', { day:'2-digit', month:'short' }) + ' ' + d.toLocaleTimeString('es', { hour:'2-digit', minute:'2-digit' });
+    return `<div class="activity-item"><span class="activity-time">${time}</span><span class="activity-text">${esc(a.action)}</span></div>`;
+  }).join('') + '</div>';
+}
+
+// ============================================================
+// COST TRACKER
+// ============================================================
+const COSTS_KEY = 'project-costs';
+function getCosts() { try { return JSON.parse(localStorage.getItem(COSTS_KEY)) || {}; } catch { return {}; } }
+function saveCosts(data) { localStorage.setItem(COSTS_KEY, JSON.stringify(data)); }
+
+function getProjectCosts(name) { return getCosts()[name] || []; }
+
+function addCost(e, projectName) {
+  e.stopPropagation();
+  const container = e.target.closest('.cost-section');
+  const nameInput = container.querySelector('.cost-name-input');
+  const amountInput = container.querySelector('.cost-amount-input');
+  const name = nameInput.value.trim();
+  const amount = parseFloat(amountInput.value);
+  if (!name || isNaN(amount)) return;
+
+  const all = getCosts();
+  if (!all[projectName]) all[projectName] = [];
+  all[projectName].push({ name, amount });
+  saveCosts(all);
+  nameInput.value = '';
+  amountInput.value = '';
+  logActivity(projectName, `Costo agregado: ${name} $${amount}/mes`);
+  renderAll();
+}
+
+function removeCost(e, projectName, idx) {
+  e.stopPropagation();
+  const all = getCosts();
+  if (all[projectName]) {
+    all[projectName].splice(idx, 1);
+    saveCosts(all);
+    renderAll();
+  }
+}
+
+function renderCostSection(projectName) {
+  const costs = getProjectCosts(projectName);
+  const total = costs.reduce((s, c) => s + c.amount, 0);
+  const sn = esc(projectName).replace(/'/g, "\\'");
+  let html = '<div class="cost-section"><h3 style="font-size:0.85rem;margin-bottom:0.5rem">Costos mensuales</h3>';
+  if (costs.length) {
+    html += costs.map((c, i) =>
+      `<div class="cost-row"><span class="cost-name">${esc(c.name)}</span><span class="cost-amount">$${c.amount.toFixed(2)}</span><button class="cost-del" onclick="removeCost(event,'${sn}',${i})">✕</button></div>`
+    ).join('');
+    html += `<div class="cost-total"><span>Total</span><span class="cost-amount">$${total.toFixed(2)}/mes</span></div>`;
+  } else {
+    html += '<div style="color:var(--text-dim);font-size:0.75rem">Sin costos registrados</div>';
+  }
+  html += `<div class="cost-add" onclick="event.stopPropagation()">
+    <input type="text" class="cost-name-input" placeholder="Hosting, API...">
+    <input type="number" class="cost-amount-input" placeholder="$/mes" step="0.01" min="0">
+    <button onclick="addCost(event,'${sn}')">+</button>
+  </div></div>`;
+  return html;
+}
+
+// ============================================================
+// HEALTH DASHBOARD
+// ============================================================
+let healthOpen = localStorage.getItem('health-open') === 'true';
+
+function toggleHealth() {
+  healthOpen = !healthOpen;
+  localStorage.setItem('health-open', healthOpen);
+  document.getElementById('health-bar').classList.toggle('open', healthOpen);
+  document.getElementById('health-toggle').classList.toggle('active', healthOpen);
+  if (healthOpen) renderHealth();
+}
+
+function renderHealth() {
+  if (!healthOpen) return;
+  const grid = document.getElementById('health-grid');
+  const deadlines = document.getElementById('health-deadlines');
+
+  // Aggregate stats
+  let totalTodos = 0, doneTodos = 0, totalCost = 0;
+  const upcomingDeadlines = [];
+
+  projects.forEach(p => {
+    const todos = getTodos(p.name);
+    totalTodos += todos.length;
+    doneTodos += todos.filter(t => t.done).length;
+    totalCost += getProjectCosts(p.name).reduce((s, c) => s + c.amount, 0);
+
+    todos.filter(t => !t.done && t.due).forEach(t => {
+      const d = new Date(t.due);
+      const diff = Math.ceil((d - new Date()) / 86400000);
+      if (diff <= 7) upcomingDeadlines.push({ project: p.name, text: t.text, due: t.due, diff });
+    });
+  });
+
+  upcomingDeadlines.sort((a, b) => a.diff - b.diff);
+  const pct = totalTodos ? Math.round((doneTodos / totalTodos) * 100) : 0;
+  const recentActivity = getActivity().slice(0, 5);
+
+  grid.innerHTML = `
+    <div class="health-card"><div class="h-value">${pct}%</div><div class="h-label">Progreso global</div></div>
+    <div class="health-card"><div class="h-value">${totalTodos - doneTodos}</div><div class="h-label">Tareas pendientes</div></div>
+    <div class="health-card"><div class="h-value">${upcomingDeadlines.length}</div><div class="h-label">Deadlines esta semana</div></div>
+    <div class="health-card"><div class="h-value">$${totalCost.toFixed(0)}</div><div class="h-label">Costo mensual total</div></div>
+  `;
+
+  let dlHtml = '';
+  if (upcomingDeadlines.length) {
+    dlHtml += '<div style="font-size:0.78rem;font-weight:600;margin-bottom:0.4rem">Deadlines proximos</div>';
+    dlHtml += upcomingDeadlines.slice(0, 5).map(d => {
+      const cls = d.diff < 0 ? 'deadline-overdue' : 'deadline-soon';
+      const label = d.diff < 0 ? `${Math.abs(d.diff)}d atrasado` : d.diff === 0 ? 'HOY' : `en ${d.diff}d`;
+      return `<div class="deadline-item"><span>${esc(d.project)}: ${esc(d.text)}</span><span class="${cls}">${label}</span></div>`;
+    }).join('');
+  }
+  if (recentActivity.length) {
+    dlHtml += '<div style="font-size:0.78rem;font-weight:600;margin:0.8rem 0 0.4rem">Actividad reciente</div>';
+    dlHtml += recentActivity.map(a => {
+      const d = new Date(a.time);
+      const time = d.toLocaleTimeString('es', { hour:'2-digit', minute:'2-digit' });
+      return `<div class="deadline-item"><span>${esc(a.project)}: ${esc(a.action)}</span><span style="color:var(--text-dim)">${time}</span></div>`;
+    }).join('');
+  }
+  deadlines.innerHTML = dlHtml;
+}
+
+// Init health
+if (healthOpen) {
+  document.getElementById('health-bar').classList.add('open');
+  document.getElementById('health-toggle').classList.add('active');
+}
+
+// ============================================================
+// INIT
+// ============================================================
+renderAll();
+setTimeout(renderHealth, 100);
+</script>
+</body>
+</html>
