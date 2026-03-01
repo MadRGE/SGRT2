@@ -73,6 +73,13 @@ export default function ResetPassword() {
         <PasswordInput label="Confirmar contraseña" required value={confirmPassword} onChange={setConfirmPassword} disabled={loading} />
         <AuthButton loading={loading}>Guardar nueva contraseña</AuthButton>
       </form>
+
+      <button
+        onClick={clearRecovery}
+        className="mt-4 w-full text-center text-sm text-slate-400 hover:text-slate-600"
+      >
+        Cancelar
+      </button>
     </AuthLayout>
   );
 }

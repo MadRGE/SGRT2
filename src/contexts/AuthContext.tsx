@@ -28,12 +28,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isRecovery, setIsRecovery] = useState(false);
 
   useEffect(() => {
-    // Detect recovery token in URL hash on mount
-    const hash = window.location.hash;
-    if (hash.includes('type=recovery')) {
-      setIsRecovery(true);
-    }
-
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
