@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { checkSoftDelete, checkSeguimientoUserCol } from './lib/supabase';
 import Login from './pages/Auth/Login';
 import SignUp from './pages/Auth/SignUp';
 import ResetPassword from './pages/Auth/ResetPassword';
@@ -31,9 +30,22 @@ import ModuloFinancieroContable from './pages/ModuloFinancieroContable';
 import GestionUsuarios from './pages/Admin/GestionUsuarios';
 import CotizacionViewPublica from './components/CotizacionViewPublica';
 import ANMATPage from './pages/ANMATPage';
+import INALPage from './pages/INALPage';
+import SENASAPage from './pages/SENASAPage';
 import Legal from './pages/Legal';
 import AsistenteIA from './pages/AsistenteIA';
+import AlertasRegulatorias from './components/Admin/AlertasRegulatorias';
+import StockPage from './pages/StockPage';
+import VentasPage from './pages/VentasPage';
+import CajaPage from './pages/CajaPage';
+import ProveedoresPage from './pages/ProveedoresPage';
+import ProduccionPage from './pages/ProduccionPage';
+import PedidosPage from './pages/PedidosPage';
+import LogisticaPage from './pages/LogisticaPage';
 import PortalDespachanteApp from './pages/Despachante/PortalDespachante';
+import CertificadosPage from './pages/CertificadosPage';
+import ProductPassport from './pages/ProductPassport';
+import QRLanding from './pages/QRLanding';
 
 function AppContent() {
   const [page, setPage] = useState<Page>(() => {
@@ -41,10 +53,14 @@ function AppContent() {
     const path = window.location.pathname;
     const cotizMatch = path.match(/^\/cotizacion\/(.+)$/);
     if (cotizMatch) return { type: 'cotizacion-publica', urlPublica: cotizMatch[1] };
+    const passportMatch = path.match(/^\/passport\/(.+)$/);
+    if (passportMatch) return { type: 'passport', productUuid: passportMatch[1] };
+    const qrMatch = path.match(/^\/qr\/(.+)$/);
+    if (qrMatch) return { type: 'qr-landing', productUuid: qrMatch[1] };
     return { type: 'dashboard' };
   });
 
-  useEffect(() => { checkSoftDelete(); checkSeguimientoUserCol(); }, []);
+  // Supabase checks removed — using local backend now
 
   const navigate = (p: Page) => setPage(p);
 
@@ -65,15 +81,32 @@ function AppContent() {
       case 'finanzas': return 'finanzas' as const;
       case 'usuarios': return 'usuarios' as const;
       case 'anmat': return 'anmat' as const;
+      case 'inal': return 'inal' as const;
+      case 'senasa': return 'senasa' as const;
       case 'asistente-ia': return 'asistente-ia' as const;
+      case 'vigia-regulatorio': return 'vigia-regulatorio' as const;
+      case 'stock': return 'stock' as const;
+      case 'ventas': return 'ventas' as const;
+      case 'caja': return 'caja' as const;
+      case 'proveedores': return 'proveedores' as const;
+      case 'produccion': return 'produccion' as const;
+      case 'pedidos': return 'pedidos' as const;
+      case 'logistica': return 'logistica' as const;
+      case 'certificados': return 'certificados' as const;
       case 'legal': return 'configuracion' as const;
       default: return 'dashboard' as const;
     }
   };
 
-  // Public cotizacion view - render without layout
+  // Public views - render without layout
   if (page.type === 'cotizacion-publica') {
     return <CotizacionViewPublica urlPublica={page.urlPublica} />;
+  }
+  if (page.type === 'passport') {
+    return <ProductPassport productUuid={page.productUuid} />;
+  }
+  if (page.type === 'qr-landing') {
+    return <QRLanding productUuid={page.productUuid} onRedirect={() => navigate({ type: 'passport', productUuid: page.productUuid })} />;
   }
 
   return (
@@ -106,7 +139,18 @@ function AppContent() {
       )}
       {page.type === 'usuarios' && <GestionUsuarios onBack={() => navigate({ type: 'dashboard' })} />}
       {page.type === 'anmat' && <ANMATPage />}
+      {page.type === 'inal' && <INALPage />}
+      {page.type === 'senasa' && <SENASAPage />}
       {page.type === 'asistente-ia' && <AsistenteIA onNavigate={navigate} />}
+      {page.type === 'vigia-regulatorio' && <AlertasRegulatorias />}
+      {page.type === 'stock' && <StockPage clienteId={page.clienteId} />}
+      {page.type === 'ventas' && <VentasPage clienteId={page.clienteId} onNavigate={navigate} />}
+      {page.type === 'caja' && <CajaPage clienteId={page.clienteId} />}
+      {page.type === 'proveedores' && <ProveedoresPage clienteId={page.clienteId} />}
+      {page.type === 'produccion' && <ProduccionPage clienteId={page.clienteId} />}
+      {page.type === 'pedidos' && <PedidosPage clienteId={page.clienteId} />}
+      {page.type === 'logistica' && <LogisticaPage clienteId={page.clienteId} />}
+      {page.type === 'certificados' && <CertificadosPage clienteId={page.clienteId} />}
       {page.type === 'legal' && <Legal initialSection={page.section} onBack={() => navigate({ type: 'dashboard' })} />}
     </Layout>
   );
@@ -118,11 +162,19 @@ function AuthenticatedApp() {
   const { user, loading, userRole, isRecovery } = useAuth();
   const [authView, setAuthView] = useState<AuthView>('login');
 
-  // Public cotizacion view - no auth required
+  // Public views - no auth required
   const path = window.location.pathname;
   const cotizMatch = path.match(/^\/cotizacion\/(.+)$/);
   if (cotizMatch) {
     return <CotizacionViewPublica urlPublica={cotizMatch[1]} />;
+  }
+  const passportMatch = path.match(/^\/passport\/(.+)$/);
+  if (passportMatch) {
+    return <ProductPassport productUuid={passportMatch[1]} />;
+  }
+  const qrMatch = path.match(/^\/qr\/(.+)$/);
+  if (qrMatch) {
+    return <QRLanding productUuid={qrMatch[1]} onRedirect={() => { window.location.href = `/passport/${qrMatch[1]}`; }} />;
   }
 
   if (loading) {
@@ -152,17 +204,11 @@ function AuthenticatedApp() {
     );
   }
 
-  // User is authenticated but role hasn't loaded yet
-  if (userRole === null) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-3">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-        <p className="text-sm text-slate-500">Configurando tu cuenta...</p>
-      </div>
-    );
-  }
+  // Role comes with the user object now (no separate async load)
+  // Fall back to 'gestor' if somehow null
+  const effectiveRole = userRole || (user as any)?.rol || 'gestor';
 
-  if (userRole === 'despachante') return <PortalDespachanteApp />;
+  if (effectiveRole === 'despachante') return <PortalDespachanteApp />;
 
   return <AppContent />;
 }
