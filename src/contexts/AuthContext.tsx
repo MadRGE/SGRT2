@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, createIsolatedClient } from '../lib/supabase';
 import type { User as SupabaseUser, Session } from '@supabase/supabase-js';
+
+const MCKEIN_URL = import.meta.env.VITE_MCKEIN_URL || "https://mckein.com";
 
 export interface User {
   id: string;
@@ -90,8 +92,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    // 1. Try Supabase local auth first
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error ? new Error(error.message) : null };
+    if (!error) return { error: null };
+
+    // 2. Fallback: authenticate against Mckein
+    try {
+      const mckeinRes = await fetch(`${MCKEIN_URL}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!mckeinRes.ok) return { error: new Error(error.message) };
+
+      const mckeinData = await mckeinRes.json();
+      const mckeinNode = mckeinData.node;
+
+      if (!mckeinData.user || !mckeinNode) return { error: new Error(error.message) };
+
+      // Only gestores can SSO into SGRT2
+      const nodeTypes: string[] = mckeinNode.types || [mckeinNode.type];
+      if (!nodeTypes.includes("gestor")) {
+        return { error: new Error("Solo nodos de tipo gestor pueden acceder a SGT") };
+      }
+
+      // 3. Auto-provision: create Supabase user with isolated client (no session hijack)
+      const isolated = createIsolatedClient();
+      const nombre = mckeinData.user.name || email.split("@")[0];
+
+      await isolated.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { nombre, rol: "gestor" },
+        },
+      });
+
+      // 4. Now sign in with the newly created user
+      const retry = await supabase.auth.signInWithPassword({ email, password });
+      return { error: retry.error ? new Error(retry.error.message) : null };
+    } catch (err) {
+      console.error("[auth] Mckein SSO failed:", err);
+      return { error: new Error(error.message) };
+    }
   };
 
   const signInWithGoogle = async () => {
