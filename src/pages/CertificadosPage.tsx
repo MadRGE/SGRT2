@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Award, Package, FileText, QrCode, Plus, Search, Eye, Edit2, Trash2, X, Check, AlertTriangle, Clock, RefreshCw, ChevronDown } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Award, Package, FileText, QrCode, Plus, Search, Eye, Edit2, Trash2, X, Check, AlertTriangle, Clock, RefreshCw, ChevronDown, Download } from 'lucide-react';
+import { QRCodeCanvas } from 'qrcode.react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
@@ -442,45 +443,107 @@ function DJCTab({ djcs, onRefresh }: { djcs: DJC[]; onRefresh: () => void }) {
   );
 }
 
+function downloadQR(canvasId: string, fileName: string) {
+  const canvas = document.getElementById(canvasId) as HTMLCanvasElement | null;
+  if (!canvas) return;
+  const url = canvas.toDataURL('image/png');
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${fileName}.png`;
+  a.click();
+}
+
 function QRTab({ productos, accesos }: { productos: Producto[]; accesos: QRAcceso[] }) {
   const baseUrl = window.location.origin;
+  const [expanded, setExpanded] = useState<string | null>(null);
 
   return (
     <div className="space-y-6">
-      {/* QR Links per product */}
+      {/* QR por producto */}
       <div>
-        <h3 className="text-sm font-semibold text-slate-700 mb-3">Links QR por Producto</h3>
+        <h3 className="text-sm font-semibold text-slate-700 mb-3">QR por Producto</h3>
         {productos.length === 0 ? (
           <EmptyState message="Registrá un producto primero para generar su QR" />
         ) : (
-          <div className="grid gap-2">
-            {productos.map(p => (
-              <div key={p.id} className="flex items-center justify-between bg-white rounded-lg border border-slate-200 px-4 py-3">
-                <div>
-                  <p className="font-medium text-slate-900 text-sm">{p.nombre}</p>
-                  <p className="text-xs text-slate-400 font-mono">{p.codigo}</p>
+          <div className="grid gap-3">
+            {productos.map(p => {
+              const qrUrl = `${baseUrl}/qr/${p.uuid}`;
+              const isOpen = expanded === p.id;
+              return (
+                <div key={p.id} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => setExpanded(isOpen ? null : p.id)}
+                        className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center hover:bg-amber-100 transition-colors"
+                      >
+                        <QrCode className="w-4 h-4 text-amber-600" />
+                      </button>
+                      <div>
+                        <p className="font-medium text-slate-900 text-sm">{p.nombre}</p>
+                        <p className="text-xs text-slate-400 font-mono">{p.codigo}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => { navigator.clipboard.writeText(qrUrl); toast.success('Link copiado'); }}
+                        className="px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors"
+                      >
+                        Copiar Link
+                      </button>
+                      <button
+                        onClick={() => downloadQR(`qr-${p.id}`, `QR-${p.codigo}`)}
+                        className="px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors flex items-center gap-1"
+                      >
+                        <Download className="w-3 h-3" />
+                        Descargar
+                      </button>
+                      <a
+                        href={`/passport/${p.uuid}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                      >
+                        Ver Passport
+                      </a>
+                      <button
+                        onClick={() => setExpanded(isOpen ? null : p.id)}
+                        className={`p-1.5 rounded-lg hover:bg-slate-100 transition-all ${isOpen ? 'rotate-180' : ''}`}
+                      >
+                        <ChevronDown className="w-4 h-4 text-slate-400" />
+                      </button>
+                    </div>
+                  </div>
+                  {isOpen && (
+                    <div className="border-t border-slate-100 px-4 py-4 flex flex-col items-center gap-3 bg-slate-50/50">
+                      <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                        <QRCodeCanvas
+                          id={`qr-${p.id}`}
+                          value={qrUrl}
+                          size={200}
+                          level="H"
+                          marginSize={2}
+                        />
+                      </div>
+                      <p className="text-[11px] text-slate-400 font-mono text-center break-all max-w-xs">{qrUrl}</p>
+                      <button
+                        onClick={() => downloadQR(`qr-${p.id}`, `QR-${p.codigo}`)}
+                        className="px-4 py-2 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 rounded-lg transition-colors flex items-center gap-2"
+                      >
+                        <Download className="w-4 h-4" />
+                        Descargar QR (PNG)
+                      </button>
+                    </div>
+                  )}
+                  {/* Hidden canvas for download when collapsed */}
+                  {!isOpen && (
+                    <div className="hidden">
+                      <QRCodeCanvas id={`qr-${p.id}`} value={qrUrl} size={400} level="H" marginSize={2} />
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center gap-2">
-                  <code className="text-xs bg-slate-50 text-slate-600 px-2 py-1 rounded hidden sm:block">
-                    {baseUrl}/qr/{p.uuid}
-                  </code>
-                  <button
-                    onClick={() => { navigator.clipboard.writeText(`${baseUrl}/qr/${p.uuid}`); toast.success('Link copiado'); }}
-                    className="px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors"
-                  >
-                    Copiar QR
-                  </button>
-                  <a
-                    href={`/passport/${p.uuid}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
-                  >
-                    Ver Passport
-                  </a>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
