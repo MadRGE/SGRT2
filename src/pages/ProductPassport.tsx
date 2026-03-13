@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Shield, Award, FileText, CheckCircle, AlertTriangle, Clock, Loader2 } from 'lucide-react';
+import { Shield, Award, FileText, CheckCircle, AlertTriangle, Clock, Loader2, Upload, Send } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface Props {
@@ -52,6 +52,12 @@ export default function ProductPassport({ productUuid }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // DJC upload form
+  const [showDjcForm, setShowDjcForm] = useState(false);
+  const [djcForm, setDjcForm] = useState({ resolucion: '', representante: '', representante_cuit: '', notas: '' });
+  const [djcSaving, setDjcSaving] = useState(false);
+  const [djcSuccess, setDjcSuccess] = useState(false);
+
   useEffect(() => {
     loadPassport();
   }, [productUuid]);
@@ -60,7 +66,6 @@ export default function ProductPassport({ productUuid }: Props) {
     setLoading(true);
     setError(null);
     try {
-      // Fetch product by UUID (anon policy allows active products)
       const { data: prod, error: prodErr } = await supabase
         .from('productos_certificados')
         .select('*')
@@ -75,7 +80,6 @@ export default function ProductPassport({ productUuid }: Props) {
       }
       setProduct(prod);
 
-      // Fetch certs (anon policy filters vigente/en_renovacion)
       const { data: certsData } = await supabase
         .from('certificados')
         .select('id, organismo, tipo, titulo, referencia, estado, fecha_emision, fecha_vencimiento, resolucion')
@@ -83,7 +87,6 @@ export default function ProductPassport({ productUuid }: Props) {
         .order('fecha_emision', { ascending: false });
       setCerts(certsData || []);
 
-      // Fetch DJCs (anon policy filters generada/firmada)
       const { data: djcData } = await supabase
         .from('djcs')
         .select('id, resolucion, estado, representante, created_at')
@@ -91,7 +94,6 @@ export default function ProductPassport({ productUuid }: Props) {
         .order('created_at', { ascending: false });
       setDjcs(djcData || []);
 
-      // Fetch client name
       const { data: cliente } = await supabase
         .from('clientes')
         .select('nombre')
@@ -99,7 +101,6 @@ export default function ProductPassport({ productUuid }: Props) {
         .single();
       if (cliente) setClienteName(cliente.nombre);
 
-      // Log access
       await supabase.from('qr_accesos').insert({
         producto_id: prod.id,
         accion: 'view',
@@ -109,6 +110,44 @@ export default function ProductPassport({ productUuid }: Props) {
       setError('Error al cargar el producto');
     }
     setLoading(false);
+  }
+
+  async function submitDjc(e: React.FormEvent) {
+    e.preventDefault();
+    if (!product) return;
+    setDjcSaving(true);
+    try {
+      const { error } = await supabase.from('djcs').insert({
+        producto_id: product.id,
+        cliente_id: product.cliente_id,
+        resolucion: djcForm.resolucion || null,
+        representante: djcForm.representante || null,
+        representante_cuit: djcForm.representante_cuit || null,
+        notas: djcForm.notas || null,
+        estado: 'borrador',
+      });
+      if (error) throw error;
+
+      // Log the upload
+      await supabase.from('qr_accesos').insert({
+        producto_id: product.id,
+        accion: 'djc_upload',
+        user_agent: navigator.userAgent,
+      });
+
+      setDjcSuccess(true);
+      setDjcForm({ resolucion: '', representante: '', representante_cuit: '', notas: '' });
+      // Refresh DJCs
+      const { data: djcData } = await supabase
+        .from('djcs')
+        .select('id, resolucion, estado, representante, created_at')
+        .eq('producto_id', product.id)
+        .order('created_at', { ascending: false });
+      setDjcs(djcData || []);
+    } catch (err: any) {
+      alert(err.message || 'Error al enviar la DJC');
+    }
+    setDjcSaving(false);
   }
 
   if (loading) {
@@ -142,7 +181,7 @@ export default function ProductPassport({ productUuid }: Props) {
             </div>
             <div>
               <p className="text-xs text-slate-400 uppercase tracking-wider font-medium">Product Passport</p>
-              <p className="text-xs text-slate-400">Verificación digital de producto</p>
+              <p className="text-xs text-slate-400">Verificacion digital de producto</p>
             </div>
           </div>
 
@@ -197,31 +236,132 @@ export default function ProductPassport({ productUuid }: Props) {
         </section>
 
         {/* DJCs */}
-        {djcs.length > 0 && (
-          <section>
-            <div className="flex items-center gap-2 mb-3">
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
               <FileText className="w-5 h-5 text-blue-600" />
               <h2 className="text-lg font-bold text-slate-900">Declaraciones Juradas</h2>
-              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">{djcs.length}</span>
+              {djcs.length > 0 && (
+                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">{djcs.length}</span>
+              )}
             </div>
+            {!showDjcForm && !djcSuccess && (
+              <button
+                onClick={() => setShowDjcForm(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                Subir mi DJC
+              </button>
+            )}
+          </div>
+
+          {/* DJC upload form */}
+          {showDjcForm && !djcSuccess && (
+            <div className="bg-blue-50/50 rounded-xl border border-blue-200 p-4 mb-4">
+              <h3 className="text-sm font-semibold text-slate-800 mb-3">Cargar Declaracion Jurada de Composicion</h3>
+              <p className="text-xs text-slate-500 mb-4">
+                Complete los datos de su DJC. Sera recibida por el gestor para su revision.
+              </p>
+              <form onSubmit={submitDjc} className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Resolucion</label>
+                  <input
+                    value={djcForm.resolucion}
+                    onChange={e => setDjcForm({ ...djcForm, resolucion: e.target.value })}
+                    className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
+                    placeholder="Ej: 237/2024"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Representante legal / tecnico *</label>
+                  <input
+                    value={djcForm.representante}
+                    onChange={e => setDjcForm({ ...djcForm, representante: e.target.value })}
+                    className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">CUIT del representante</label>
+                  <input
+                    value={djcForm.representante_cuit}
+                    onChange={e => setDjcForm({ ...djcForm, representante_cuit: e.target.value })}
+                    className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
+                    placeholder="XX-XXXXXXXX-X"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Notas</label>
+                  <textarea
+                    value={djcForm.notas}
+                    onChange={e => setDjcForm({ ...djcForm, notas: e.target.value })}
+                    className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
+                    rows={2}
+                    placeholder="Informacion adicional..."
+                  />
+                </div>
+                <div className="flex justify-end gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowDjcForm(false)}
+                    className="px-3 py-1.5 text-xs text-slate-500 hover:text-slate-700"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={djcSaving}
+                    className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50 transition-colors"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    {djcSaving ? 'Enviando...' : 'Enviar DJC'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* Success message */}
+          {djcSuccess && (
+            <div className="bg-green-50 rounded-xl border border-green-200 p-4 mb-4 text-center">
+              <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2" />
+              <p className="text-sm font-medium text-green-800">DJC enviada correctamente</p>
+              <p className="text-xs text-green-600 mt-1">El gestor la revisara y actualizara el estado.</p>
+              <button
+                onClick={() => { setDjcSuccess(false); setShowDjcForm(false); }}
+                className="mt-3 text-xs text-green-700 underline hover:text-green-800"
+              >
+                Cerrar
+              </button>
+            </div>
+          )}
+
+          {djcs.length === 0 && !showDjcForm && !djcSuccess ? (
+            <p className="text-sm text-slate-400 py-4">Sin declaraciones juradas para este producto.</p>
+          ) : (
             <div className="space-y-2">
               {djcs.map(d => (
                 <div key={d.id} className="bg-white rounded-xl border border-slate-200 p-4">
                   <div className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-green-500" />
                     <span className="text-sm font-medium text-slate-900">
-                      DJC {d.resolucion ? `— Res. ${d.resolucion}` : ''}
+                      DJC {d.resolucion ? `\u2014 Res. ${d.resolucion}` : ''}
                     </span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${d.estado === 'firmada' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
-                      {d.estado}
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                      d.estado === 'firmada' ? 'bg-green-100 text-green-700' :
+                      d.estado === 'borrador' ? 'bg-slate-100 text-slate-600' :
+                      'bg-blue-100 text-blue-700'
+                    }`}>
+                      {d.estado === 'borrador' ? 'pendiente revision' : d.estado}
                     </span>
                   </div>
                   {d.representante && <p className="text-xs text-slate-500 mt-1 ml-6">Representante: {d.representante}</p>}
                 </div>
               ))}
             </div>
-          </section>
-        )}
+          )}
+        </section>
 
         {/* Footer */}
         <div className="text-center pt-4 border-t border-slate-100">
@@ -229,7 +369,7 @@ export default function ProductPassport({ productUuid }: Props) {
             Verificado el {new Date().toLocaleDateString('es-AR')} &mdash; SGRT Product Passport
           </p>
           <p className="text-[10px] text-slate-300 mt-1">
-            Esta información es de carácter informativo. Los documentos originales prevalecen.
+            Esta informacion es de caracter informativo. Los documentos originales prevalecen.
           </p>
         </div>
       </div>
