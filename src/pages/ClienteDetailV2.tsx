@@ -15,6 +15,7 @@ import { ArrowLeft, Plus, FileText, ChevronRight, Loader2, Pencil, Save, X, Shie
 import NuevoRegistroModal from '../components/Cliente/NuevoRegistroModal';
 import NuevoDocClienteModal from '../components/Cliente/NuevoDocClienteModal';
 import { TabUsuarios } from '../components/Cliente/TabUsuarios';
+import ClienteModulos from '../components/Cliente/ClienteModulos';
 import type { DocumentoCliente } from '../components/Cliente/NuevoDocClienteModal';
 import StatusBadge from '../components/UI/StatusBadge';
 
@@ -684,7 +685,10 @@ export default function ClienteDetailV2({ clienteId, onNavigate }: Props) {
         )}
       </div>
 
-      {/* 6. Usuarios del Cliente */}
+      {/* 6. Módulos & Vigía Regulatorio */}
+      <ClienteModulos clienteId={clienteId} />
+
+      {/* 7. Usuarios del Cliente */}
       <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-200/50 p-4">
         <TabUsuarios clienteId={clienteId} />
       </div>

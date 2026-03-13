@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Save, User } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { supabase, createIsolatedClient } from '../../lib/supabase';
 
 type Usuario = {
   id: string;
@@ -118,23 +118,14 @@ export default function UsuarioFormModal({ isOpen, onClose, usuario, onSuccess }
 
         if (error) throw error;
       } else {
-        // Guardar sesión del admin antes de crear el usuario
-        const { data: { session: adminSession } } = await supabase.auth.getSession();
+        // Use an isolated Supabase client so signUp doesn't hijack the admin session
+        const isolatedClient = createIsolatedClient();
 
-        // Create: sign up new user, then update their rol
-        const { data: authData, error: authError } = await supabase.auth.signUp({
+        const { data: authData, error: authError } = await isolatedClient.auth.signUp({
           email: formData.email,
           password: formData.password,
           options: { data: { nombre: formData.nombre, rol: formData.rol, cliente_id: clienteId } },
         });
-
-        // Restaurar sesión del admin (signUp loguea al nuevo usuario)
-        if (adminSession) {
-          await supabase.auth.setSession({
-            access_token: adminSession.access_token,
-            refresh_token: adminSession.refresh_token,
-          });
-        }
 
         if (authError) throw authError;
 

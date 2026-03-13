@@ -1,11 +1,37 @@
 import { useState } from 'react';
-import { Shield, FileText, Wrench, Sparkles } from 'lucide-react';
+import { Shield, FileText, Wrench, Sparkles, Stethoscope, MessageCircle, ClipboardList } from 'lucide-react';
 import { ANMATCasosList } from '../components/ANMAT/ANMATCasosList';
 import { HerramientaFichaProducto } from '../components/ANMAT/HerramientaFichaProducto';
 import { HerramientaBPM } from '../components/ANMAT/HerramientaBPM';
+import ModuloTramites from '../components/Modulo/ModuloTramites';
+import ModuloAsistente from '../components/Modulo/ModuloAsistente';
 
-type Tab = 'casos' | 'herramientas';
-type Herramienta = null | 'ficha-producto' | 'bpm-rne';
+type Tab = 'casos' | 'herramientas' | 'tramites' | 'asistente';
+type Herramienta = null | 'ficha-producto' | 'bpm-rne' | 'dispositivos';
+
+const ANMAT_SYSTEM_PROMPT = `Sos un asistente experto en trámites ante ANMAT (Administración Nacional de Medicamentos, Alimentos y Tecnología Médica) de Argentina.
+
+Tu conocimiento abarca:
+- Registro y habilitación de dispositivos médicos (clasificación de riesgo I, II, III, IV)
+- Registro de productos cosméticos y de higiene personal
+- Registro de medicamentos y especialidades medicinales
+- Buenas Prácticas de Manufactura (BPM) para establecimientos
+- Habilitación de establecimientos productores, importadores y distribuidores
+- Normativas ANMAT: disposiciones, resoluciones y reglamentaciones vigentes
+- Trámites a Distancia (TAD) para presentaciones ante ANMAT
+- Certificados de libre venta y comercialización
+- Farmacovigilancia y tecnovigilancia
+- Trazabilidad de medicamentos (SNT)
+- Importación y exportación de productos regulados por ANMAT
+
+Respondé siempre en español argentino, de forma clara y profesional. Cuando sea relevante, citá la normativa aplicable. Si no sabés algo con certeza, indicalo.`;
+
+const ANMAT_QUESTIONS = [
+  '¿Cómo se clasifica el riesgo de un dispositivo médico?',
+  '¿Qué documentación necesito para habilitar un establecimiento ante ANMAT?',
+  '¿Cuál es el proceso para registrar un producto cosmético?',
+  '¿Qué son las BPM y cómo se implementan para obtener habilitación?',
+];
 
 export default function ANMATPage() {
   const [tab, setTab] = useState<Tab>('casos');
@@ -15,115 +41,110 @@ export default function ANMATPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+        <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
           <Shield className="w-6 h-6 text-white" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Gestoría ANMAT</h1>
-          <p className="text-sm text-slate-500">Gestión regulatoria y herramientas documentales</p>
+          <h1 className="text-2xl font-bold text-slate-900">ANMAT</h1>
+          <p className="text-sm text-slate-500">Dispositivos médicos, cosméticos, medicamentos</p>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="border-b border-slate-200">
         <div className="flex gap-6">
-          <button
+          <TabButton
+            active={tab === 'casos'}
             onClick={() => { setTab('casos'); setHerramienta(null); }}
-            className={`pb-3 px-1 font-medium text-sm transition-colors flex items-center gap-2 ${
-              tab === 'casos'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            <FileText className="w-4 h-4" />
-            Casos ANMAT
-          </button>
-          <button
-            onClick={() => { setTab('herramientas'); setHerramienta(null); }}
-            className={`pb-3 px-1 font-medium text-sm transition-colors flex items-center gap-2 ${
-              tab === 'herramientas'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            <Wrench className="w-4 h-4" />
-            Herramientas IA
-          </button>
+            icon={FileText}
+            label="Casos & Herramientas"
+          />
+          <TabButton
+            active={tab === 'tramites'}
+            onClick={() => setTab('tramites')}
+            icon={ClipboardList}
+            label="Mis Trámites"
+          />
+          <TabButton
+            active={tab === 'asistente'}
+            onClick={() => setTab('asistente')}
+            icon={MessageCircle}
+            label="Asistente ANMAT"
+            badge="Gratis"
+          />
         </div>
       </div>
 
       {/* Content */}
-      {tab === 'casos' && <ANMATCasosList />}
-      {tab === 'herramientas' && !herramienta && (
-        <HerramientasSelector onSelect={setHerramienta} />
-      )}
-      {tab === 'herramientas' && herramienta === 'ficha-producto' && (
+      {tab === 'casos' && !herramienta && <ANMATCasosList />}
+      {tab === 'casos' && herramienta === 'ficha-producto' && (
         <HerramientaFichaProducto />
       )}
-      {tab === 'herramientas' && herramienta === 'bpm-rne' && (
+      {tab === 'casos' && herramienta === 'bpm-rne' && (
         <HerramientaBPM />
+      )}
+      {tab === 'casos' && herramienta === 'dispositivos' && (
+        <PlaceholderTool onBack={() => setHerramienta(null)} />
+      )}
+      {tab === 'tramites' && (
+        <ModuloTramites organismo="ANMAT" color="from-indigo-500 to-violet-600" />
+      )}
+      {tab === 'asistente' && (
+        <ModuloAsistente
+          modulo="ANMAT"
+          color="from-indigo-500 to-violet-600"
+          systemPrompt={ANMAT_SYSTEM_PROMPT}
+          suggestedQuestions={ANMAT_QUESTIONS}
+          placeholder="Preguntame sobre dispositivos médicos, cosméticos, habilitaciones..."
+        />
       )}
     </div>
   );
 }
 
-function HerramientasSelector({ onSelect }: { onSelect: (h: Herramienta) => void }) {
-  const herramientas = [
-    {
-      id: 'ficha-producto' as const,
-      titulo: 'Ficha de Producto',
-      descripcion: 'Genera fichas técnicas de producto con toda la información requerida por ANMAT: composición, materiales, fabricante, normativas aplicables y datos de aptitud sanitaria.',
-      color: 'from-blue-500 to-cyan-600',
-      bgLight: 'bg-blue-50 border-blue-200',
-      hoverBorder: 'hover:border-blue-400',
-    },
-    {
-      id: 'bpm-rne' as const,
-      titulo: 'BPM para RNE',
-      descripcion: 'Documentación de Buenas Prácticas de Manufactura para la obtención del RNE. Incluye: manual BPM, POEs, planillas POES, layout y flujogramas.',
-      color: 'from-emerald-500 to-green-600',
-      bgLight: 'bg-emerald-50 border-emerald-200',
-      hoverBorder: 'hover:border-emerald-400',
-    },
-  ];
+function TabButton({ active, onClick, icon: Icon, label, badge }: {
+  active: boolean;
+  onClick: () => void;
+  icon: typeof Wrench;
+  label: string;
+  badge?: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`pb-3 px-1 font-medium text-sm transition-colors flex items-center gap-2 ${
+        active
+          ? 'text-indigo-600 border-b-2 border-indigo-600'
+          : 'text-slate-500 hover:text-slate-700'
+      }`}
+    >
+      <Icon className="w-4 h-4" />
+      {label}
+      {badge && (
+        <span className="px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-[10px] font-bold">{badge}</span>
+      )}
+    </button>
+  );
+}
 
+function PlaceholderTool({ onBack }: { onBack: () => void }) {
   return (
     <div className="space-y-6">
-      <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200 rounded-xl p-5">
-        <div className="flex items-start gap-3">
-          <Sparkles className="w-5 h-5 text-indigo-600 mt-0.5" />
-          <div>
-            <p className="font-semibold text-indigo-900">Herramientas IA - Claude</p>
-            <p className="text-sm text-indigo-700 mt-1">
-              Generadores de documentación regulatoria potenciados por IA. Completá los datos de tu producto o establecimiento y la IA genera la documentación técnica.
-            </p>
-          </div>
+      <button onClick={onBack} className="text-sm text-slate-500 hover:text-slate-700 flex items-center gap-1">
+        ← Volver a herramientas
+      </button>
+      <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-8 text-center">
+        <div className="w-16 h-16 bg-gradient-to-br from-indigo-400 to-violet-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+          <Stethoscope className="w-8 h-8 text-white" />
         </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {herramientas.map(h => (
-          <button
-            key={h.id}
-            onClick={() => onSelect(h.id)}
-            className={`text-left bg-white rounded-xl border-2 ${h.bgLight} ${h.hoverBorder} overflow-hidden transition-all hover:shadow-lg group`}
-          >
-            <div className="p-6">
-              <div className="flex items-start gap-4">
-                <div className={`w-12 h-12 bg-gradient-to-br ${h.color} rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm`}>
-                  <Sparkles className="w-6 h-6 text-white" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-bold text-slate-800 group-hover:text-slate-900">{h.titulo}</h3>
-                  <p className="text-sm text-slate-600 mt-2 leading-relaxed">{h.descripcion}</p>
-                </div>
-              </div>
-            </div>
-            <div className={`px-6 py-4 bg-gradient-to-r ${h.color} text-white font-medium text-sm text-center`}>
-              Abrir herramienta
-            </div>
-          </button>
-        ))}
+        <h2 className="text-xl font-bold text-slate-800">Dispositivos Médicos</h2>
+        <p className="text-slate-600 mt-2 max-w-md mx-auto">
+          Módulo en desarrollo. Próximamente: registro de dispositivos médicos, clasificación de riesgo, documentación técnica.
+        </p>
+        <div className="mt-6 inline-flex items-center gap-2 px-4 py-2 bg-white rounded-lg border border-slate-200 text-sm text-slate-500">
+          <Sparkles className="w-4 h-4" />
+          En desarrollo — próximamente disponible
+        </div>
       </div>
     </div>
   );

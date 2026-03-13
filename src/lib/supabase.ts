@@ -9,6 +9,20 @@ export const supabase = supabaseConfigured
   ? createClient(supabaseUrl, supabaseAnonKey)
   : createClient('https://placeholder.supabase.co', 'placeholder');
 
+/**
+ * Creates a separate Supabase client with no shared auth state.
+ * Use this for operations like signUp that would otherwise hijack
+ * the current user's session via onAuthStateChange.
+ */
+export function createIsolatedClient() {
+  if (!supabaseConfigured) {
+    return createClient('https://placeholder.supabase.co', 'placeholder');
+  }
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+}
+
 // Soft-delete support: detecta si la columna deleted_at existe
 let _softDeleteReady: boolean | null = null;
 let _softDeleteChecked = false;

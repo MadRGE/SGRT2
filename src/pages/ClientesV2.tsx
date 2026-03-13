@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase, filterActive } from '../lib/supabase';
 import { PROVINCIAS } from '../lib/constants/enums';
 import { Plus, Search, Users, ChevronRight, Loader2, X, Shield, AlertTriangle } from 'lucide-react';
+import { syncClientToMckein } from '../lib/mckein';
 
 interface Props {
   onNavigate: (page: any) => void;
@@ -226,7 +227,10 @@ function NuevoClienteModal({ onClose, onCreated }: { onClose: () => void; onCrea
           setSaving(false);
           return;
         }
-        if (d2) { onCreated(d2.id); }
+        if (d2) {
+          syncClientToMckein({ razon_social: form.razon_social, email: form.email, cuit: form.cuit, telefono: form.telefono }).catch(() => {});
+          onCreated(d2.id);
+        }
         setSaving(false);
         return;
       }
@@ -236,6 +240,19 @@ function NuevoClienteModal({ onClose, onCreated }: { onClose: () => void; onCrea
     }
 
     if (data) {
+      // Sync to Mckein (fire & forget)
+      syncClientToMckein({
+        razon_social: form.razon_social,
+        email: form.email,
+        cuit: form.cuit,
+        telefono: form.telefono,
+        direccion: form.direccion,
+        localidad: form.localidad,
+        provincia: form.provincia,
+      }).then(r => {
+        if (r.ok) console.log('[mckein] Cliente sincronizado, nodeId:', r.nodeId);
+        else console.warn('[mckein] Sync error:', r.error);
+      });
       onCreated(data.id);
     }
     setSaving(false);

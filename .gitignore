@@ -44,3 +44,5 @@ desktop.ini
 # Windows registry
 NTUSER.DAT*
 ntuser.*
+.vercel
+.env*.local
