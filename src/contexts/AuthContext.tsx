@@ -1,15 +1,24 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import type { User, Session } from '@supabase/supabase-js';
+import type { User as SupabaseUser, Session } from '@supabase/supabase-js';
+
+export interface User {
+  id: string;
+  email: string;
+  nombre: string;
+  rol: string;
+  cliente_id: string | null;
+}
 
 interface AuthContextType {
   user: User | null;
-  session: Session | null;
   loading: boolean;
   userRole: string | null;
   clienteId: string | null;
   isRecovery: boolean;
+  session: { user: User } | null;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signInWithGoogle: () => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, nombre: string, rol?: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
@@ -19,139 +28,113 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function mapSupabaseUser(su: SupabaseUser): User {
+  const meta = su.user_metadata || {};
+  return {
+    id: su.id,
+    email: su.email || '',
+    nombre: (meta.nombre as string) || (meta.full_name as string) || (meta.name as string) || su.email || '',
+    rol: (meta.rol as string) || 'gestor',
+    cliente_id: (meta.cliente_id as string) || null,
+  };
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [clienteId, setClienteId] = useState<string | null>(null);
   const [isRecovery, setIsRecovery] = useState(false);
 
+  const applyUser = (su: SupabaseUser | null) => {
+    if (su) {
+      const u = mapSupabaseUser(su);
+      setUser(u);
+      setUserRole(u.rol);
+      setClienteId(u.cliente_id);
+    } else {
+      setUser(null);
+      setUserRole(null);
+      setClienteId(null);
+    }
+  };
+
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        loadUserData(session.user.id);
-      } else {
+    // Handle OAuth callback — clean hash tokens from URL to prevent loops
+    const hash = window.location.hash;
+    if (hash && hash.includes('access_token')) {
+      // Let Supabase consume the tokens, then clean the URL
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        applyUser(session?.user ?? null);
         setLoading(false);
-      }
-    }).catch(() => {
-      setLoading(false);
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-
-      if (event === 'PASSWORD_RECOVERY') {
-        setIsRecovery(true);
-      }
-
-      if (event === 'SIGNED_OUT') {
-        setUserRole(null);
-        setClienteId(null);
-        setIsRecovery(false);
+        // Remove hash so we don't re-process on refresh
+        window.history.replaceState(null, '', window.location.pathname);
+      });
+    } else {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        applyUser(session?.user ?? null);
         setLoading(false);
-        return;
-      }
+      });
+    }
 
-      if (session?.user) {
-        loadUserData(session.user.id);
-      } else {
-        setUserRole(null);
-        setClienteId(null);
-        setLoading(false);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      applyUser(session?.user ?? null);
+      if (event === 'PASSWORD_RECOVERY') setIsRecovery(true);
+      // Clean hash after any OAuth event
+      if (event === 'SIGNED_IN' && window.location.hash.includes('access_token')) {
+        window.history.replaceState(null, '', window.location.pathname);
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  const loadUserData = async (userId: string, retry = true) => {
-    try {
-      const { data, error } = await supabase
-        .from('usuarios')
-        .select('rol, cliente_id')
-        .eq('id', userId)
-        .maybeSingle();
-
-      if (error) {
-        setUserRole(null);
-        setClienteId(null);
-      } else if (!data && retry) {
-        // The handle_new_user trigger may not have finished yet — retry once after 1s
-        setTimeout(() => loadUserData(userId, false), 1000);
-        return;
-      } else if (data) {
-        setUserRole(data.rol);
-        setClienteId(data.cliente_id || null);
-      } else {
-        // No data after retry — role stays null (handled in App.tsx as loading)
-        setUserRole(null);
-        setClienteId(null);
-      }
-    } catch {
-      setUserRole(null);
-      setClienteId(null);
-    }
-    setLoading(false);
-  };
-
-  const clearRecovery = () => setIsRecovery(false);
-
   const signIn = async (email: string, password: string) => {
-    try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      return { error };
-    } catch (error) {
-      return { error: error as Error };
-    }
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    return { error: error ? new Error(error.message) : null };
   };
 
-  const signUp = async (email: string, password: string, nombre: string, rol: string = 'cliente') => {
-    try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { nombre, rol } },
-      });
-      if (error) return { error };
-      return { error: null };
-    } catch (error) {
-      return { error: error as Error };
-    }
+  const signInWithGoogle = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin },
+    });
+    return { error: error ? new Error(error.message) : null };
+  };
+
+  const signUp = async (email: string, password: string, nombre: string, rol: string = 'gestor') => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { nombre, rol } },
+    });
+    return { error: error ? new Error(error.message) : null };
   };
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    setUser(null);
+    setUserRole(null);
+    setClienteId(null);
   };
 
   const resetPassword = async (email: string) => {
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      return { error };
-    } catch (error) {
-      return { error: error as Error };
-    }
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    return { error: error ? new Error(error.message) : null };
   };
 
   const updatePassword = async (newPassword: string) => {
-    try {
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
-      return { error };
-    } catch (error) {
-      return { error: error as Error };
-    }
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (!error) setIsRecovery(false);
+    return { error: error ? new Error(error.message) : null };
   };
 
-  const value = {
-    user, session, loading, userRole, clienteId, isRecovery,
-    signIn, signUp, signOut, resetPassword, updatePassword, clearRecovery,
+  const clearRecovery = () => setIsRecovery(false);
+
+  const value: AuthContextType = {
+    user, loading, userRole, clienteId, isRecovery,
+    session: user ? { user } : null,
+    signIn, signInWithGoogle, signUp, signOut, resetPassword, updatePassword, clearRecovery,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
