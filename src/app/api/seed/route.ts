@@ -36,7 +36,7 @@ export async function GET() {
       update: {},
       create: {
         email: "maximiliano@riosglobalexperts.com",
-        nombre: "Max",
+        nombre: "Maximiliano Ezequiel Rios",
         password: hashedPw,
         role: "admin",
         studioId: studio.id,
