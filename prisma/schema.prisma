@@ -1,0 +1,513 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── ORGANIZACIONAL ──────────────────────────────────
+model Studio {
+  id           String   @id @default(cuid())
+  nombre       String
+  cuit         String?
+  matricula    String?
+  email        String?
+  telefono     String?
+  direccion    String?
+  mckeinNodeId String?  @unique
+
+  users        User[]
+  clientes     Cliente[]
+  documentos   Documento[]
+  gestiones    Gestion[]
+  tracking     Tracking[]
+  notificaciones Notificacion[]
+  auditLogs    AuditLog[]
+  mckeinSyncs  MckeinSync[]
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("studios")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String
+  nombre    String
+  password  String
+  role      String   @default("gestor")
+  activo    Boolean  @default(true)
+
+  studioId  String
+  studio    Studio   @relation(fields: [studioId], references: [id])
+
+  tracking  Tracking[]
+  mensajes  Mensaje[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([email, studioId])
+  @@map("users")
+}
+
+model ClienteUser {
+  id        String   @id @default(cuid())
+  email     String
+  nombre    String
+  password  String
+  activo    Boolean  @default(true)
+
+  clienteId String
+  cliente   Cliente  @relation(fields: [clienteId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([email, clienteId])
+  @@map("cliente_users")
+}
+
+model MasterDevice {
+  id          String   @id @default(cuid())
+  fingerprint String   @unique
+  owner       String
+  label       String?
+  lastUsed    DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@map("master_devices")
+}
+
+// ─── CLIENTES & PRODUCTOS ────────────────────────────
+model Cliente {
+  id           String   @id @default(cuid())
+  razonSocial  String
+  cuit         String?
+  email        String?
+  telefono     String?
+  direccion    String?
+  rne          String?
+  notas        String?
+
+  studioId     String
+  studio       Studio   @relation(fields: [studioId], references: [id])
+
+  productos    Producto[]
+  gestiones    Gestion[]
+  documentos   Documento[]
+  clienteUsers ClienteUser[]
+  mensajes     Mensaje[]
+  anmatCasos   AnmatCaso[]
+
+  deletedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@map("clientes")
+}
+
+model Producto {
+  id          String   @id @default(cuid())
+  nombre      String
+  marca       String?
+  modelo      String?
+  rubro       String?
+  paisOrigen  String?
+
+  clienteId   String
+  cliente     Cliente  @relation(fields: [clienteId], references: [id])
+
+  especificaciones ProductoEspecificacion[]
+  expedienteProductos ExpedienteProducto[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("productos")
+}
+
+model ProductoEspecificacion {
+  id             String   @id @default(cuid())
+  tipo           String   // envases_anmat, alimentos_inal, medicos_anmat, cosmeticos_anmat, veterinarios_senasa
+  datosTecnicos  Json
+  version        Int      @default(1)
+  estado         String   @default("borrador") // borrador, completo, aprobado, rechazado
+
+  productoId     String
+  producto       Producto @relation(fields: [productoId], references: [id])
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("producto_especificaciones")
+}
+
+// ─── CATÁLOGO REGULATORIO ────────────────────────────
+model Organismo {
+  id       String   @id @default(cuid())
+  nombre   String   @unique
+  logoUrl  String?
+
+  tramiteTipos    TramiteTipo[]
+  aranceles       ArancelOficial[]
+  alertas         AlertaRegulatoria[]
+
+  createdAt DateTime @default(now())
+
+  @@map("organismos")
+}
+
+model TramiteTipo {
+  id                      String   @id @default(cuid())
+  codigo                  String   @unique
+  nombre                  String
+  categoria               String?
+  subcategoria            String?
+  plazoDias               Int?
+  costoOrganismo          Float?
+  moneda                  String   @default("ARS")
+  honorarios              Float?
+  plataforma              String?  // TAD, TADO, VUCE, SIGSA, Otro
+  documentacionObligatoria Json?   // string[]
+  observaciones           String?
+  prioridad               String   @default("media")
+  activo                  Boolean  @default(true)
+
+  organismoId             String
+  organismo               Organismo @relation(fields: [organismoId], references: [id])
+
+  expedientes             Expediente[]
+
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  @@map("tramite_tipos")
+}
+
+// ─── GESTIONES ───────────────────────────────────────
+model Gestion {
+  id          String   @id @default(cuid())
+  nombre      String
+  estado      String   @default("relevamiento") // relevamiento, en_curso, en_espera, finalizado, archivado
+  prioridad   String   @default("normal")       // baja, normal, alta, urgente
+  descripcion String?
+  fechaInicio DateTime @default(now())
+  fechaCierre DateTime?
+
+  clienteId   String
+  cliente     Cliente  @relation(fields: [clienteId], references: [id])
+
+  studioId    String
+  studio      Studio   @relation(fields: [studioId], references: [id])
+
+  expedientes  Expediente[]
+  presupuesto  Presupuesto?
+  documentos   Documento[]
+
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("gestiones")
+}
+
+model Expediente {
+  id          String   @id @default(cuid())
+  codigo      String   @unique @default(cuid())
+  estado      String   @default("consulta") // 9 estados del state machine
+  fechaLimite DateTime?
+  pasoActual  String?
+  progreso    Int      @default(0)  // 0-100
+  semaforo    String   @default("verde") // verde, amarillo, rojo
+  plataforma  String?
+
+  gestionId     String
+  gestion       Gestion     @relation(fields: [gestionId], references: [id], onDelete: Cascade)
+
+  tramiteTipoId String
+  tramiteTipo   TramiteTipo @relation(fields: [tramiteTipoId], references: [id])
+
+  productos     ExpedienteProducto[]
+  documentos    Documento[]
+  acciones      OrganismoAccion[]
+  presupuestoItems PresupuestoItem[]
+
+  deletedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("expedientes")
+}
+
+model ExpedienteProducto {
+  id                  String   @id @default(cuid())
+  estadoIndividual    String   @default("en_evaluacion") // en_evaluacion, aprobado, observado, rechazado
+  observaciones       String?
+  certificadoUrl      String?
+  numeroCertificado   String?
+  fechaAprobacion     DateTime?
+
+  expedienteId        String
+  expediente          Expediente @relation(fields: [expedienteId], references: [id], onDelete: Cascade)
+
+  productoId          String
+  producto            Producto   @relation(fields: [productoId], references: [id])
+
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+
+  @@unique([expedienteId, productoId])
+  @@map("expediente_productos")
+}
+
+// ─── DOCUMENTOS ──────────────────────────────────────
+model Documento {
+  id          String   @id @default(cuid())
+  nombre      String
+  archivoUrl  String?
+  tipo        String?
+  estado      String   @default("pendiente") // pendiente, cargado, aprobado, vencido
+  obligatorio Boolean  @default(false)
+  responsable String?  // "Cliente", "Gestor", "Organismo"
+  vencimiento DateTime?
+
+  expedienteId String?
+  expediente   Expediente? @relation(fields: [expedienteId], references: [id], onDelete: Cascade)
+
+  clienteId    String?
+  cliente      Cliente?    @relation(fields: [clienteId], references: [id])
+
+  gestionId    String?
+  gestion      Gestion?   @relation(fields: [gestionId], references: [id])
+
+  studioId     String?
+  studio       Studio?    @relation(fields: [studioId], references: [id])
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@map("documentos")
+}
+
+// ─── PRESUPUESTOS (estimación, NO facturación) ───────
+model Presupuesto {
+  id              String   @id @default(cuid())
+  estado          String   @default("borrador") // borrador, enviado, aprobado
+  totalOrganismo  Float    @default(0)
+  totalHonorarios Float    @default(0)
+
+  gestionId       String   @unique
+  gestion         Gestion  @relation(fields: [gestionId], references: [id], onDelete: Cascade)
+
+  items           PresupuestoItem[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("presupuestos")
+}
+
+model PresupuestoItem {
+  id          String   @id @default(cuid())
+  concepto    String
+  tipo        String   @default("honorario") // honorario, arancel, tasa, otro
+  monto       Float
+  cantidad    Int      @default(1)
+
+  presupuestoId String
+  presupuesto   Presupuesto @relation(fields: [presupuestoId], references: [id], onDelete: Cascade)
+
+  expedienteId  String?
+  expediente    Expediente? @relation(fields: [expedienteId], references: [id])
+
+  createdAt     DateTime    @default(now())
+
+  @@map("presupuesto_items")
+}
+
+// ─── ARANCELES ───────────────────────────────────────
+model ArancelOficial {
+  id             String    @id @default(cuid())
+  codigoTramite  String
+  descripcion    String?
+  monto          Float
+  moneda         String    @default("ARS")
+  categoria      String?
+  formulaCalculo String?
+  vigenciaDesde  DateTime?
+  vigenciaHasta  DateTime?
+  activo         Boolean   @default(true)
+
+  organismoId    String
+  organismo      Organismo @relation(fields: [organismoId], references: [id])
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@map("aranceles_oficiales")
+}
+
+// ─── TRACKING & NOTIFICACIONES ───────────────────────
+model Tracking {
+  id        String   @id @default(cuid())
+  evento    String
+  detalle   String?
+  metadata  Json?
+
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+
+  studioId  String
+  studio    Studio   @relation(fields: [studioId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@map("tracking")
+}
+
+model Notificacion {
+  id      String   @id @default(cuid())
+  titulo  String
+  cuerpo  String?
+  tipo    String   @default("info")
+  leida   Boolean  @default(false)
+
+  studioId String
+  studio   Studio  @relation(fields: [studioId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@map("notificaciones")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String
+  entity    String
+  entityId  String?
+  details   Json?
+  hash      String?
+
+  studioId  String
+  studio    Studio   @relation(fields: [studioId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@map("audit_logs")
+}
+
+// ─── INTEGRACIONES ───────────────────────────────────
+model OrganismoAccion {
+  id               String   @id @default(cuid())
+  organismo        String
+  tipo             String   // tad_envase, afip_vep, tad_consulta, senasa_consulta
+  hammerId         String?
+  estado           String   @default("pendiente")
+  pasosEjecutados  Int      @default(0)
+  pasosTotales     Int      @default(0)
+  resultado        Json?
+
+  expedienteId     String
+  expediente       Expediente @relation(fields: [expedienteId], references: [id], onDelete: Cascade)
+
+  startedAt        DateTime   @default(now())
+  finishedAt       DateTime?
+
+  @@map("organismo_acciones")
+}
+
+model AlertaRegulatoria {
+  id      String   @id @default(cuid())
+  modulo  String
+  titulo  String
+  detalle String?
+  impacto String?  // alto, medio, bajo
+  leida   Boolean  @default(false)
+
+  organismoId String?
+  organismo   Organismo? @relation(fields: [organismoId], references: [id])
+
+  createdAt   DateTime   @default(now())
+
+  @@map("alertas_regulatorias")
+}
+
+model MckeinSync {
+  id          String   @id @default(cuid())
+  entity      String
+  entityId    String
+  action      String
+  payload     Json?
+  status      String   @default("pending")
+  error       String?
+
+  studioId    String
+  studio      Studio   @relation(fields: [studioId], references: [id])
+
+  createdAt   DateTime @default(now())
+  processedAt DateTime?
+
+  @@map("mckein_syncs")
+}
+
+// ─── ANMAT ───────────────────────────────────────────
+model AnmatCaso {
+  id          String   @id @default(cuid())
+  nombre      String
+  descripcion String?
+  estado      String   @default("activo")
+
+  clienteId   String
+  cliente     Cliente  @relation(fields: [clienteId], references: [id])
+
+  requisitos  AnmatRequisitoDoc[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("anmat_casos")
+}
+
+model AnmatDivision {
+  id       String @id @default(cuid())
+  nombre   String @unique
+
+  requisitos AnmatRequisitoDoc[]
+
+  @@map("anmat_divisiones")
+}
+
+model AnmatRequisitoDoc {
+  id        String  @id @default(cuid())
+  documento String
+  requerido Boolean @default(true)
+
+  casoId    String
+  caso      AnmatCaso     @relation(fields: [casoId], references: [id], onDelete: Cascade)
+
+  divisionId String
+  division   AnmatDivision @relation(fields: [divisionId], references: [id])
+
+  @@map("anmat_requisitos_docs")
+}
+
+// ─── MENSAJES ────────────────────────────────────────
+model Mensaje {
+  id       String   @id @default(cuid())
+  texto    String
+  origen   String   // "staff" | "cliente"
+
+  userId   String?
+  user     User?    @relation(fields: [userId], references: [id])
+
+  clienteId String
+  cliente   Cliente  @relation(fields: [clienteId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@map("mensajes")
+}

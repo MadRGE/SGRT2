@@ -22,3 +22,12 @@ Thumbs.db
 
 # Vercel
 .vercel
+
+# Next.js
+.next/
+
+# Prisma generated
+src/generated/
+
+# Old v2 archive
+v2-archive/
